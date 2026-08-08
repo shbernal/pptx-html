@@ -15,7 +15,6 @@
  */
 
 import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
-import html2canvas from 'html2canvas'
 import { DEFAULT_FONT, EMU_PER_IN } from './constants'
 import { createHiddenFrame, settleFrame } from './extract/frame'
 import { defaultResolveIcon, inlineDeckIcons } from './extract/icons'
@@ -176,8 +175,7 @@ export async function convertDeck(fullHtmlString, opts) {
 }
 
 // Deliver per `opts.output` (default 'download'), replacing the old __TEST__ hack.
-// Shared by the vector (`convertDeck`) and raster (`convertDeckRaster`) paths so
-// both honor `output: 'download' | 'base64' | 'blob' | 'pptx-instance'` identically.
+// Honors `output: 'download' | 'base64' | 'blob' | 'pptx-instance'`.
 async function deliverDeck(pptx, result, opts) {
 	const output = opts.output || 'download'
 	if (output === 'pptx-instance') {
@@ -197,75 +195,6 @@ async function deliverDeck(pptx, result, opts) {
 		downloadBase64Pptx(base64, opts.fileName || 'deck.pptx')
 	}
 	return result
-}
-
-// Render one slide section in a hidden frame and rasterize it with html2canvas.
-// Capture the rendered `.slide` at 2x and return a JPEG data URL sized for the
-// 16:9 layout.
-async function rasterizeSlide(headHTML, slideHTML, lang) {
-	const frame = createHiddenFrame(composeSlideDocument(headHTML, slideHTML, lang))
-	try {
-		await frame.load()
-		await settleFrame(frame)
-		const doc = frame.iframe.contentDocument
-		const target = doc.querySelector('.slide') || doc.body
-		const canvas = await html2canvas(target, { scale: 2, useCORS: true, backgroundColor: '#fff', width: 1280, height: 720 })
-		return canvas.toDataURL('image/jpeg', 0.92)
-	} finally {
-		frame.close()
-	}
-}
-
-/**
- * Image-based fallback: rasterize each slide with html2canvas and place it as a
- * full-bleed picture. Use this when the editable (vector) `convertDeck` path
- * fails — a file is still produced, just not editable. Keeping it here means
- * consumers never import `@shbernal/ts-pptx`/`html2canvas` directly (this package
- * owns both).
- *
- * Signature and `ConvertResult` shape mirror `convertDeck`; delivery is the same
- * `opts.output` switch. `onProgress` emits `{ phase: 'slide', index, total }` and
- * `{ phase: 'finalize', ... }`, matching the vector path for consumer parity.
- */
-export async function convertDeckRaster(fullHtmlString, opts) {
-	opts = opts || {}
-	const parsed = parseDeckHtml(fullHtmlString)
-	if (!parsed.slides.length) throw new Error('Export input contains no slide sections.')
-
-	const pptx = createPptx(opts)
-	pptx.layout = 'LAYOUT_16x9'
-	pptx.author = opts.author || 'dom2pptx'
-	pptx.subject = opts.title || 'dom2pptx PPTX export'
-	pptx.company = 'dom2pptx'
-	pptx.lang = parsed.lang || 'en'
-	const size = getPptSize(pptx)
-
-	const warnings = []
-	const shouldStop = () => !!(opts.shouldStop && opts.shouldStop())
-	let completedSlides = 0
-	let stopped = false
-	for (let index = 0; index < parsed.slides.length; index++) {
-		if (shouldStop()) { stopped = true; break }
-		if (opts.onProgress) opts.onProgress({ phase: 'slide', index, total: parsed.slides.length })
-		try {
-			const data = await rasterizeSlide(parsed.headHTML, parsed.slides[index], parsed.lang)
-			pptx.addSlide().addImage({ data, x: 0, y: 0, w: size.width, h: size.height })
-			completedSlides++
-		} catch (error) {
-			warnings.push({ slide: index + 1, message: 'SLIDE EXPORT ISSUE: ' + (error && error.message ? error.message : String(error)) })
-		}
-		if (shouldStop()) { stopped = true; break }
-	}
-	if (stopped && !completedSlides) throw new Error('Export stopped before any slide was created.')
-	if (opts.onProgress) opts.onProgress({ phase: 'finalize', total: parsed.slides.length, stopped, completed: completedSlides })
-
-	const result = {
-		warnings,
-		slideCount: stopped ? completedSlides : parsed.slides.length,
-		stopped,
-		totalSlideCount: parsed.slides.length
-	}
-	return deliverDeck(pptx, result, opts)
 }
 
 /**

@@ -6,10 +6,10 @@
  * `@shbernal/ts-pptx`. This package owns the HTML → ts-pptx link only; it does
  * not write OOXML itself, and it does not generate the HTML.
  *
- * The mapping is **heuristic**. HTML/CSS and PPTX are different formats with
- * different primitives, so fidelity is best-effort: unmappable constructs
- * degrade to the closest editable equivalent and raise a `Warning` rather than
- * being dropped. `convertDeckRaster` trades editability for pixel fidelity.
+ * Every element is **modeled**, **carried** or **warned** — never approximated
+ * into something that cannot be read back. This lane (HTML that carries no IR)
+ * is the inference lane, so its mapping is heuristic: an unmappable construct
+ * raises a `Warning` rather than being silently dropped or rasterized.
  *
  * This is a **browser** package: it needs a real DOM (iframe, `getComputedStyle`,
  * `getBoundingClientRect`, canvas, fonts) and is not Node-portable as written.
@@ -19,7 +19,7 @@
  * so the model boundary can be asserted directly.
  */
 
-import { convertDeck as convertDeckEngine, convertDeckRaster as convertDeckRasterEngine, convertSlide as convertSlideEngine } from './engine'
+import { convertDeck as convertDeckEngine, convertSlide as convertSlideEngine } from './engine'
 import type { SlideModel } from './ir/model'
 
 export type * from './ir/model'
@@ -100,20 +100,6 @@ export interface ConvertResult {
  */
 export async function convertDeck(fullHtmlString: string, opts?: ConvertOptions): Promise<ConvertResult> {
 	return convertDeckEngine(fullHtmlString, opts) as Promise<ConvertResult>
-}
-
-/**
- * Image-based fallback converter. Rasterizes each slide with the bundled
- * `html2canvas` and places it as a full-bleed picture, producing a (non-editable)
- * PPTX when the editable `convertDeck` path fails. Same signature, `ConvertResult`
- * shape and `opts.output` delivery as `convertDeck`; `onProgress` emits the same
- * `{ phase: 'slide', index, total }` / `{ phase: 'finalize' }` events.
- *
- * This lives here (not in the consumer) so callers never import
- * `@shbernal/ts-pptx` or `html2canvas` directly — this package owns both.
- */
-export async function convertDeckRaster(fullHtmlString: string, opts?: ConvertOptions): Promise<ConvertResult> {
-	return convertDeckRasterEngine(fullHtmlString, opts) as Promise<ConvertResult>
 }
 
 /**

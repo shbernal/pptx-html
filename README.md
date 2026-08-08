@@ -3,48 +3,78 @@
 Turn HTML from the DOM into PowerPoint (`.pptx`) decks, by way of
 [`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx).
 
-This library owns exactly one link in that chain: **HTML/DOM → `ts-pptx` calls**.
-It reads a rendered document, builds an intermediate slide model (IR), and drives
-the writer. It does not emit OOXML itself — that is `ts-pptx`'s job — and it does
-not generate the HTML — that is the caller's job.
+This library owns the link between **HTML/DOM and `ts-pptx` calls**, in both
+directions. It reads a document, builds an intermediate slide model (IR), and
+drives the writer. It does not emit OOXML itself — that is `ts-pptx`'s job — and
+it does not generate the HTML — that is the caller's job.
 
 ```
-your app / AI agent               produces HTML slides
+your app / AI agent               produces / displays HTML slides
         │  imports
         ▼
-dom2pptx (this package)           rendered DOM → IR → ts-pptx calls
+dom2pptx (this package)           HTML ⇄ IR ⇄ ts-pptx calls
         │  depends on
         ▼
-@shbernal/ts-pptx                 IR-agnostic OOXML emitter (custGeom, etc.)
+@shbernal/ts-pptx                 IR-agnostic OOXML reader + emitter
 ```
 
 ## Why
 
-**1. Preview decks on the web before generating them.** HTML renders in a
-browser instantly; PPTX does not. If the deck is authored as HTML, what you see
-in the page is the preview, and this library is what makes that preview
-redeemable as a real `.pptx`.
+The centre of the project is a **loop**, not a one-way conversion:
+
+```
+.pptx  ──import──►  IR  ──render──►  HTML   (what a human sees / edits)
+  ▲                  ▲                 │
+  └────emit──────────┴─────parse───────┘   (what a machine reads back)
+```
+
+**1. Preview and edit decks on the web.** HTML renders in a browser instantly;
+PPTX does not. A deck goes out as HTML, gets looked at and edited there, and
+comes back as a `.pptx` — the page is the preview *and* the editing surface.
 
 **2. Let AI agents build decks.** Models are good at emitting HTML and bad at
 emitting OOXML. Give an agent an HTML target and it can produce a deck; this
 library is the adapter that makes the HTML land as editable slides.
 
-**3. (Deferred) Round-tripping.** Accept a `.pptx` and give back HTML/DOM for
-preview and editing. Not implemented — the pipeline currently runs one way.
+The loop only means anything if it is lossless, which is the property the whole
+design is arranged around:
 
-## Fidelity is best-effort
+> **Invariant R.** For any deck this pipeline can write, `import → render →
+> parse → emit` produces a deck **equal under the normalized read model** to the
+> input. Slides whose features the IR does not model are carried across
+> **byte-identical** rather than approximated.
 
-The mapping is **heuristic, not deterministic**. HTML/CSS and PPTX are different
-formats with different primitives, and neither is a superset of the other: box
-layout, text flow, filters, and blend modes have no exact OOXML equivalent, and
-PowerPoint's own model (placeholders, theme colors, freeform geometry) has no
-exact CSS equivalent.
+Equality is normalized, not byte-for-byte: zip entry order, timestamps,
+relationship ids and element ids all vary legally, and the comparison
+canonicalizes both sides before diffing.
 
-So the contract is a *close* deck, not a pixel-identical one. Where a faithful
-mapping is impossible, the converter picks the closest editable construct and
-records a `Warning` rather than dropping content. Callers that need pixel
-fidelity over editability can fall back to `convertDeckRaster`, which rasterizes
-each slide into a full-bleed picture.
+**Status.** The forward half (HTML → IR → `.pptx`) is what ships today. The
+import and return halves are under construction; until the round-trip oracle
+gates CI, treat Invariant R as the charter, not as a shipped guarantee.
+
+## Modeled, carried, or warned — never approximated
+
+HTML/CSS and PPTX are different formats and neither is a superset of the other:
+box layout, text flow, filters and blend modes have no exact OOXML equivalent,
+and PowerPoint's own model (placeholders, theme colors, freeform geometry) has
+no exact CSS equivalent. That does not make the output a guess. Every element
+lands in exactly one of three states:
+
+- **Modeled** — the IR represents it, and it survives the loop exactly.
+- **Carried** — the IR does not model it, so its XML moves across untouched. No
+  approximation, and no loss.
+- **Warned** — it can be neither modeled nor carried, and the conversion says
+  so. A visible failure, never a silent one.
+
+What this rules out is the fourth state — *approximated*: content that comes out
+looking about right but has no way back. That is why the `html2canvas` raster
+fallback was removed rather than kept as an escape hatch. A slide flattened into
+a picture is the one output that can never re-enter the loop, so producing a file
+that way is a failure wearing a success's clothes.
+
+Inference is still how the **secondary** lane works: HTML that carries no IR of
+its own is read from the rendered DOM, and that reading is genuinely heuristic.
+It stays honest by the same rule — closest editable construct, plus a `Warning`.
 
 ## Scope
 

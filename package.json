@@ -55,8 +55,7 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"@shbernal/ts-pptx": "^2.0.0",
-		"html2canvas": "^1.4.1"
+		"@shbernal/ts-pptx": "^2.0.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.7",

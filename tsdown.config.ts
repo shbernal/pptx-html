@@ -1,8 +1,8 @@
 import { defineConfig } from 'tsdown'
 
-// Browser-only package (needs a real DOM at runtime). @shbernal/ts-pptx and
-// html2canvas are real dependencies of this package, not bundled here; the
-// consumer's bundler resolves them.
+// Browser-only package (needs a real DOM at runtime). @shbernal/ts-pptx is a
+// real dependency of this package, not bundled here; the consumer's bundler
+// resolves it.
 export default defineConfig({
 	clean: true,
 	dts: {

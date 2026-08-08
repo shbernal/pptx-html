@@ -4,8 +4,8 @@ Guidance for coding agents working in the `dom2pptx/` project.
 
 ## Repository Expectations
 
-- This repo builds `dom2pptx`: it turns HTML from the DOM into editable PPTX by
-  driving `@shbernal/ts-pptx`. Its role is the **HTML → ts-pptx** link only.
+- This repo builds `dom2pptx`: it moves slides between HTML and PPTX by driving
+  `@shbernal/ts-pptx`. Its role is the **HTML ⇄ ts-pptx** link, both directions.
 - This is a **standalone top-level project** (`~/dev/dom2pptx`) with its own git.
   It is not part of a workspace; run its commands from this directory.
 - Use `pnpm`. Node `>=24`. Keep source in `src/`, tests in `test/`. Treat `dist/`
@@ -14,34 +14,97 @@ Guidance for coding agents working in the `dom2pptx/` project.
 
 ## Purpose
 
-Three goals, in priority order:
+**Round-tripping is the centre of the project**, not a deferred extra:
 
-1. **Web previews.** HTML is the preview medium for a deck; this library is what
-   makes that preview redeemable as a real `.pptx`.
+```
+.pptx  ──import──►  IR  ──render──►  HTML   (what a human sees / edits)
+  ▲                  ▲                 │
+  └────emit──────────┴─────parse───────┘   (what a machine reads back)
+```
+
+The property the design defends:
+
+> **Invariant R.** For any deck this pipeline can write, `import → render →
+> parse → emit` produces a deck **equal under the normalized read model** to the
+> input. Slides whose features the IR does not model are carried across
+> **byte-identical** rather than approximated.
+
+Equality is normalized, not byte-level — zip order, timestamps, `rId`s and
+`cNvPr` ids all vary legally, so both decks are canonicalized before diffing.
+Byte determinism is explicitly *not* a goal and is not an upstream ask.
+
+Two things this serves, in priority order:
+
+1. **Web previews and web editing.** HTML is the medium a deck is looked at and
+   edited in; this library is what makes that page redeemable as a real `.pptx`.
 2. **AI-authored decks.** Agents emit HTML well and OOXML badly. This is the
    adapter that makes agent-emitted HTML land as editable slides.
-3. **(Deferred) Round-tripping.** PPTX in, HTML/DOM preview out. Not
-   implemented; do not build toward it without being asked.
 
-## Fidelity Is Heuristic
+The **heuristic DOM → IR lane stays**, but it is now the *secondary* path: it is
+for HTML that carries no IR of its own. HTML produced by this library's own
+renderer carries its IR in the document, and the return path parses that IR
+rather than re-deriving it from `getComputedStyle` — computed style is lossy and
+has no representation for placeholder inheritance, colour transforms, autofit
+mode or geometry adjust values.
 
-HTML/CSS and PPTX are different formats and neither is a superset of the other.
-The mapping is best-effort by design:
+## Modeled, Carried, or Warned — Never Approximated
 
-- Aim for the closest **editable** PowerPoint construct, not a pixel match.
-- When a faithful mapping is impossible, degrade and record a `Warning`. Never
-  silently drop content.
-- `convertDeckRaster` is the escape hatch for callers who want pixel fidelity
-  instead of editability. Keep it working; do not let it rot.
-- Do not add deterministic-looking guarantees to the docs. Fidelity claims must
-  stay honest.
+HTML/CSS and PPTX are different formats and neither is a superset of the other,
+but that does not license guessing. Every element lands in exactly one of three
+states, and "degrade and warn" is replaced by **carry, or warn**:
+
+- **Modeled** — the IR represents it; it survives the loop exactly.
+- **Carried** — the IR does not model it, so the original XML moves across
+  untouched. No approximation, no loss. This is the residual channel that lets
+  best-effort coverage coexist with a hard round-trip guarantee.
+- **Warned** — neither modeled nor carried, and the conversion says so. A
+  visible failure beats a silent one.
+
+The fourth state — **approximated**, output that looks about right but has no
+way back — is what the charter rules out.
+
+- The machine-readable classification is upstream's `FidelityNote`
+  (`Disposition` × `Cause`) from `@shbernal/ts-pptx/script`, checked against
+  `knownNoteConstructs()`. **Do not coin a local `modeled`/`carried`/`unsupported`
+  enum** alongside it: two vocabularies for one concept is how the differ and the
+  renderer drift apart. The trio above is the charter's plain-language framing of
+  that same classification.
+- `Cause` also triages where a fix belongs: `unread` / `unwritable` are upstream
+  bugs to file against `ts-pptx`; `unsupported` is a property of OOXML and will
+  not be fixed by more converter work here.
+- In the inference lane, still aim for the closest **editable** PowerPoint
+  construct, not a pixel match, and record a `Warning` rather than dropping
+  content.
+- Do not add deterministic-looking guarantees to the docs beyond what the
+  round-trip oracle actually gates. Fidelity claims must stay honest.
+
+## The Raster Path Was Removed On Purpose
+
+`convertDeckRaster` / `rasterizeSlide` and the `html2canvas` dependency are gone,
+and **nothing should reintroduce a rasterizer in `src/`**. A slide flattened into
+a full-bleed picture has no model to re-import — it is the one output that can
+never re-enter the loop, so it is a failure wearing a success's clothes. The cost
+is real and was accepted: hostile HTML no longer always yields *some* file. A
+warned failure beats a file that can never come back.
+
+The obvious follow-up — "then render `.pptx` → PNG directly" — was asked and
+answered: it cannot run in a browser. It needs a PowerPoint-grade renderer, and
+the slides that would most want a preview are the carried ones, which by
+definition have no model to draw from. The real options (PowerPoint COM
+`Slide.Export`, LibreOffice headless) are out-of-process and host-dependent, so a
+preview generator is a **test utility, not a package feature**. One under `test/`
+for visual review of the corpus is welcome; nothing goes in `src/`.
+
+Canvas use that remains in `src/extract/` and `src/emit/` is *not* this: it
+rasterizes individual CSS gradients and re-encodes images, and each of those is a
+modeled IR element. It is not slide rasterization.
 
 ## Architecture & Boundaries
 
 One-way dependency: **consumer app → dom2pptx → ts-pptx**. No cycles.
 
-- `dom2pptx` does **not** know about AI or UI. It owns `ts-pptx` and
-  `html2canvas` as dependencies; consumers never import `ts-pptx` directly.
+- `dom2pptx` does **not** know about AI or UI. `@shbernal/ts-pptx` is its only
+  runtime dependency; consumers never import `ts-pptx` directly.
 - The IR (`src/ir/model.ts`) is the boundary between the two internal layers:
   - `src/extract/` (DOM → IR) is **browser-only** (iframe, `getComputedStyle`,
     `getBoundingClientRect`, canvas, fonts).
