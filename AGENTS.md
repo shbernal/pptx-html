@@ -105,13 +105,76 @@ One-way dependency: **consumer app → dom2pptx → ts-pptx**. No cycles.
 
 - `dom2pptx` does **not** know about AI or UI. `@shbernal/ts-pptx` is its only
   runtime dependency; consumers never import `ts-pptx` directly.
-- The IR (`src/ir/model.ts`) is the boundary between the two internal layers:
+- The IR (`src/ir/`) is the boundary between the two internal layers:
   - `src/extract/` (DOM → IR) is **browser-only** (iframe, `getComputedStyle`,
     `getBoundingClientRect`, canvas, fonts).
   - `src/emit/` (IR → ts-pptx) is **pure and isomorphic** — unit-testable
     without a browser. This is where custGeom correctness lives.
 - Keep the IR as the single source of truth for the slide model. Changing the IR
   shape touches both layers; do it deliberately.
+
+## Two IRs, On Purpose
+
+`src/ir/render.ts` (`RenderIr`) is the **paint** model. `DeckIr` from
+`@shbernal/ts-pptx/script` is the **contract** model — it is what emit writes and
+what `diffDeckIr` judges. Both are built from the same read-model traversal, so
+they cannot disagree about the source deck.
+
+They stay separate because `DeckIr.slides[].calls[].args` is `IrValue` — untyped
+write-API option bags — and nothing can be drawn from a bag. Merging them would
+either drag geometry into upstream's write-call vocabulary or drag write-API
+arguments into the renderer, and the second is how a renderer starts silently
+deciding what gets emitted. **Nothing in `src/emit/` may import `ir/render`**; the
+moment something is emitted from `RenderIr`, there are two writers and the oracle
+is judging one of them.
+
+Rules `RenderIr` is built on, each of which something will break if ignored:
+
+- **EMU is the stored unit**, integers, for every position and size; `Pt` in a
+  field name means OOXML states it in points. Inches appear only at the edges via
+  `inchesOf`/`emuOf`. Storing inches — or both — puts float noise on every
+  element, which then reads as a difference on every diff.
+- **JSON is the wire format.** Part of the model is embedded in the rendered
+  document and parsed back, so: no `undefined` (an absent field is a missing key,
+  the single spelling of "absent"), no `Date`/`Map`/`Set`, and **no
+  `Uint8Array`** — media lives behind an `AssetRef` and is addressed by content
+  hash, never re-embedded. `test/unit/ir-render.test.ts` walks the model and
+  fails on any of these.
+- **Node identity is derived from the source, never generated** — `s{slide}.sp{cNvPr@id}`,
+  structural rather than hashed, so a second import of the same deck agrees with
+  the first and the differ aligns sides by id instead of by position.
+- **Absent means inherited, not default**, on every run property. Import resolves
+  the chain for rendering but records what the run itself stated, so emit does
+  not bake a placeholder's inherited size into the slide.
+- **`render: 'drawn' | 'placeholder'` is a rendering fact, not a fidelity one.**
+  Fidelity is `FidelityNote` and nothing else.
+- **Do not model what cannot round-trip yet.** A half-drawn construct with no
+  matching `FidelityNote` is worse than an honest carried one — the note is what
+  makes a difference *declared* rather than a defect.
+
+## The Editable Surface
+
+`src/ir/surface.ts` defines exactly what a human may change in the rendered HTML
+and have honoured on the way back: **run text, `bold`/`italic`/`sizePt`/`color`,
+and deleting a node.** Everything else — moving a box, changing geometry,
+restyling a table, reordering or inserting slides — is **detected as drift**,
+never interpreted.
+
+It is a data structure, not prose, because two consumers read it: the renderer
+makes those regions editable, and the return path decides what counts as drift.
+Two hand-maintained copies of "what is editable" diverge silently, and the
+failure is invisible in both directions.
+
+- `project(ir)` is the editable view — the part that may change, addressed by
+  node id (positional addressing misaligns the moment a user deletes a node,
+  which the surface allows).
+- `freeze(ir)` is its complement — the part that may not. Both are derived from
+  the same list, so they stay complementary by construction. The test that
+  matters is that an in-surface edit leaves `freeze` bit-identical while an
+  out-of-surface one does not; keep it when touching either function.
+- A property is in surface only if it maps 1:1 onto a write-API option. Anything
+  needing interpretation to get back into the deck stays out — the return path
+  must never guess.
 
 ## Scope
 

@@ -22,6 +22,11 @@
 import { convertDeck as convertDeckEngine, convertSlide as convertSlideEngine } from './engine'
 import type { SlideModel } from './ir/model'
 
+// The legacy IR. `./ir/render` (`RenderIr`) is deliberately *not* re-exported
+// here yet: nothing outside the package can produce one until the import and
+// render layers land, and two of its type names (`TableCell`, `Background`)
+// collide with the legacy ones below. Both problems disappear together when this
+// line goes and `RenderIr` takes its place.
 export type * from './ir/model'
 
 /** How a non-fatal issue surfaced during conversion. */

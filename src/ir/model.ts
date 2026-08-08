@@ -1,4 +1,22 @@
 /**
+ * **Legacy IR — the adapter, not the model.** The typed, drawable model is
+ * `./render` (`RenderIr`); this file is what the existing `extract/` and
+ * `emit/` layers still speak, kept only so they keep building while the import
+ * and render layers land. It is scheduled for deletion once `emit/` is fed from
+ * `DeckIr` and `extract/` produces `RenderIr` — leaving it in place is how IR v2
+ * quietly becomes IR v1.5, so do not extend it.
+ *
+ * The shortcomings are the reason `RenderIr` exists and are worth naming: runs,
+ * table cells and borders are `Record<string, unknown>` passed through opaquely,
+ * so there is no schema to read a deck *into*; items are positional, with no
+ * stable identity to align two sides of a diff by; there is no rotation or flip;
+ * colour is a hex string, which discards the `schemeClr` token and its
+ * transforms; fill is one optional string, so `null` means both "no fill" and
+ * "not stated"; and there are no groups, no placeholder inheritance and no
+ * paragraph properties.
+ *
+ * ---
+ *
  * Intermediate representation (IR) — the contract between the browser-only
  * `extract/` layer (DOM → IR) and the pure `emit/` layer (IR → ts-pptx).
  *
