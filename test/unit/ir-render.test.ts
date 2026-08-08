@@ -107,6 +107,7 @@ describe('units', () => {
 		// EMU is the stored truth precisely so that no frame carries float noise;
 		// a fractional one means something converted through inches and back.
 		for (const node of NODES) {
+			if (node.placement === null) continue
 			const { x, y, w, h } = node.placement.box
 			expect([x, y, w, h].every(Number.isInteger)).toBe(true)
 		}

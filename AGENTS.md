@@ -105,7 +105,9 @@ One-way dependency: **consumer app → dom2pptx → ts-pptx**. No cycles.
 
 - `dom2pptx` does **not** know about AI or UI. `@shbernal/ts-pptx` is its only
   runtime dependency; consumers never import `ts-pptx` directly.
-- The IR (`src/ir/`) is the boundary between the two internal layers:
+- The IR (`src/ir/`) is the boundary between the internal layers:
+  - `src/import/` (`.pptx` → IR) is **isomorphic** — it drives the read model's
+    typed object graph and runs in Node and in Chromium alike.
   - `src/extract/` (DOM → IR) is **browser-only** (iframe, `getComputedStyle`,
     `getBoundingClientRect`, canvas, fonts).
   - `src/emit/` (IR → ts-pptx) is **pure and isomorphic** — unit-testable
@@ -117,8 +119,8 @@ One-way dependency: **consumer app → dom2pptx → ts-pptx**. No cycles.
 
 `src/ir/render.ts` (`RenderIr`) is the **paint** model. `DeckIr` from
 `@shbernal/ts-pptx/script` is the **contract** model — it is what emit writes and
-what `diffDeckIr` judges. Both are built from the same read-model traversal, so
-they cannot disagree about the source deck.
+what `diffDeckIr` judges. Both are built from **one loaded `Presentation`**
+(`src/import/deck.ts`), so they cannot disagree about the source deck.
 
 They stay separate because `DeckIr.slides[].calls[].args` is `IrValue` — untyped
 write-API option bags — and nothing can be drawn from a bag. Merging them would
@@ -143,14 +145,54 @@ Rules `RenderIr` is built on, each of which something will break if ignored:
 - **Node identity is derived from the source, never generated** — `s{slide}.sp{cNvPr@id}`,
   structural rather than hashed, so a second import of the same deck agrees with
   the first and the differ aligns sides by id instead of by position.
-- **Absent means inherited, not default**, on every run property. Import resolves
-  the chain for rendering but records what the run itself stated, so emit does
-  not bake a placeholder's inherited size into the slide.
+- **Absent means inherited, not default.** Every `RunProperties` field, plus a
+  paragraph's `align`/`bullet`, and the `inherit` arm of `Fill` and `Stroke`.
+  This is why `TextRun` carries **two** property sets: `props` is what the run
+  itself stated (what emit reads), `resolved` is what to paint after the
+  placeholder → layout → master chain is walked. Writing the resolved value into
+  `props` renders identically and bakes a layout's 44pt title into every slide —
+  the flattening trap in miniature.
+- **`inherit` and `none` are different decks.** A shape with `a:noFill` is
+  deliberately transparent; a shape that states no fill takes one from its style
+  reference. Collapsing them loses a real distinction. (Import can currently only
+  produce `inherit` for a *fill* — see the upstream asks — and both for a *line*.)
+- **Placement is slide-absolute at every depth**, composed by the read model's
+  `absoluteFrame`. A group child's `a:xfrm` is stated in its group's child space
+  and is not directly placeable; doing that arithmetic per consumer is how every
+  shape in a nested group ends up subtly displaced. `GroupNode` therefore carries
+  no child-space transform of its own.
 - **`render: 'drawn' | 'placeholder'` is a rendering fact, not a fidelity one.**
   Fidelity is `FidelityNote` and nothing else.
 - **Do not model what cannot round-trip yet.** A half-drawn construct with no
   matching `FidelityNote` is worse than an honest carried one — the note is what
   makes a difference *declared* rather than a defect.
+
+## Import Is Mapping, Not Parsing
+
+`src/import/` turns a `.pptx` into both models. It is **browser-capable** — the
+same code runs in Chromium — and it holds to three rules:
+
+- **No XML.** Everything comes through `@shbernal/ts-pptx/read`'s typed object
+  graph. When the read model exposes no accessor, that is an upstream ask, not a
+  licence to reach into `Shape.element_`. Raw OOXML lives in `src/repair/` and
+  nowhere else.
+- **The contract side is not reimplemented.** `readModelToIr` is called for
+  `DeckIr`; only the render side is local.
+- **Media identity is joined by content hash.** Upstream's asset names
+  (`image1.png`) and the package's partnames (`/ppt/media/image-1-1.png`) have no
+  published map between them, and two names for one image is how a picture stops
+  being traceable through the loop. Hashing both sides is the only join that does
+  not depend on an internal convention holding still.
+
+**Opaque is not carried.** `OpaqueNode` / `render: 'placeholder'` means *this IR
+cannot paint it*; `RenderSlide.source: 'carried'` means *the write API cannot
+author it*. A plain chart is the case that separates them — it round-trips
+through `addChart` perfectly and simply cannot be drawn in a browser.
+
+The `import → emit` lane (`test/oracle/script-lane.ts`) replays `DeckIr` through
+the write API with no HTML involved. Both legs are upstream code, so a failure
+there is an issue to file rather than a local fix — and a defect it catches can
+never be misattributed to the renderer.
 
 ## The Editable Surface
 

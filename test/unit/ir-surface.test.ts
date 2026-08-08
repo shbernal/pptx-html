@@ -99,7 +99,7 @@ describe('freeze is the complement of project', () => {
 	it('changes when an out-of-surface edit moves a box', () => {
 		const drifted = clone(SAMPLE_IR)
 		const title = drifted.slides[0]?.nodes[0]
-		if (!title) throw new Error('fixture lost its title node')
+		if (!title?.placement) throw new Error('fixture lost its title node')
 		title.placement.box.x += 914_400
 
 		expect(freeze(drifted)).not.toStrictEqual(freeze(SAMPLE_IR))
@@ -121,7 +121,14 @@ describe('freeze is the complement of project', () => {
 	it('strips text inside table cells and groups too', () => {
 		const frozen = freeze(SAMPLE_IR)
 		const table = frozen.slides[1]?.nodes[0] as TableNode
-		expect(table.rows[0]?.cells[0]?.text?.paragraphs[0]?.runs[0]).toStrictEqual({ text: '', props: {} })
+		// `resolved` survives the freeze on purpose: it is what import computed for
+		// painting, nothing on the editable surface writes it, and a renderer that
+		// mangled it would otherwise change the page with no drift to show for it.
+		expect(table.rows[0]?.cells[0]?.text?.paragraphs[0]?.runs[0]).toStrictEqual({
+			text: '',
+			props: {},
+			resolved: { bold: true, sizePt: 18 },
+		})
 
 		const group = frozen.slides[0]?.nodes[5]
 		if (group?.kind !== 'group') throw new Error('fixture lost its group')

@@ -22,12 +22,13 @@
  *
  * ## Units
  *
- * **EMU everywhere.** Every length that describes a position or a size is an
- * integer count of English Metric Units (914 400 per inch); point-valued fields
- * — stroke widths, font sizes, text insets — say `Pt` in their name because
- * OOXML states them that way and rounding them to EMU would be lossy in the
- * other direction. Inches appear only at the edges, via {@link inchesOf} /
- * {@link emuOf}.
+ * **EMU everywhere a position or a size is stated** — an integer count of
+ * English Metric Units, 914 400 per inch. Where a value arrives in points
+ * instead (stroke widths, font sizes, the text insets the read model already
+ * converts), the field name says so with a `Pt` suffix, and where it arrives in
+ * EMU the name says `Emu`. **Nothing here converts a unit**: a field carries the
+ * unit its source reported, so no rounding decision is taken at this layer.
+ * Inches appear only at the edges, via {@link inchesOf} / {@link emuOf}.
  *
  * A deck read from a package has exact integer EMU on every frame. Storing
  * inches instead — or, worse, storing both — reintroduces float noise on every
@@ -46,7 +47,7 @@ import type { AssetRef, FidelityNote, SlideLayoutIr, SlideSource } from '@shbern
 // `SlideSource` is two unrelated types upstream: `'authored' | 'carried'` here in
 // `/script`, and the `{ extractSlides() }` interface in `/read`. Importing both
 // into one file silently shadows one of them.
-import type { ColorTransform, GeometryCommand, LineSpacing, ThemeColorSlot } from '@shbernal/ts-pptx/read'
+import type { ColorMapToken, ColorTransform, GeometryCommand, LineSpacing, ThemeColorSlot } from '@shbernal/ts-pptx/read'
 
 export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
 
@@ -137,13 +138,29 @@ export interface EdgeRect {
 /**
  * Where and how a node sits: its box plus the `a:xfrm` attributes the legacy IR
  * had no representation for at all.
+ *
+ * The box is **slide-absolute**, with every enclosing group transform already
+ * composed in (the read model's `absoluteFrame` does this). A group child's own
+ * `a:xfrm` is stated in its group's child space (`a:chOff`/`a:chExt`) and is not
+ * directly placeable, so composing it here rather than at paint time is what
+ * keeps a nested group from being subtly displaced — and it is why
+ * {@link GroupNode} carries no child-space transform of its own.
  */
 export interface Placement {
 	box: Box
-	/** `a:xfrm/@rot`, clockwise degrees. */
+	/** `a:xfrm/@rot`, clockwise degrees, after composing enclosing group rotations. */
 	rotation: number
 	flipH: boolean
 	flipV: boolean
+	/**
+	 * Which tier of slide → layout → master the box resolved from.
+	 *
+	 * This is the "model the link, do not flatten it" half of placeholder
+	 * inheritance: a renderer needs a concrete box, but a box silently promoted
+	 * from `layout` to `own` is a slide that has stopped tracking its layout, and
+	 * the differ would see it. Recording where it came from keeps both true.
+	 */
+	geometrySource: 'own' | 'layout' | 'master'
 }
 
 /**
@@ -160,8 +177,15 @@ export type Geometry =
 			kind: 'preset'
 			/** `a:prstGeom/@prst`, e.g. `roundRect`. */
 			preset: string
-			/** `a:avLst` guide values, keyed by name (`adj`, `adj1`, …). Open-ended by the schema. */
-			adjustValues: Record<string, number>
+			/**
+			 * `a:avLst` guide values, keyed by name (`adj`, `adj1`, …), as the raw
+			 * `a:gd/@fmla` the source states — `'val 13333'`, or a computed form whose
+			 * verb is an operator name. Strings rather than numbers because the
+			 * schema's guide grammar is a formula language, and parsing `val N` while
+			 * silently dropping everything else would turn an unmodeled adjust handle
+			 * into an unnoticed shape change.
+			 */
+			adjustValues: Record<string, string>
 	  }
 	| { kind: 'custom'; paths: GeometryPath[] }
 
@@ -191,11 +215,22 @@ export interface GeometryPath {
  * happened to resolve to on import. `effectiveHex` is what a renderer paints;
  * `slot` + `transforms` is what the deck actually said.
  */
+/**
+ * What an `a:schemeClr/@val` may name.
+ *
+ * Not {@link ThemeColorSlot} alone: inside a slide the reference usually goes
+ * through the colour *map* (`bg1`/`tx1`/`bg2`/`tx2`), which points at a slot
+ * rather than being one, and a shape inside a theme's style matrix can say
+ * `phClr` ("the colour my caller passes me"). Narrowing to the twelve theme slots
+ * would silently coerce two thirds of real references to the wrong token.
+ */
+export type SchemeToken = ThemeColorSlot | ColorMapToken | 'phClr'
+
 export type Color =
 	| { kind: 'srgb'; hex: string; alpha?: number }
 	| {
 			kind: 'scheme'
-			slot: ThemeColorSlot
+			slot: SchemeToken
 			/** `lumMod`/`lumOff`/`shade`/`tint`/… in document order, as read. */
 			transforms: ColorTransform[]
 			/** `slot` resolved through the theme with `transforms` applied. */
@@ -214,11 +249,22 @@ export type Gradient =
 	| { kind: 'path'; shape: 'circle' | 'rect' | 'shape'; stops: GradientStop[] }
 
 /**
- * A fill. `none` is a state of its own rather than an absent value — the legacy
- * IR overloaded `null` to mean both "no fill" and "not stated", which are
- * different decks.
+ * A fill.
+ *
+ * `none` and `inherit` are separate states rather than one absent value, because
+ * they are different decks: `none` is an explicit `a:noFill` (a deliberately
+ * transparent shape), `inherit` is a shape that states no fill at all and takes
+ * one from its `p:style/a:fillRef` or its placeholder chain. The legacy IR
+ * overloaded `null` to mean both, so a themed shape and a transparent one were
+ * indistinguishable.
+ *
+ * Import currently produces `inherit` for both, because the read model exposes
+ * no accessor for a shape's `a:noFill` — see the upstream asks. The distinction
+ * is modeled anyway: the lane that *can* state it (the DOM lane, and emit) needs
+ * it, and collapsing the two would make the gap invisible instead of pending.
  */
 export type Fill =
+	| { kind: 'inherit' }
 	| { kind: 'none' }
 	| { kind: 'solid'; color: Color }
 	| { kind: 'gradient'; gradient: Gradient }
@@ -245,23 +291,40 @@ export type DashStyle =
 	| 'sysDashDot'
 	| 'sysDashDotDot'
 
-/** An arrowhead (`a:headEnd` / `a:tailEnd`). */
+/** An arrowhead (`a:headEnd` / `a:tailEnd`). `@w`/`@len` are optional in the schema. */
 export interface LineEnd {
 	type: 'none' | 'triangle' | 'stealth' | 'diamond' | 'oval' | 'arrow'
-	width: 'sm' | 'med' | 'lg'
-	length: 'sm' | 'med' | 'lg'
+	width?: 'sm' | 'med' | 'lg'
+	length?: 'sm' | 'med' | 'lg'
 }
 
-/** An outline: shape border, connector line, or table cell edge. */
-export interface Stroke {
-	widthPt: number
-	color: Color
-	dash: DashStyle
-	cap: 'flat' | 'round' | 'square'
-	join: 'round' | 'bevel' | 'miter'
-	head?: LineEnd
-	tail?: LineEnd
-}
+/**
+ * An outline: shape border, connector line, or table cell edge.
+ *
+ * Three states for the same reason {@link Fill} has them — `none` is an explicit
+ * `a:noFill` on the line, `inherit` is a shape that states none and takes one
+ * from the theme's `a:lnRef`. Here the read model *does* distinguish the two
+ * (`Shape.lineNoFill`), so both are reachable from import.
+ *
+ * `a:ln/@cap` and `@algn` are deliberately absent: the read model exposes no
+ * accessor for either, so any value here would be a default this file invented
+ * rather than something the deck said. See the upstream asks.
+ */
+export type Stroke =
+	| { kind: 'inherit' }
+	| { kind: 'none' }
+	| {
+			kind: 'line'
+			/** `a:ln/@w`. Absent when the line states no width and inherits one. */
+			widthPt?: number
+			/** Absent when the line states no colour of its own. */
+			color?: Color
+			gradient?: Gradient
+			/** `a:prstDash/@val`. Absent when unstated; a token outside {@link DashStyle} is a note. */
+			dash?: DashStyle
+			head?: LineEnd
+			tail?: LineEnd
+	  }
 
 // ---------------------------------------------------------------------------
 // Text
@@ -312,17 +375,27 @@ export type Bullet =
 			kind: 'number'
 			/** `a:buAutoNum/@type`, e.g. `arabicPeriod`. */
 			scheme: string
-			startAt: number
+			/** `@startAt`. Absent means the schema default, 1 — the read model exposes no accessor for it. */
+			startAt?: number
 			font?: string
 			color?: Color
 			sizePct?: number
 	  }
 
+/**
+ * Paragraph formatting.
+ *
+ * `align` and `bullet` are optional for the same reason every {@link RunProperties}
+ * field is: absent means *inherited from the list style*, which is a different
+ * paragraph from one that explicitly says `left` or `a:buNone`. `level` is not
+ * optional — `a:pPr/@lvl` genuinely defaults to `0`.
+ */
 export interface ParagraphProperties {
-	align: 'left' | 'center' | 'right' | 'justify'
+	/** `@algn`, restricted to the four the write API expresses; `dist`/`thaiDist` are a note. */
+	align?: 'left' | 'center' | 'right' | 'justify'
 	/** `a:pPr/@lvl`, 0-based outline depth. */
 	level: number
-	bullet: Bullet
+	bullet?: Bullet
 	/** `@marL` / `@indent`, points. */
 	marginLeftPt?: number
 	indentPt?: number
@@ -332,9 +405,33 @@ export interface ParagraphProperties {
 	spaceAfterPt?: number
 }
 
+/**
+ * What a run's character formatting resolves to once the placeholder → layout →
+ * master → `p:defaultTextStyle` chain has been walked.
+ *
+ * The counterpart to {@link RunProperties}, and the reason "absent means
+ * inherited" is affordable: a renderer cannot paint an inherited value, so
+ * without this the only way to draw a placeholder title at its real 44pt would
+ * be to write 44 into the run — which is the flattening trap, and would bake a
+ * layout's size into every slide the moment emit read it back.
+ *
+ * Only these four exist because these are the four the read model resolves.
+ * Nothing may emit from them; they are paint, and {@link RunProperties} is what
+ * the deck said.
+ */
+export interface ResolvedRunProperties {
+	fontFace?: string
+	sizePt?: number
+	bold?: boolean
+	color?: Color
+}
+
 export interface TextRun {
 	text: string
+	/** What this run itself stated. Absent field = inherited. */
 	props: RunProperties
+	/** What to paint. Derived at import; never written back to the deck. */
+	resolved: ResolvedRunProperties
 }
 
 export interface Paragraph {
@@ -376,7 +473,13 @@ interface NodeBase {
 	id: NodeId
 	/** `p:cNvPr/@name`. Carried because {@link FidelityNote.shapeName} points at it. */
 	name: string
-	placement: Placement
+	/**
+	 * `null` when nothing in the slide → layout → master chain gives this node a
+	 * resolvable box — a non-placeholder shape with no `a:xfrm`, or a group whose
+	 * `a:chExt` is degenerate. Rare, and honest: a renderer skips it and says so,
+	 * which beats painting it at the origin as if that were stated.
+	 */
+	placement: Placement | null
 	/**
 	 * How this node is drawn — a **rendering** fact, not a fidelity one. A
 	 * `placeholder` node renders as a labelled inert box naming
@@ -401,7 +504,7 @@ export interface ShapeNode extends NodeBase {
 	kind: 'shape'
 	geometry: Geometry
 	fill: Fill
-	stroke: Stroke | null
+	stroke: Stroke
 	text: TextBody | null
 }
 
@@ -411,7 +514,7 @@ export interface PictureNode extends NodeBase {
 	/** `a:srcRect` crop. */
 	crop?: EdgeRect
 	geometry: Geometry
-	stroke: Stroke | null
+	stroke: Stroke
 }
 
 /** One bound end of a connector. */
@@ -425,13 +528,14 @@ export interface Connection {
 export interface ConnectorNode extends NodeBase {
 	kind: 'connector'
 	geometry: Geometry
-	stroke: Stroke | null
+	stroke: Stroke
 	start?: Connection
 	end?: Connection
 }
 
 export interface TableColumn {
-	widthEmu: number
+	/** `a:gridCol/@w`. `null` when the grid states none and the renderer distributes. */
+	widthEmu: number | null
 }
 
 export interface TableCell {
@@ -439,21 +543,30 @@ export interface TableCell {
 	text: TextBody | null
 	fill: Fill
 	borders: {
-		left: Stroke | null
-		right: Stroke | null
-		top: Stroke | null
-		bottom: Stroke | null
+		left: Stroke
+		right: Stroke
+		top: Stroke
+		bottom: Stroke
 	}
 	/** `>1` when this cell spans; `null` for a plain 1×1 cell. */
 	span: { columns: number; rows: number } | null
 	/** `true` for a cell covered by a neighbour's span (`hMerge`/`vMerge`). */
 	covered: boolean
-	marginsPt: { left: number; right: number; top: number; bottom: number }
+	/**
+	 * `a:tcPr/@marL`/`@marR`/`@marT`/`@marB`. EMU, not points, because that is the
+	 * unit OOXML states them in — unlike {@link TextBody.insetsPt}, whose source
+	 * attributes the read model already reports in points. Nothing here converts a
+	 * unit; the field name says which one arrived.
+	 *
+	 * A side is `null` when the cell states none and inherits it from the style.
+	 */
+	marginsEmu: { left: number | null; right: number | null; top: number | null; bottom: number | null }
 	anchor: 'top' | 'middle' | 'bottom'
 }
 
 export interface TableRow {
-	heightEmu: number
+	/** `a:tr/@h`. `null` when the row height is left to the content. */
+	heightEmu: number | null
 	cells: TableCell[]
 }
 
@@ -466,21 +579,31 @@ export interface TableNode extends NodeBase {
 /**
  * A group. Z-order is tree order — the flat `z` number the legacy IR carried
  * cannot express "inside this group, above that sibling".
+ *
+ * There is no child-space transform here on purpose. Every child's
+ * {@link Placement} is already slide-absolute (see {@link Placement}), so a
+ * renderer walks the tree for paint order and identity and never composes a
+ * transform. Carrying `a:chOff`/`a:chExt` as well would be a second copy of the
+ * same geometry that nothing keeps in step — and the read model exposes no
+ * accessor for either, so it would have to be invented.
  */
 export interface GroupNode extends NodeBase {
 	kind: 'group'
-	/** `a:grpSpPr/a:xfrm/a:chOff`: the origin children's coordinates are relative to. */
-	childOffset: { x: number; y: number }
-	/** `a:chExt`: the extent that child space is scaled from, onto {@link Placement.box}. */
-	childExtent: { w: number; h: number }
 	children: RenderNode[]
 }
 
 /**
- * A node whose construct this IR does not model — a chart, a SmartArt diagram,
- * an embedded object. It is *not* a loss: the slide carrying it is `carried`, so
- * the original XML crosses intact. This node exists only so the renderer has
- * something to put on the page, and it always renders as a placeholder.
+ * A node this model cannot draw — a chart, a SmartArt diagram, an embedded
+ * object. It exists so the renderer has something to put on the page, and it
+ * always renders as a labelled placeholder.
+ *
+ * **Opaque is not the same as carried, and the two are independent.** Opaque
+ * means *this IR cannot paint it*; {@link RenderSlide.source} `carried` means
+ * *the write API cannot author it*. A plain chart is opaque and its slide is
+ * authored — it round-trips through `addChart` perfectly and simply cannot be
+ * drawn in a browser. A `chartEx` is both. Collapsing them would either carry
+ * every slide holding a chart (losing an editable emitted deck for no reason) or
+ * claim a `chartEx` survives transcription (which it does not).
  */
 export interface OpaqueNode extends NodeBase {
 	kind: 'opaque'
@@ -499,16 +622,19 @@ export type NodeKind = (typeof NODE_KINDS)[number]
 // Slides and deck
 // ---------------------------------------------------------------------------
 
-export type SlideBackground =
-	| { kind: 'none' }
-	| { kind: 'solid'; color: Color }
-	| { kind: 'gradient'; gradient: Gradient }
-	| { kind: 'picture'; asset: AssetRef }
-
+/**
+ * A slide's effective background.
+ *
+ * The fill is a plain {@link Fill} rather than a background-only union: a
+ * background's fill options *are* a shape's, and a second near-identical type
+ * would need its own mapper, its own renderer branch and its own reason to drift.
+ * A `p:bgRef` (a background naming a style-matrix entry) resolves through the
+ * theme to one of these before it gets here.
+ */
 export interface Background {
 	/** Which tier of slide → layout → master the background resolved from. */
 	source: 'slide' | 'layout' | 'master'
-	fill: SlideBackground
+	fill: Fill
 }
 
 /**
@@ -525,8 +651,19 @@ export interface Residual {
 	kind: 'slide' | 'shape'
 	/** The standalone part body, verbatim. */
 	xml: string
-	/** Media the XML references, by {@link AssetRef} — never inline bytes. */
-	assets: AssetRef[]
+	/**
+	 * Media the XML references. Keyed by relationship id, because the XML refers
+	 * to its media by `r:embed`/`r:id` and nothing else — a bare list of assets
+	 * would carry the bytes and lose the only thing that says which `<a:blip>`
+	 * wants them. This is the shape `ExtractedSlide.media` takes on the way back.
+	 */
+	assets: ResidualAsset[]
+}
+
+export interface ResidualAsset {
+	/** The `r:id` used inside {@link Residual.xml}. */
+	relId: string
+	asset: AssetRef
 }
 
 export interface RenderSlide {

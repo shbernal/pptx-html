@@ -1,12 +1,16 @@
 /**
- * A `RenderIr` exercising every node kind, every fill kind, both geometry kinds
- * and both bullet kinds — hand-written, because the import layer that would
- * produce one does not exist yet.
+ * A `RenderIr` exercising every node kind, every fill and stroke state, both
+ * geometry kinds and both bullet kinds.
  *
- * It is deliberately built with **no `undefined` values**: an absent field is a
- * missing key. The JSON island depends on that being true, and a fixture that
- * quietly wrote `undefined` would let the identity test pass while the real
- * model failed.
+ * Still hand-written now that `src/import` exists, and deliberately so: an
+ * imported fixture would test the model against whatever the importer happens to
+ * produce, so a field the importer never populates would look covered. This one
+ * is the model's own statement of what it can hold, and `test/oracle/` is where
+ * the importer is held to producing it.
+ *
+ * It is built with **no `undefined` values**: an absent field is a missing key.
+ * The JSON island depends on that being true, and a fixture that quietly wrote
+ * `undefined` would let the identity test pass while the real model failed.
  */
 
 import type {
@@ -16,6 +20,7 @@ import type {
 	GroupNode,
 	OpaqueNode,
 	PictureNode,
+	Placement,
 	RenderIr,
 	ShapeNode,
 	Stroke,
@@ -26,6 +31,9 @@ import { cellNodeId, EMU_PER_INCH, IR_VERSION, importedNodeId } from '../../src/
 
 const inch = (n: number): number => Math.round(n * EMU_PER_INCH)
 
+/** The drawn arm of {@link Stroke}, so spreading one keeps its discriminant. */
+type Line = Extract<Stroke, { kind: 'line' }>
+
 const ACCENT: Color = {
 	kind: 'scheme',
 	slot: 'accent1',
@@ -35,22 +43,30 @@ const ACCENT: Color = {
 
 const INK: Color = { kind: 'srgb', hex: '202020' }
 
-const HAIRLINE: Stroke = {
-	widthPt: 1,
-	color: INK,
-	dash: 'solid',
-	cap: 'flat',
-	join: 'miter',
-}
+const HAIRLINE: Line = { kind: 'line', widthPt: 1, color: INK, dash: 'solid' }
+
+const INHERITED: Stroke = { kind: 'inherit' }
 
 const SOLID: Fill = { kind: 'solid', color: ACCENT }
+
+/** Every node's box is slide-absolute; only the placeholder tier varies. */
+function at(x: number, y: number, w: number, h: number, rest: Partial<Placement> = {}): Placement {
+	return {
+		box: { x: inch(x), y: inch(y), w: inch(w), h: inch(h) },
+		rotation: 0,
+		flipH: false,
+		flipV: false,
+		geometrySource: 'own',
+		...rest,
+	}
+}
 
 function body(text: string): TextBody {
 	return {
 		paragraphs: [
 			{
 				props: { align: 'left', level: 0, bullet: { kind: 'none' } },
-				runs: [{ text, props: { bold: true, sizePt: 18, color: INK } }],
+				runs: [{ text, props: { bold: true, sizePt: 18, color: INK }, resolved: { bold: true, sizePt: 18 } }],
 			},
 		],
 		autofit: 'none',
@@ -64,12 +80,14 @@ const TITLE: ShapeNode = {
 	kind: 'shape',
 	id: importedNodeId(1, 2),
 	name: 'Title 1',
-	placement: { box: { x: inch(0.5), y: inch(0.4), w: inch(9), h: inch(1.2) }, rotation: 0, flipH: false, flipV: false },
+	// The one node whose geometry comes from the layout rather than the slide —
+	// the case `geometrySource` exists to keep visible.
+	placement: at(0.5, 0.4, 9, 1.2, { geometrySource: 'layout' }),
 	render: 'drawn',
 	placeholder: { type: 'title', idx: '0' },
 	geometry: { kind: 'preset', preset: 'rect', adjustValues: {} },
 	fill: { kind: 'none' },
-	stroke: null,
+	stroke: INHERITED,
 	text: {
 		paragraphs: [
 			{
@@ -81,8 +99,16 @@ const TITLE: ShapeNode = {
 					spaceAfterPt: 6,
 				},
 				runs: [
-					{ text: 'Quarterly ', props: { sizePt: 40, color: ACCENT } },
-					{ text: 'review', props: { sizePt: 40, italic: true, color: ACCENT, underline: 'single' } },
+					{
+						text: 'Quarterly ',
+						props: { sizePt: 40, color: ACCENT },
+						resolved: { sizePt: 40, color: { kind: 'srgb', hex: '2E5A8A' } },
+					},
+					{
+						text: 'review',
+						props: { sizePt: 40, italic: true, color: ACCENT, underline: 'single' },
+						resolved: { sizePt: 40, color: { kind: 'srgb', hex: '2E5A8A' } },
+					},
 				],
 			},
 		],
@@ -97,9 +123,9 @@ const BULLETS: ShapeNode = {
 	kind: 'shape',
 	id: importedNodeId(1, 3),
 	name: 'Content Placeholder 2',
-	placement: { box: { x: inch(0.5), y: inch(1.8), w: inch(5), h: inch(3) }, rotation: 0, flipH: false, flipV: false },
+	placement: at(0.5, 1.8, 5, 3),
 	render: 'drawn',
-	geometry: { kind: 'preset', preset: 'roundRect', adjustValues: { adj: 16667 } },
+	geometry: { kind: 'preset', preset: 'roundRect', adjustValues: { adj: 'val 16667' } },
 	fill: {
 		kind: 'gradient',
 		gradient: {
@@ -111,7 +137,7 @@ const BULLETS: ShapeNode = {
 			],
 		},
 	},
-	stroke: { ...HAIRLINE, dash: 'dash', head: { type: 'none', width: 'med', length: 'med' } },
+	stroke: { ...HAIRLINE, dash: 'dash', head: { type: 'none' } },
 	text: {
 		paragraphs: [
 			{
@@ -122,11 +148,13 @@ const BULLETS: ShapeNode = {
 					marginLeftPt: 18,
 					indentPt: -18,
 				},
-				runs: [{ text: 'Revenue up', props: {} }],
+				// The inherited run: it states nothing, so everything a renderer needs
+				// is in `resolved` and `props` is empty.
+				runs: [{ text: 'Revenue up', props: {}, resolved: { sizePt: 18, fontFace: 'Calibri' } }],
 			},
 			{
 				props: { align: 'left', level: 1, bullet: { kind: 'number', scheme: 'arabicPeriod', startAt: 1 } },
-				runs: [{ text: 'North', props: { bold: true } }],
+				runs: [{ text: 'North', props: { bold: true }, resolved: { bold: true, sizePt: 18 } }],
 			},
 		],
 		autofit: 'resize',
@@ -141,7 +169,7 @@ const FREEFORM: ShapeNode = {
 	kind: 'shape',
 	id: importedNodeId(1, 4),
 	name: 'Freeform 3',
-	placement: { box: { x: inch(6), y: inch(2), w: inch(2), h: inch(2) }, rotation: 30, flipH: true, flipV: false },
+	placement: at(6, 2, 2, 2, { rotation: 30, flipH: true }),
 	render: 'drawn',
 	geometry: {
 		kind: 'custom',
@@ -169,20 +197,20 @@ const LOGO: PictureNode = {
 	kind: 'picture',
 	id: importedNodeId(1, 5),
 	name: 'Picture 4',
-	placement: { box: { x: inch(8), y: inch(0.4), w: inch(1), h: inch(1) }, rotation: 0, flipH: false, flipV: false },
+	placement: at(8, 0.4, 1, 1),
 	render: 'drawn',
 	alt: 'Company logo',
 	asset: { $asset: 'image1.png' },
 	crop: { left: 0.1, top: 0, right: 0.1, bottom: 0 },
 	geometry: { kind: 'preset', preset: 'rect', adjustValues: {} },
-	stroke: null,
+	stroke: { kind: 'none' },
 }
 
 const ARROW: ConnectorNode = {
 	kind: 'connector',
 	id: importedNodeId(1, 6),
 	name: 'Straight Arrow Connector 5',
-	placement: { box: { x: inch(5.6), y: inch(3), w: inch(0.4), h: inch(0) }, rotation: 0, flipH: false, flipV: false },
+	placement: at(5.6, 3, 0.4, 0),
 	render: 'drawn',
 	geometry: { kind: 'preset', preset: 'straightConnector1', adjustValues: {} },
 	stroke: { ...HAIRLINE, tail: { type: 'triangle', width: 'med', length: 'med' } },
@@ -194,20 +222,19 @@ const GROUP: GroupNode = {
 	kind: 'group',
 	id: importedNodeId(1, 7),
 	name: 'Group 6',
-	placement: { box: { x: inch(0.5), y: inch(5), w: inch(3), h: inch(1) }, rotation: 0, flipH: false, flipV: true },
+	placement: at(0.5, 5, 3, 1, { flipV: true }),
 	render: 'drawn',
-	childOffset: { x: 0, y: 0 },
-	childExtent: { w: inch(3), h: inch(1) },
 	children: [
 		{
 			kind: 'shape',
 			id: importedNodeId(1, 8),
 			name: 'Chip 7',
-			placement: { box: { x: 0, y: 0, w: inch(1.4), h: inch(1) }, rotation: 0, flipH: false, flipV: false },
+			// Slide-absolute, inside the group's box — not child-space coordinates.
+			placement: at(0.6, 5.1, 1.4, 0.8),
 			render: 'drawn',
 			geometry: { kind: 'preset', preset: 'ellipse', adjustValues: {} },
 			fill: SOLID,
-			stroke: null,
+			stroke: INHERITED,
 			text: body('Nested'),
 		},
 	],
@@ -215,11 +242,13 @@ const GROUP: GroupNode = {
 
 const TABLE_ID = importedNodeId(2, 2)
 
+const CELL_MARGINS = { left: 91440, right: 91440, top: 45720, bottom: 45720 }
+
 const GRID: TableNode = {
 	kind: 'table',
 	id: TABLE_ID,
 	name: 'Table 1',
-	placement: { box: { x: inch(0.5), y: inch(1), w: inch(6), h: inch(1.2) }, rotation: 0, flipH: false, flipV: false },
+	placement: at(0.5, 1, 6, 1.2),
 	render: 'drawn',
 	columns: [{ widthEmu: inch(3) }, { widthEmu: inch(3) }],
 	rows: [
@@ -233,17 +262,17 @@ const GRID: TableNode = {
 					borders: { left: HAIRLINE, right: HAIRLINE, top: HAIRLINE, bottom: HAIRLINE },
 					span: { columns: 2, rows: 1 },
 					covered: false,
-					marginsPt: { left: 7.2, right: 7.2, top: 3.6, bottom: 3.6 },
+					marginsEmu: CELL_MARGINS,
 					anchor: 'middle',
 				},
 				{
 					id: cellNodeId(TABLE_ID, 0, 1),
 					text: null,
-					fill: { kind: 'none' },
-					borders: { left: null, right: null, top: null, bottom: null },
+					fill: { kind: 'inherit' },
+					borders: { left: INHERITED, right: INHERITED, top: INHERITED, bottom: INHERITED },
 					span: null,
 					covered: true,
-					marginsPt: { left: 7.2, right: 7.2, top: 3.6, bottom: 3.6 },
+					marginsEmu: { left: null, right: null, top: null, bottom: null },
 					anchor: 'top',
 				},
 			],
@@ -255,7 +284,7 @@ const CHART: OpaqueNode = {
 	kind: 'opaque',
 	id: importedNodeId(2, 3),
 	name: 'Chart 2',
-	placement: { box: { x: inch(0.5), y: inch(2.6), w: inch(6), h: inch(3) }, rotation: 0, flipH: false, flipV: false },
+	placement: at(0.5, 2.6, 6, 3),
 	render: 'placeholder',
 	standsFor: 'chart',
 }
@@ -293,10 +322,14 @@ export const SAMPLE_IR: RenderIr = {
 			source: 'carried',
 			layout: { name: 'Title Only', index: 2, nameIsUnique: true },
 			hidden: true,
-			background: { source: 'slide', fill: { kind: 'picture', asset: { $asset: 'image1.png' } } },
+			background: { source: 'slide', fill: { kind: 'picture', asset: { $asset: 'image1.png' }, mode: 'stretch' } },
 			nodes: [GRID, CHART],
 			notes: null,
-			residual: { kind: 'slide', xml: '<p:sld><p:cSld/></p:sld>', assets: [{ $asset: 'image1.png' }] },
+			residual: {
+				kind: 'slide',
+				xml: '<p:sld><p:cSld/></p:sld>',
+				assets: [{ relId: 'rId2', asset: { $asset: 'image1.png' } }],
+			},
 			fidelity: [
 				{
 					slideNumber: 2,

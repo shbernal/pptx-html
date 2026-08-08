@@ -174,6 +174,53 @@ export const CORPUS: CorpusDeck[] = [
 			)
 	}),
 
+	deck(
+		'nested-group',
+		'primitive',
+		'a group inside a group — the depth where child coordinate space goes wrong',
+		(pptx) => {
+			pptx.addSlide().addGroup(
+				[
+					{ rect: { x: 0.5, y: 0.5, w: 1, h: 1, fill: { color: 'DDE3F0' }, objectName: 'outer-plate' } },
+					{
+						group: {
+							children: [
+								{ rect: { x: 2, y: 0.8, w: 1, h: 0.6, fill: { color: '250F6B' }, objectName: 'inner-plate' } },
+								{ text: { text: 'Deep', options: { x: 2.1, y: 0.85, w: 0.8, h: 0.5, objectName: 'inner-label' } } },
+							],
+							options: { objectName: 'inner' },
+						},
+					},
+				],
+				{ objectName: 'outer' }
+			)
+		}
+	),
+
+	deck(
+		'hyperlink',
+		'primitive',
+		'a run whose link points at another slide — an identity the IR must resolve',
+		(pptx) => {
+			pptx
+				.addSlide()
+				.addText([{ text: 'Jump to the appendix', options: { hyperlink: { slide: 2, tooltip: 'Appendix' } } }], {
+					x: 1,
+					y: 1,
+					w: 6,
+					h: 1,
+					objectName: 'link-source',
+				})
+			pptx.addSlide().addText([{ text: 'External', options: { hyperlink: { url: 'https://example.invalid/spec' } } }], {
+				x: 1,
+				y: 1,
+				w: 6,
+				h: 1,
+				objectName: 'link-target',
+			})
+		}
+	),
+
 	deck('chart', 'hard', 'a full reader with no writer for every form — expected to be carried', (pptx) => {
 		pptx.addSlide().addChart([{ name: 'Share', labels: ['EMEA', 'AMER', 'APAC'], values: [48, 31, 21] }], {
 			type: 'bar',

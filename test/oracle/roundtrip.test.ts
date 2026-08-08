@@ -2,6 +2,7 @@ import { diffDeckIr, type FidelityNote } from '@shbernal/ts-pptx/script'
 import { describe, expect, it } from 'vitest'
 import { CORPUS, corpusBytes } from '../corpus/decks'
 import { assertRoundTrip, carryLoop, describeReport, resaveLoop, roundTrip, viewDeck } from './roundtrip'
+import { scriptLoop } from './script-lane'
 
 // Two things are under test here, and they are not the same thing:
 //
@@ -25,6 +26,17 @@ describe('lanes', () => {
 		it(`${entry.name}: survives being carried across by import`, async () => {
 			const result = await roundTrip(await corpusBytes(entry), carryLoop)
 			assertRoundTrip(result, `${entry.name} (carry)`)
+		})
+	}
+
+	for (const entry of CORPUS) {
+		it(`${entry.name}: survives import → emit`, async () => {
+			// Half the loop, with HTML nowhere near it. Both legs are upstream code,
+			// so a failure here is an upstream issue to file rather than a renderer
+			// bug — and every defect this catches is one that cannot later be
+			// misattributed to the render or parse steps.
+			const result = await roundTrip(await corpusBytes(entry), scriptLoop)
+			assertRoundTrip(result, `${entry.name} (import → emit)`)
 		})
 	}
 
