@@ -158,7 +158,8 @@ export function fillOf(source: FillSource, scope: ImportScope): Fill {
 	// Neither `a:noFill` nor a stated fill is distinguishable here: the read model
 	// exposes no accessor for the former, and this layer does not touch XML. So an
 	// unstated fill reports as inherited, which is the truthful half — and the
-	// upstream ask is a `hasNoFill` getter, not a guess.
+	// ask is a reader, not a guess: https://github.com/shbernal/ts-pptx/issues/1
+	// Return `{ kind: 'none' }` off that accessor once a release carries it.
 	return { kind: 'inherit' }
 }
 

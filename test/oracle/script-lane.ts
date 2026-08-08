@@ -49,9 +49,10 @@ export const scriptLoop: Loop = async (input) => {
  *
  * Upstream already owns this construct and already notes the mixed case (some
  * rows auto, some not). It does not note the all-auto case, which is the more
- * common one, so that gap is a part-07 ask rather than something to fix here.
- * The note is scoped to the tables it actually applies to — a blanket one would
- * excuse a genuinely wrong `rowH` on any table in the deck.
+ * common one — filed as https://github.com/shbernal/ts-pptx/issues/5, and this
+ * whole function is deleted the day a release carries the note. The note is
+ * scoped to the tables it actually applies to: a blanket one would excuse a
+ * genuinely wrong `rowH` on any table in the deck.
  */
 function autoRowNotes(pres: Presentation): FidelityNote[] {
 	const notes: FidelityNote[] = []

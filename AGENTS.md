@@ -10,6 +10,17 @@ Guidance for coding agents working in the `dom2pptx/` project.
   It is not part of a workspace; run its commands from this directory.
 - Use `pnpm`. Node `>=24`. Keep source in `src/`, tests in `test/`. Treat `dist/`
   as generated build output.
+- **Skills live in `.agents/skills/`** — the tracked source of truth, runtime
+  agnostic. `.claude/skills/` is a junction to it (`.gitignore`d), so Claude Code
+  loads the same files every other runtime does and there is one copy to edit.
+  Recreate it after a fresh clone:
+
+  ```powershell
+  New-Item -ItemType Junction -Path .claude\skills -Target .agents\skills
+  ```
+
+  Repo-scoped skills only — anything not specific to this project belongs in the
+  personal skills repo instead.
 - Preserve unrelated dirty state. Do not revert user changes.
 
 ## Purpose
@@ -231,6 +242,18 @@ failure is invisible in both directions.
   (it helps every consumer) over patching them here. When a fix belongs upstream
   but is not yet released, keep any stopgap here thin and clearly marked, and
   drop it once a release carries the fix.
+- **File the issue in the same unit of work that found the gap** — on
+  `shbernal/ts-pptx`, before the commit, not batched into a later sweep. A gap
+  that lives only in a chat session or a doc does not exist: sessions end and
+  scratch plans are deleted by design, and the tracker is the one queue that
+  survives both. An ask that turns out to be unclear gets closed, which is cheap;
+  a gap never filed costs a rediscovery, usually by whoever re-invents the same
+  workaround. Every stopgap therefore carries its **issue URL** and the condition
+  under which it is deleted — see `src/import/paint.ts` and
+  `test/oracle/script-lane.ts` for the shape of that comment.
+- `.agents/skills/ts-pptx-upstream/` is the normative reference: what to file,
+  what not to (anything about *HTML* stays here), how to write an ask that is
+  still actionable months later, and what to do when a release lands.
 - Anything discovered while building the custGeom/SVG-path vectorizer (a missing
   custGeom case, a measure gap) goes upstream, not patched locally.
 

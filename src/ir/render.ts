@@ -259,7 +259,8 @@ export type Gradient =
  * indistinguishable.
  *
  * Import currently produces `inherit` for both, because the read model exposes
- * no accessor for a shape's `a:noFill` — see the upstream asks. The distinction
+ * no accessor for a shape's `a:noFill`
+ * ({@link https://github.com/shbernal/ts-pptx/issues/1}). The distinction
  * is modeled anyway: the lane that *can* state it (the DOM lane, and emit) needs
  * it, and collapsing the two would make the gap invisible instead of pending.
  */
@@ -308,7 +309,8 @@ export interface LineEnd {
  *
  * `a:ln/@cap` and `@algn` are deliberately absent: the read model exposes no
  * accessor for either, so any value here would be a default this file invented
- * rather than something the deck said. See the upstream asks.
+ * rather than something the deck said
+ * ({@link https://github.com/shbernal/ts-pptx/issues/2}).
  */
 export type Stroke =
 	| { kind: 'inherit' }
@@ -375,7 +377,11 @@ export type Bullet =
 			kind: 'number'
 			/** `a:buAutoNum/@type`, e.g. `arabicPeriod`. */
 			scheme: string
-			/** `@startAt`. Absent means the schema default, 1 — the read model exposes no accessor for it. */
+			/**
+			 * `@startAt`. Absent means the schema default, 1 — the read model exposes no
+			 * accessor for it ({@link https://github.com/shbernal/ts-pptx/issues/3}, which
+			 * also covers the bullet's own `font`/`color`/`sizePct` below).
+			 */
 			startAt?: number
 			font?: string
 			color?: Color
@@ -585,7 +591,8 @@ export interface TableNode extends NodeBase {
  * renderer walks the tree for paint order and identity and never composes a
  * transform. Carrying `a:chOff`/`a:chExt` as well would be a second copy of the
  * same geometry that nothing keeps in step — and the read model exposes no
- * accessor for either, so it would have to be invented.
+ * accessor for either ({@link https://github.com/shbernal/ts-pptx/issues/4}, filed
+ * for a replica consumer's sake, not this one's), so it would have to be invented.
  */
 export interface GroupNode extends NodeBase {
 	kind: 'group'
