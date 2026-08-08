@@ -1,0 +1,119 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`bullets slide > extracts a heading and a list with one run per bullet 1`] = `
+{
+  "background": {
+    "type": "color",
+    "value": "FFFFFF",
+  },
+  "items": [
+    {
+      "bold": true,
+      "color": "250F6B",
+      "tag": "h2",
+      "text": "Key Priorities",
+      "type": "text",
+      "z": 0,
+    },
+    {
+      "runs": [
+        "Accelerate cloud migration",
+        "Strengthen data governance",
+        "Expand the partner ecosystem",
+      ],
+      "type": "list",
+      "z": 0,
+    },
+  ],
+}
+`;
+
+exports[`cover slide > extracts a heading, subtitle and a gradient background image 1`] = `
+{
+  "background": {
+    "type": "color",
+    "value": "FFFFFF",
+  },
+  "items": [
+    {
+      "src": "png",
+      "type": "image",
+      "z": -10000,
+    },
+    {
+      "bold": true,
+      "color": "FFFFFF",
+      "tag": "h1",
+      "text": "Quarterly Strategy Review",
+      "type": "text",
+      "z": 0,
+    },
+    {
+      "bold": false,
+      "color": "04F06A",
+      "tag": "p",
+      "text": "Northwind — FY26 Planning",
+      "type": "text",
+      "z": 0,
+    },
+  ],
+}
+`;
+
+exports[`icon row slide > inlines the injected resolver SVG into one image per icon 1`] = `
+{
+  "background": {
+    "type": "color",
+    "value": "FFFFFF",
+  },
+  "items": [
+    {
+      "src": "svg",
+      "type": "image",
+      "z": 0,
+    },
+    {
+      "src": "svg",
+      "type": "image",
+      "z": 0,
+    },
+    {
+      "src": "svg",
+      "type": "image",
+      "z": 0,
+    },
+  ],
+}
+`;
+
+exports[`table slide > extracts a 3×3 table with header and body cells 1`] = `
+{
+  "background": {
+    "type": "color",
+    "value": "FFFFFF",
+  },
+  "items": [
+    {
+      "rows": [
+        [
+          "Workstream",
+          "Owner",
+          "Status",
+        ],
+        [
+          "Cloud migration",
+          "A. Dupont",
+          "On track",
+        ],
+        [
+          "Data governance",
+          "M. Laurent",
+          "At risk",
+        ],
+      ],
+      "type": "table",
+      "z": 0,
+    },
+  ],
+}
+`;

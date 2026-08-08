@@ -1,0 +1,78 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"includes": ["src/**/*.ts", "test/**/*.ts", "*.json", "*.jsonc", "*.ts", "!dist", "!coverage", "!.tmp"]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 120
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single",
+			"semicolons": "asNeeded",
+			"trailingCommas": "es5"
+		}
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended"
+		}
+	},
+	"overrides": [
+		{
+			// `src/` is deliberately not formatted. Most of it was ported byte-for-byte
+			// from the original browser engine (the extractor is a stringified `eval`
+			// payload), so reformatting would rewrite verbatim code wholesale and bury
+			// the real diffs. Prettier never covered `src/` either — this preserves that
+			// boundary. Linting still applies.
+			// The import organizer is off here for the same reason: `biome check --write`
+			// would otherwise reshuffle imports in the ported files.
+			"includes": ["src/**/*.ts"],
+			"formatter": { "enabled": false },
+			"assist": { "enabled": false }
+		},
+		{
+			// The lifted engine modules stay untyped (`@ts-nocheck`) until later phases
+			// migrate them onto the writer API and type the IR boundary. Relax the rules
+			// that fight verbatim browser code — idiomatic-JS preferences (template
+			// literals, optional chaining, concise arrow bodies handed to `forEach`) and
+			// annotation demands that a `@ts-nocheck` file cannot satisfy. None of these
+			// flag a defect in this code; they would only invite churn in a byte-for-byte
+			// port. The clean public seam (`index.ts`, `ir/`, `constants.ts`) is not
+			// listed here and keeps the full recommended set above.
+			"includes": ["src/extract/**/*.ts", "src/emit/**/*.ts", "src/repair/**/*.ts", "src/engine.ts"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noArguments": "off",
+						"noUselessEscapeInRegex": "off",
+						"useOptionalChain": "off"
+					},
+					"correctness": {
+						"noUnusedFunctionParameters": "off",
+						"noUnusedVariables": "off"
+					},
+					"style": {
+						"noNonNullAssertion": "off",
+						"useTemplate": "off"
+					},
+					"suspicious": {
+						"noAssignInExpressions": "off",
+						"noEmptyBlockStatements": "off",
+						"noImplicitAnyLet": "off",
+						"noTsIgnore": "off",
+						"useIterableCallbackReturn": "off"
+					}
+				}
+			}
+		}
+	]
+}

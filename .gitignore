@@ -1,0 +1,30 @@
+### macOS
+.DS_Store
+*.icloud
+
+### Node
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+*.log
+coverage/
+.nyc_output/
+
+### Env / secrets
+.env
+.env.local
+.env.*.local
+
+### Build artifacts
+/dist/
+/.tmp/
+
+### Editors
+.idea/
+*.swp
+*~
+
+### Claude Code local/runtime files (shared config like .claude/settings.json stays tracked)
+.claude/settings.local.json
+.claude/*.lock
+.claude/skills/

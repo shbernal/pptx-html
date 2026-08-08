@@ -1,0 +1,8 @@
+{
+	"mcpServers": {
+		"ooxml": {
+			"type": "http",
+			"url": "https://api.ooxml.dev/mcp"
+		}
+	}
+}

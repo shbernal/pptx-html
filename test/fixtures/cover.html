@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<style>
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+			}
+			/* Fixed 1280x720 so getBoundingClientRect is deterministic (scale = 1). */
+			.slide {
+				position: relative;
+				width: 1280px;
+				height: 720px;
+				overflow: hidden;
+				font-family: Aptos, Arial, sans-serif;
+				background: linear-gradient(135deg, #250f6b, #451dc7);
+			}
+			.slide h1 {
+				position: absolute;
+				left: 96px;
+				top: 280px;
+				width: 900px;
+				margin: 0;
+				font-size: 64px;
+				font-weight: 700;
+				color: #ffffff;
+			}
+			.slide p.subtitle {
+				position: absolute;
+				left: 96px;
+				top: 384px;
+				width: 760px;
+				margin: 0;
+				font-size: 24px;
+				color: #04f06a;
+			}
+		</style>
+	</head>
+	<body>
+		<section class="slide">
+			<h1>Quarterly Strategy Review</h1>
+			<p class="subtitle">Northwind — FY26 Planning</p>
+		</section>
+	</body>
+</html>

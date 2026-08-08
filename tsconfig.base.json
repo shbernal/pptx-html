@@ -1,0 +1,14 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"display": "dom2pptx base",
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"lib": ["dom", "dom.iterable", "es2024"],
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"noImplicitAny": true,
+		"sourceMap": true,
+		"strict": true,
+		"target": "es2024"
+	}
+}

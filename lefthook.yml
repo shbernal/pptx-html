@@ -1,0 +1,10 @@
+pre-commit:
+  parallel: true
+  jobs:
+    # `biome check` is lint + format + import sorting in one pass. Per-directory
+    # scope (src/ is linted but never formatted) lives in biome.jsonc, so the
+    # staged files can be passed in wholesale here.
+    - name: biome
+      glob: '*.{ts,mts,json,jsonc}'
+      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true

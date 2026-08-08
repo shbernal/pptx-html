@@ -1,0 +1,12 @@
+# Package-local pnpm config (single package, not a grouping workspace — the
+# grouping dir stays workspace-free per ../AGENTS.md).
+#
+# lefthook's postinstall is denied on purpose, and there is deliberately no
+# `prepare: lefthook install` script. That postinstall syncs git hooks, and when
+# `core.hooksPath` is set globally it writes *into that global directory* —
+# renaming the existing `pre-commit` to `pre-commit.old` and replacing it with a
+# wrapper hardcoded to this repo's `node_modules`, which would then fire for
+# every repo on the machine. `lefthook run` needs no installed hooks, so hook
+# wiring is left to whatever the environment already provides.
+allowBuilds:
+  lefthook: false

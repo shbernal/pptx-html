@@ -1,0 +1,73 @@
+{
+	"name": "dom2pptx",
+	"version": "0.0.0",
+	"private": true,
+	"author": {
+		"name": "shbernal",
+		"url": "https://github.com/shbernal/"
+	},
+	"description": "Turn HTML from the DOM into editable PowerPoint presentations via @shbernal/ts-pptx",
+	"keywords": [
+		"pptx",
+		"powerpoint",
+		"html",
+		"dom",
+		"slides",
+		"presentation",
+		"ooxml"
+	],
+	"license": "MIT",
+	"packageManager": "pnpm@11.3.0",
+	"type": "module",
+	"engines": {
+		"node": ">=24"
+	},
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"browser": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./package.json": {
+			"default": "./package.json"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsdown",
+		"start": "pnpm run watch",
+		"watch": "tsdown --watch",
+		"test": "pnpm run build && vitest run",
+		"test:unit": "vitest run --project unit",
+		"test:browser": "vitest run --project browser",
+		"test:watch": "vitest --watch --project unit",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"lint": "biome lint",
+		"lint:fix": "biome lint --write",
+		"format": "biome format --write",
+		"format:check": "biome format",
+		"check": "biome check",
+		"check:fix": "biome check --write",
+		"prepack": "pnpm run build"
+	},
+	"dependencies": {
+		"@shbernal/ts-pptx": "^2.0.0",
+		"html2canvas": "^1.4.1"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.7",
+		"@types/node": "^26.1.2",
+		"@vitest/browser": "^4.1.10",
+		"@vitest/browser-playwright": "^4.1.10",
+		"lefthook": "^2.1.10",
+		"playwright": "^1.62.1",
+		"tsdown": "^0.22.14",
+		"tslib": "^2.8.1",
+		"typescript": "^7.0.2",
+		"vitest": "^4.1.10"
+	}
+}
