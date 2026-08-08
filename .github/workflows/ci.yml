@@ -50,6 +50,12 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
+      # The round-trip gate. Runs before the browser layer and on its own so a
+      # fidelity regression is reported as one, rather than as a failure buried
+      # in a suite that also needs a browser to start. Needs no DOM.
+      - name: Round-trip oracle
+        run: pnpm run test:oracle
+
       # The browser test layer (test/browser/) runs the extract/e2e path in real
       # Chromium via Playwright; jsdom/happy-dom lack the layout + canvas it needs.
       - name: Install Playwright Chromium

@@ -43,6 +43,7 @@
 		"watch": "tsdown --watch",
 		"test": "pnpm run build && vitest run",
 		"test:unit": "vitest run --project unit",
+		"test:oracle": "vitest run --project oracle",
 		"test:browser": "vitest run --project browser",
 		"test:watch": "vitest --watch --project unit",
 		"typecheck": "tsc -p tsconfig.json --noEmit",

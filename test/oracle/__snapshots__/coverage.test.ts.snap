@@ -1,0 +1,39 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`coverage > matches the recorded support baseline 1`] = `
+"# deck coverage — slides (authored/carried), calls
+text-box            primitive  slides=1 (1a/0c)  calls=1
+autoshape           primitive  slides=1 (1a/0c)  calls=1
+custgeom            primitive  slides=1 (1a/0c)  calls=1
+table               primitive  slides=1 (1a/0c)  calls=1
+picture             primitive  slides=1 (1a/0c)  calls=1
+connector           primitive  slides=1 (1a/0c)  calls=1
+gradient            primitive  slides=1 (1a/0c)  calls=1
+group               primitive  slides=1 (1a/0c)  calls=1
+chart               hard       slides=1 (1a/0c)  calls=1
+layout-placeholder  hard       slides=1 (1a/0c)  calls=2
+notes               hard       slides=1 (1a/0c)  calls=1
+rotated-flipped     hard       slides=1 (1a/0c)  calls=2
+theme-color         hard       slides=1 (1a/0c)  calls=2
+
+# fidelity notes by disposition × cause (whole corpus)
+             unread       unwritable   unsupported  
+dropped      14           20           2            
+flattened    0            13           4            
+approximated 13           0            1            
+
+# constructs named, by deck
+text-box            deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
+autoshape           deck.docProps, master.background, master.txStyles, theme.fmtScheme
+custgeom            deck.docProps, master.background, master.txStyles, shape.custGeom.guides, theme.fmtScheme
+table               deck.docProps, master.background, master.txStyles, table.style, text.indent, theme.fmtScheme
+picture             deck.docProps, master.background, master.txStyles, theme.fmtScheme
+connector           deck.docProps, master.background, master.txStyles, theme.fmtScheme
+gradient            deck.docProps, master.background, master.txStyles, theme.fmtScheme
+group               deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
+chart               chart.workbook, deck.docProps, master.background, master.txStyles, theme.fmtScheme
+layout-placeholder  deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, text.indent, theme.fmtScheme
+notes               deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
+rotated-flipped     deck.docProps, master.background, master.txStyles, theme.fmtScheme
+theme-color         deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme"
+`;

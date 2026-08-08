@@ -1,10 +1,14 @@
 import { playwright } from '@vitest/browser-playwright'
 import { defineConfig } from 'vitest/config'
 
-// Two test layers, kept as separate projects so each runs in the right
+// Three test layers, kept as separate projects so each runs in the right
 // environment:
 //   - `unit`    — node, no DOM, fast. Feeds hand-written SlideModel fixtures into
 //                 `emit/*` and parses the result back with ts-pptx's `read` model.
+//   - `oracle`  — node. The round-trip gate: generates the corpus, runs each deck
+//                 through a lane, and diffs the result under the normalized read
+//                 model. Import and emit need no DOM; the render/parse lane will
+//                 join the `browser` project when it exists.
 //   - `browser` — real Chromium via Playwright. Loads HTML slide fixtures through
 //                 the full extract path (`convertSlide` / `convertDeck`) with an
 //                 injected offline `resolveIcon`. jsdom/happy-dom are insufficient
@@ -17,6 +21,15 @@ export default defineConfig({
 					name: 'unit',
 					environment: 'node',
 					include: ['test/unit/**/*.test.ts'],
+				},
+			},
+			{
+				test: {
+					name: 'oracle',
+					environment: 'node',
+					include: ['test/oracle/**/*.test.ts'],
+					// Generating a deck per corpus entry is write-bound, not CPU-bound.
+					testTimeout: 30_000,
 				},
 			},
 			{
