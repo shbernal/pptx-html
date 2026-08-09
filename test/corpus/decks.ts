@@ -122,6 +122,26 @@ export const CORPUS: CorpusDeck[] = [
 		)
 	}),
 
+	deck('cell-fill', 'primitive', 'a table cell that suppresses its fill next to one that states none', (pptx) => {
+		// The two cells in the second row differ only in their `a:tcPr`: `clear` states
+		// `a:noFill`, `plain` states nothing. They paint differently — one lets the
+		// slide through, the other takes the table style's shading — so a lane that
+		// reports the same fill for both has flattened a real difference.
+		//
+		// Reachable only since ts-pptx 3.1.0, and by two fixes at once:
+		// `fill: { type: 'none' }` authors the `a:noFill`
+		// (https://github.com/shbernal/ts-pptx/issues/9) and `TableCell.fillNoFill`
+		// reads it back (https://github.com/shbernal/ts-pptx/issues/7). Before that
+		// the deck could not be written and its distinction could not be read.
+		pptx.addSlide().addTable(
+			[
+				[{ text: 'Stated', options: { fill: { color: '250F6B' }, color: 'FFFFFF' } }, { text: 'Suppressed' }],
+				[{ text: 'plain' }, { text: 'clear', options: { fill: { type: 'none' } } }],
+			],
+			{ x: 0.5, y: 0.5, w: 6, colW: [3, 3], objectName: 'cells' }
+		)
+	}),
+
 	deck('picture', 'primitive', 'embedded media — the case hash-addressed assets must survive', (pptx) => {
 		pptx.addSlide().addImage({ data: PIXEL_PNG, x: 1, y: 1, w: 2, h: 2, objectName: 'photo' })
 	}),
@@ -231,13 +251,12 @@ export const CORPUS: CorpusDeck[] = [
 			// into a lozenge. On a hairline the difference would be unobservable and the
 			// deck would pass whether or not the attribute survived.
 			//
-			// It passes the round-trip gate today *while losing the cap*, and that is
-			// worth stating rather than discovering later: `readModelToIr` never reads
-			// `Shape.lineCap` (https://github.com/shbernal/ts-pptx/issues/8), so both
-			// sides of `diffDeckIr` are missing it equally and the difference cancels.
-			// The deck earns its place on the import side, where `import.test.ts` pins
-			// the cap the paint model does carry; it starts gating the script tier the
-			// day upstream maps the attribute.
+			// As of ts-pptx 3.1.0 this gates the script tier for real: `readModelToIr`
+			// consumes `Shape.lineCap` (https://github.com/shbernal/ts-pptx/issues/8),
+			// so a dropped `@cap` now shows up as a difference instead of cancelling on
+			// both sides of `diffDeckIr`. Before that the deck passed *while losing the
+			// cap*, and earned its place on the import side alone, where `import.test.ts`
+			// pins the cap the paint model carries.
 			pptx.addSlide().addShape('line', {
 				x: 1,
 				y: 1,

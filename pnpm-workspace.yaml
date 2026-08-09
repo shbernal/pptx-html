@@ -18,5 +18,15 @@
 allowBuilds:
   esbuild: false
   lefthook: false
+#
+# The writer is excluded from the release-age gate. That gate exists to keep a
+# compromised publish from being pulled in before anyone notices it; this repo
+# and `@shbernal/ts-pptx` share an author, so it buys nothing here and costs a
+# two-day wait on every bump — during which `pnpm run`, and therefore the
+# pre-commit hook, refuses to run at all.
+#
+# By name, not `name@version`: `pnpm add` writes the pinned form itself, but the
+# lockfile verification that runs before every script does not honour it, so the
+# entry it wrote does not unblock the commit it was written for.
 minimumReleaseAgeExclude:
-  - '@shbernal/ts-pptx@3.0.0'
+  - '@shbernal/ts-pptx'

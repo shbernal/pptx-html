@@ -258,10 +258,12 @@ export type Gradient =
  * overloaded `null` to mean both, so a themed shape and a transparent one were
  * indistinguishable.
  *
- * Import states both for a *shape*, off `Shape.fillNoFill` (added in ts-pptx
- * 3.0.0, closing {@link https://github.com/shbernal/ts-pptx/issues/1}). A *table
- * cell* still reports `inherit` for both, because `TableCell` has no equivalent
- * reader — see the note in `import/paint.ts`.
+ * Import states both for a *shape*, off `Shape.fillNoFill` (ts-pptx 3.0.0,
+ * closing {@link https://github.com/shbernal/ts-pptx/issues/1}), and for a *table
+ * cell*, off `TableCell.fillNoFill` (3.1.0,
+ * {@link https://github.com/shbernal/ts-pptx/issues/7}). Before that a suppressed
+ * cell was indistinguishable from one inheriting the table style's shading, and
+ * both landed on `inherit`.
  */
 export type Fill =
 	| { kind: 'inherit' }

@@ -6,6 +6,7 @@ text-box            primitive  slides=1 (1a/0c)  calls=1
 autoshape           primitive  slides=1 (1a/0c)  calls=1
 custgeom            primitive  slides=1 (1a/0c)  calls=1
 table               primitive  slides=1 (1a/0c)  calls=1
+cell-fill           primitive  slides=1 (1a/0c)  calls=1
 picture             primitive  slides=1 (1a/0c)  calls=1
 connector           primitive  slides=1 (1a/0c)  calls=1
 gradient            primitive  slides=1 (1a/0c)  calls=1
@@ -22,15 +23,16 @@ theme-color         hard       slides=1 (1a/0c)  calls=2
 
 # fidelity notes by disposition × cause (whole corpus)
              unread       unwritable   unsupported  
-dropped      18           29           2            
-flattened    0            17           4            
-approximated 17           0            3            
+dropped      19           31           3            
+flattened    0            18           4            
+approximated 18           0            4            
 
 # constructs named, by deck
 text-box            deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
 autoshape           deck.docProps, master.background, master.txStyles, theme.fmtScheme
 custgeom            deck.docProps, master.background, master.txStyles, shape.custGeom.guides, theme.fmtScheme
 table               deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, text.indent, theme.fmtScheme
+cell-fill           deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, text.indent, theme.fmtScheme
 picture             deck.docProps, master.background, master.txStyles, theme.fmtScheme
 connector           deck.docProps, master.background, master.txStyles, theme.fmtScheme
 gradient            deck.docProps, master.background, master.txStyles, theme.fmtScheme

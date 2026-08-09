@@ -96,21 +96,20 @@ const PLUM: Palette = {
 }
 
 /**
- * A fill that paints nothing.
+ * A fill that paints nothing — an outline whose interior lets the slide through.
  *
- * Deliberately not `{ type: 'none' }`, which is what this ought to be. The reader
- * is not the problem — the writer is: `genXmlColorSelection` has no `'none'` case,
- * so the option falls through to `default` and emits **no fill child at all**. A
- * shape with no fill child takes its interior from `p:style/a:fillRef`, so it reads
- * back with `Shape.fillNoFill === false` and paints the theme's accent where a
- * transparent plate was asked for. An `a:solidFill` at zero alpha states the same
- * intent in a spelling both sides of the loop agree on.
+ * `{ type: 'none' }` emits `<a:noFill/>` as of ts-pptx 3.1.0
+ * ({@link https://github.com/shbernal/ts-pptx/issues/9}); before that it emitted
+ * no fill child at all, which is the *inherit* state, and these shapes came back
+ * painted in the theme's accent. The stopgap was an `a:solidFill` at zero alpha,
+ * which paints the same but says something else — a white plate nobody can see
+ * rather than no plate.
  *
- * https://github.com/shbernal/ts-pptx/issues/9 — fixed upstream in 91518b11, not
- * in any published version (npm latest is 3.0.0, which reproduces it). Delete this
- * and pass `{ type: 'none' }` once the pin moves to a release carrying that commit.
+ * Not merely omitting `fill`: on this writer omission still means `<a:noFill/>`
+ * too, but by way of a ternary's else-arm rather than a stated intent
+ * ({@link https://github.com/shbernal/ts-pptx/issues/10}).
  */
-const CLEAR = { color: 'FFFFFF', transparency: 100 } as const
+const CLEAR = { type: 'none' } as const
 
 // ---------------------------------------------------------------------------
 // Freeform geometry

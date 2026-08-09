@@ -131,19 +131,17 @@ export interface FillSource {
 	readonly patternFill: PatternFill | null
 	readonly pictureFill: PictureFill | null
 	/**
-	 * Optional because `Shape` has it and `TableCell` does not — the one member of
-	 * this set the two classes disagree about. Optional rather than two interfaces:
-	 * an absent reader and a `false` one mean different things here, and a cell
-	 * silently satisfying `fillNoFill: boolean` by structural luck is worse than
-	 * the arm below being unreachable for it.
+	 * Required, as of ts-pptx 3.1.0 — `TableCell.fillNoFill` landed there as the
+	 * cell-side counterpart of `Shape.fillNoFill`, so both classes this interface
+	 * describes now answer the question and the arm below is reachable for either.
 	 */
-	readonly fillNoFill?: boolean
+	readonly fillNoFill: boolean
 }
 
 export function fillOf(source: FillSource, scope: ImportScope): Fill {
-	// First because `EG_FillProperties` admits one child: a shape with `a:noFill`
-	// has no other fill for the branches below to find.
-	if (source.fillNoFill === true) return { kind: 'none' }
+	// First because `EG_FillProperties` admits one child: a shape or cell with
+	// `a:noFill` has no other fill for the branches below to find.
+	if (source.fillNoFill) return { kind: 'none' }
 
 	const picture = source.pictureFill
 	if (picture !== null) return pictureFillOf(picture, scope)
@@ -167,15 +165,12 @@ export function fillOf(source: FillSource, scope: ImportScope): Fill {
 	const solid = colorOf(source.fillSchemeColor, source.resolvedFill)
 	if (solid !== undefined) return { kind: 'solid', color: solid }
 
-	// A shape has already taken the `none` arm above. A table cell cannot: `TableCell`
-	// exposes `hasOwnFill` but no `noFill` reader, so an explicit `a:noFill` on a cell
-	// is indistinguishable from one inheriting the table style's shading, and both
-	// land here as inherited — the truthful half of the two.
-	//
-	// Deriving it from `hasOwnFill && every other accessor is null` would be a guess,
-	// not a read: the same shape is produced by any fill choice this decode does not
-	// model. The ask is the cell-side counterpart of `Shape.fillNoFill`:
-	// https://github.com/shbernal/ts-pptx/issues/7
+	// Nothing of its own. A shape or cell with no fill child takes its interior from
+	// `p:style/a:fillRef`, its placeholder or the table style, and that is a third
+	// state rather than a missing one: painting it as transparent loses the theme
+	// colour, painting it as a colour bakes a copy that stops moving when the style
+	// changes. The explicit `a:noFill` that used to land here for cells took the
+	// `none` arm as of ts-pptx 3.1.0.
 	return { kind: 'inherit' }
 }
 
@@ -265,10 +260,13 @@ function dashOf(dash: string | null, scope: ImportScope, construct: string): Das
  * the other is the round-trip rule, not a reading limit: a field that could never
  * come back would be a difference the model quietly absorbs instead of declaring.
  *
- * `line.cap` and `line.align` are coined keys — upstream's set has `line.dash`,
- * `line.width` and `line.arrowSize` and reaches neither of these. Coining is for
- * a construct upstream does not model at all, which is exactly the case here;
- * the rule it does not break is inventing a *synonym* for a key that exists.
+ * `line.cap` is a coined key — upstream's set has `line.dash`, `line.width` and
+ * `line.arrowSize`, and none of them names a cap outside `ST_LineCap`. Coining is
+ * for a construct upstream does not model at all; the rule it does not break is
+ * inventing a *synonym* for a key that exists. `line.align` was coined the same
+ * way and no longer is: ts-pptx 3.1.0's script tier declares `@algn` under that
+ * exact key, with the same `dropped`/`unwritable` verdict, so the two lanes now
+ * agree by name rather than by coincidence.
  */
 const LINE_CAPS = new Set<string>(['flat', 'rnd', 'sq'])
 

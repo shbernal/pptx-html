@@ -196,11 +196,13 @@ describe('absent means inherited', () => {
 
 		// The third arm has no corpus case on purpose rather than by omission: a fill
 		// of `inherit` needs a shape with a `p:style/a:fillRef` and no fill child, and
-		// this writer emits a fill or an `a:noFill` on everything it authors. The one
-		// call that produces the XML is `addShape({ fill: { type: 'none' } })`, and it
-		// produces it by mistake — https://github.com/shbernal/ts-pptx/issues/9. It is
-		// reachable from the DOM lane and from PowerPoint-authored decks, which is the
-		// deferred second corpus tier.
+		// this writer emits a fill or an `a:noFill` on everything it authors. Since
+		// ts-pptx 3.1.0 that is true of *every* `addShape` call — `fill: { type: 'none' }`
+		// now emits `<a:noFill/>` as it always said it did (upstream #9), and omitting
+		// `fill` emits it too, so the write API has no spelling for `inherit` at all
+		// (https://github.com/shbernal/ts-pptx/issues/10). The arm is reachable from
+		// the DOM lane and from PowerPoint-authored decks, which is the deferred second
+		// corpus tier.
 		const fills = (await importCorpus('autoshape')).slides
 			.flatMap((slide) => flatten(slide.nodes))
 			.filter((node) => node.kind === 'shape')
@@ -368,5 +370,18 @@ describe('tables', () => {
 			dash: 'solid',
 		})
 		expect(bodyCell?.fill).not.toStrictEqual(header?.fill)
+	})
+
+	it('distinguishes a cell that suppresses its fill from one that states none', async () => {
+		// The cell-side twin of `distinguishes an explicit no-fill from an unstated one`
+		// above, and the same flattening it exists to prevent: before
+		// `TableCell.fillNoFill` (ts-pptx 3.1.0, upstream #7) every colour accessor
+		// reported `null` for both cells here, so a suppressed cell was reported as
+		// inheriting the table style's shading — and a renderer painting that model
+		// fills a cell the deck asked to see through.
+		const cells = await nodeNamed('cell-fill', 'cells')
+		if (cells.kind !== 'table') return
+		expect(cells.rows[1]?.cells[1]?.fill).toStrictEqual({ kind: 'none' })
+		expect(cells.rows[1]?.cells[0]?.fill).toStrictEqual({ kind: 'inherit' })
 	})
 })

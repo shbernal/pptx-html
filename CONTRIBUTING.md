@@ -180,8 +180,11 @@ gap never filed costs a rediscovery, usually by whoever re-invents the same
 workaround.
 
 Every stopgap therefore carries its **issue URL** and the condition under which it
-is deleted — see `src/import/paint.ts` and `test/oracle/script-lane.ts` for the
-shape of that comment.
+is deleted. There is no live one to copy right now — 3.1.0 retired the last of
+them — so `test/oracle/script-lane.ts` and `site/.vitepress/theme/home/decks.ts`
+show the shape at its other end: what the comment turns into once the release
+lands, which is a sentence about why the deleted stopgap existed rather than a
+deletion nobody can date.
 
 ## Commits
 

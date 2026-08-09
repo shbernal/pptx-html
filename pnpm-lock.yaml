@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@shbernal/ts-pptx':
-        specifier: ^3.0.0
-        version: 3.0.0
+        specifier: ^3.1.0
+        version: 3.1.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.7
@@ -735,8 +735,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@shbernal/ts-pptx@3.0.0':
-    resolution: {integrity: sha512-VmmhlVey7DHNM87tQ97n1OymRyyt2ZPFh5pAsZoiL1J4pZQED/ImZvsPlERaU067vlVcUN+iZGzoHvlEQ4wDHA==}
+  '@shbernal/ts-pptx@3.1.0':
+    resolution: {integrity: sha512-l3OibGvsf5GB/N88N7W4/eyFuf08rFo5llX/IEBiHeLZgDZln+cKklhhK89jQrTaOp/w7uGbbMOQSL3YzYATYQ==}
     engines: {node: '>=24'}
     peerDependencies:
       mathml2omml: ^0.5.0
@@ -2399,7 +2399,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.4':
     optional: true
 
-  '@shbernal/ts-pptx@3.0.0':
+  '@shbernal/ts-pptx@3.1.0':
     dependencies:
       '@xmldom/xmldom': 0.9.10
       fflate: 0.8.3
