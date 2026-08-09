@@ -1,0 +1,148 @@
+/**
+ * The renderer against the real corpus.
+ *
+ * The claim under test is not "it produces HTML" — it is that **the island
+ * survives whatever the visual channel does**. Every deck the importer can build
+ * has to come back out of the document byte-identical, including the ones whose
+ * picture this renderer is openly bad at, because that separation is what lets
+ * the preview be approximate without the round trip being approximate.
+ */
+
+import { describe, expect, it } from 'vitest'
+import { importDeck } from '../../src/import/deck'
+import type { RenderIr } from '../../src/ir/render'
+import { renderDeck } from '../../src/render/document'
+import { ASSETS_ID, ISLAND_ID } from '../../src/render/island'
+import { CORPUS, corpusBytes } from '../corpus/decks'
+
+interface Imported {
+	ir: RenderIr
+	bytes: (name: string) => Uint8Array | undefined
+}
+
+const cache = new Map<string, Imported>()
+
+async function importCorpus(name: string): Promise<Imported> {
+	const hit = cache.get(name)
+	if (hit) return hit
+	const entry = CORPUS.find((candidate) => candidate.name === name)
+	if (!entry) throw new Error(`the corpus has no deck named ${name}`)
+	const { render, assets } = await importDeck(await corpusBytes(entry))
+	const imported: Imported = { ir: render, bytes: (asset) => assets.bytesFor({ $asset: asset }) }
+	cache.set(name, imported)
+	return imported
+}
+
+function blockOf(html: string, id: string): string {
+	const match = new RegExp(`<script type="application/json" id="${id}">(.*?)</script>`, 's').exec(html)
+	if (match?.[1] === undefined) throw new Error(`no block with id ${id}`)
+	return match[1]
+}
+
+describe('every corpus deck renders and comes back whole', () => {
+	for (const entry of CORPUS) {
+		it(`${entry.name}: the island parses back to the imported model`, async () => {
+			const { ir, bytes } = await importCorpus(entry.name)
+			const { html, warnings } = await renderDeck(ir, { bytes })
+
+			expect(html.startsWith('<!doctype html>')).toBe(true)
+			expect(JSON.parse(blockOf(html, ISLAND_ID))).toStrictEqual(ir)
+			// One `<section>` per slide, whatever the slides contain.
+			expect(html.match(/class="d2p-slide"/g)?.length ?? 0).toBe(ir.slides.length)
+			// A warning is allowed (an unplaceable node, an oversized block); a
+			// *missing asset* is not, because the importer supplies every one it
+			// registered and a gap would mean the two disagree about the manifest.
+			expect(warnings.filter((warning) => warning.includes('no bytes were supplied'))).toEqual([])
+		})
+	}
+})
+
+describe('the asset mode does not reach the model', () => {
+	it('gives an inline and a ref document the same modelHash', async () => {
+		// The property that keeps part 02 on one baseline instead of one per mode.
+		// It holds because the island carries the manifest and never the bytes.
+		const { ir, bytes } = await importCorpus('picture')
+		const inline = await renderDeck(ir, { assets: 'inline', bytes })
+		const ref = await renderDeck(ir, { assets: 'ref' })
+
+		expect(inline.integrity).toStrictEqual(ref.integrity)
+		expect(blockOf(inline.html, ISLAND_ID)).toBe(blockOf(ref.html, ISLAND_ID))
+		expect(inline.html).toContain(`id="${ASSETS_ID}"`)
+		expect(ref.html).not.toContain(`id="${ASSETS_ID}"`)
+	})
+
+	it('writes each asset into an inline document exactly once', async () => {
+		// The tripwire for someone reintroducing `<img src="data:…">` at render
+		// time: the bytes would then appear both in the asset block and on every
+		// element that shows them, and a deck with one logo on ten slides would
+		// carry eleven copies.
+		const { ir, bytes } = await importCorpus('picture')
+		const { html } = await renderDeck(ir, { assets: 'inline', bytes })
+
+		expect(ir.assets.length).toBeGreaterThan(0)
+		for (const asset of ir.assets) {
+			const data = bytes(asset.name)
+			if (data === undefined) throw new Error(`no bytes for ${asset.name}`)
+			// A prefix rather than the whole payload: enough to be unique to these
+			// bytes, short enough not to depend on base64 line handling.
+			const prefix = btoa(String.fromCharCode(...data.subarray(0, 24)))
+			expect(html.split(prefix).length - 1).toBe(1)
+		}
+		expect(html).not.toContain('src="data:')
+	})
+})
+
+describe('what the picture admits to', () => {
+	it('draws every geometry the corpus uses exactly, with no box standing in', async () => {
+		// The corpus reaches `roundRect`, `rect`, `triangle`, `line` and a freeform,
+		// and the local catalogue covers all five — so *zero* geometry fallbacks is
+		// the real claim here, and it fails the day a deck is added that needs a
+		// preset nobody has written the formula for. The marker's other half — that
+		// an unresolved preset is visibly marked rather than passed off as exact —
+		// is in `test/unit/render-geometry.test.ts`, where the preset can be chosen
+		// rather than waited for.
+		for (const entry of CORPUS) {
+			const { ir, bytes } = await importCorpus(entry.name)
+			const { html } = await renderDeck(ir, { bytes })
+			expect([entry.name, html.match(/data-d2p-approx="geometry:[^"]+"/g) ?? []]).toStrictEqual([entry.name, []])
+		}
+	})
+
+	it('renders a chart as a labelled placeholder and never as a lookalike', async () => {
+		const { ir, bytes } = await importCorpus('chart')
+		const { html } = await renderDeck(ir, { bytes })
+		expect(html).toContain('carried, not editable')
+	})
+
+	it('surfaces each slide’s declared differences in the page, not only the island', async () => {
+		const { ir, bytes } = await importCorpus('table')
+		const { html } = await renderDeck(ir, { bytes })
+		const declared = ir.slides.flatMap((slide) => slide.fidelity)
+		expect(declared.length).toBeGreaterThan(0)
+		expect(html).toContain('Declared differences')
+	})
+})
+
+describe('the editable surface reaches the document', () => {
+	it('marks every run in surface as editable and addressable', async () => {
+		// Part 06 reads these addresses back. If the renderer and `src/ir/surface.ts`
+		// ever disagree about what is editable, the failure is silent in both
+		// directions — an edit the page invited that the parser calls drift, or an
+		// edit the parser expects that the page never offered.
+		const { ir, bytes } = await importCorpus('text-box')
+		const { html } = await renderDeck(ir, { bytes })
+
+		const runs = ir.slides
+			.flatMap((slide) => slide.nodes)
+			.filter((node) => node.kind === 'shape')
+			.flatMap((node) =>
+				(node.text?.paragraphs ?? []).flatMap((paragraph, index) =>
+					paragraph.runs.map((_, run) => `${node.id}/${index}/${run}`)
+				)
+			)
+
+		expect(runs.length).toBeGreaterThan(0)
+		for (const address of runs) expect(html).toContain(`data-d2p-run="${address}"`)
+		expect(html.match(/contenteditable="true"/g)?.length ?? 0).toBe(runs.length)
+	})
+})
