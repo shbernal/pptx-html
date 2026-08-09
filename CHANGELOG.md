@@ -11,6 +11,23 @@ model is expected to move.
 
 ## [Unreleased]
 
+### Added
+
+- **A public site**, at <https://shbernal.github.io/pptx-html/>, deployed from the
+  same workflow that gates the library — the publish hangs off `needs: validate`,
+  so a site whose round-trip oracle is failing cannot go out.
+  - **A playground** that runs `importDeck → renderDeck → parseDeck → emitDeck` in
+    the visitor's browser. The sample decks are the oracle's own corpus rather
+    than decks written for the page, editing goes through `EDITABLE_SURFACE` and
+    nothing else, the lane is reported per slide, and the round-tripped `.pptx`
+    is downloadable beside the original. Nothing is uploaded anywhere.
+  - **The fidelity ledger**, generated from the oracle's coverage reporter over
+    the corpus, so the page cannot claim more than CI knows. Every row links to
+    that deck running in the playground.
+  - **`docs/` published as written.** `site/docs/` is a generated mirror; the
+    tracked design record stays the source of truth, and the generator fails
+    rather than warns when the two drift.
+
 ### Fixed
 
 - **Rendered text is now legible.** `renderDeck` wrote text lengths as EMU in

@@ -9,6 +9,10 @@ the HTML ⇄ `ts-pptx` link in both directions: it reads a `.pptx` into a slide
 model, renders that model as HTML, reads the edited HTML back, and writes a
 `.pptx` out again.
 
+**[Run the loop in your browser →](https://shbernal.github.io/pptx-html/playground)**
+Pick a deck, edit it as a web page, download the `.pptx` that comes back, and open
+both files. No server, no upload, and no picture of a slide anywhere on the page.
+
 ## Why this exists
 
 Two problems, one shape.
@@ -45,7 +49,10 @@ Equality is normalized, not byte-for-byte: zip entry order, timestamps,
 relationship ids and element ids all vary legally, and both sides are
 canonicalized before diffing. This is not an aspiration in a design doc — a
 generated corpus of 17 decks runs the full loop on every CI build, and the
-per-construct fidelity ledger is snapshotted so it cannot move silently.
+per-construct fidelity ledger is snapshotted so it cannot move silently. That
+ledger is [published](https://shbernal.github.io/pptx-html/docs/fidelity),
+generated from the oracle's own reporter, with every row linking to the deck
+running in the browser.
 
 ## Modeled, carried, or warned — never approximated
 
@@ -141,7 +148,9 @@ something is not covered, it says so.
   back out, and re-imports it to show the edit arrived.
 - [docs/](./docs/index.md) — the design record: [Invariant R and the
   oracle](./docs/round-trip.md), [architecture](./docs/architecture.md), and
-  [decisions that must not be undone](./docs/decisions.md).
+  [decisions that must not be undone](./docs/decisions.md). Published at
+  <https://shbernal.github.io/pptx-html/docs/>, alongside the playground and the
+  fidelity ledger.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — install, build, the three test layers,
   and what to run for which kind of change.
 - [CHANGELOG.md](./CHANGELOG.md) — what changed, per release.

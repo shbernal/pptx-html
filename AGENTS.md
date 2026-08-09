@@ -15,6 +15,7 @@ and the routing between them.
 | `src/import`, `src/render`, `src/parse`, `src/emit`, `src/ir` | [docs/architecture.md](./docs/architecture.md) |
 | Anything that looks like a missing feature | [docs/decisions.md](./docs/decisions.md) |
 | Build, tests, verification, upstream asks | [CONTRIBUTING.md](./CONTRIBUTING.md) |
+| `site/**` — the public site | [CONTRIBUTING.md](./CONTRIBUTING.md#the-site) |
 
 ## Repository expectations
 
@@ -46,8 +47,11 @@ and the routing between them.
 Each of these has a reason recorded in `docs/`; none of them is a style
 preference. If one seems wrong, read the rationale before changing it.
 
-- **No rasterizer in `src/`.** A flattened slide is the one output that can never
-  re-enter the loop. → [decisions](./docs/decisions.md)
+- **No rasterizer in `src/`, and no slide images on the site.** A flattened slide
+  is the one output that can never re-enter the loop, and a screenshot of a
+  converted deck is that same impression sold to someone who cannot check it.
+  Previews are rendered by `renderDeck` at runtime or they are not shown. →
+  [decisions](./docs/decisions.md)
 - **No raw OOXML, and no post-write repair layer.** The last one deleted every
   speaker note in the deck and nobody noticed from outside. →
   [decisions](./docs/decisions.md)
@@ -66,7 +70,9 @@ preference. If one seems wrong, read the rationale before changing it.
   invisible to the read model. Never "fix" one by deleting a note. →
   [round-trip](./docs/round-trip.md)
 - **Do not add deterministic-looking guarantees to the docs beyond what the oracle
-  actually gates.** Fidelity claims stay honest.
+  actually gates.** Fidelity claims stay honest. This binds hardest on `site/**`,
+  which is read by people who cannot run the suite: every page touching fidelity
+  names the input domain and says PowerPoint-authored decks are not gated.
 - **A fidelity change is not done until the oracle covers it.**
 
 ## Verification

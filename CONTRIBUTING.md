@@ -36,7 +36,45 @@ pnpm run test:browser # Playwright + headless Chromium
 pnpm run test         # build, then all three
 
 pnpm run example      # the loop end to end; needs `build` first
+
+pnpm run site:dev     # the public site, locally
+pnpm run site:build
+pnpm run site:preview # serve the built site at its real base path
 ```
+
+## The site
+
+[`site/`](./site) builds <https://shbernal.github.io/pptx-html/>. It owns the
+build; `docs/` stays the tracked design record and is read as input.
+
+**`site/docs/` is generated — never edit it.** `site/scripts/sync-docs.ts` mirrors
+`docs/*.md` into it, translating the frontmatter and rewriting the links that
+point at files the site does not publish, and
+`site/scripts/build-ledger.ts` adds the fidelity ledger by running the oracle's
+coverage reporter over the corpus. Both run from `site:prepare`, which `site:dev`
+and `site:build` call first. Edit `docs/`.
+
+Those scripts fail rather than warn, on purpose: a page missing from
+`docs/docs.json`, a link leaving `docs/` with no mapping, an unrecognised
+frontmatter key, or a playground sample naming a corpus deck that no longer
+exists all stop the build. Drift between the record and the site is the failure
+they exist to make impossible, and they can only deliver that if it is an error.
+
+`site:dev` and `site:build` run `pnpm run build` first. The site imports
+`pptx-html` **by name**, through the `exports` map, exactly as a consumer would —
+the same reason `examples/round-trip.mjs` does — so `dist/` has to exist.
+
+Two rules for anything under `site/**`:
+
+- **No claim the oracle does not gate.** The site is the project's marketing
+  surface and therefore the likeliest place to overstate. Every page that touches
+  fidelity states the input domain — decks written by `@shbernal/ts-pptx` — and
+  says that PowerPoint-authored decks are a deliberate second tier.
+- **Nothing is shown that was not produced by running the library.** There are no
+  slide images anywhere on the site. A screenshot of a converted deck is exactly
+  the impression [the raster decision](./docs/decisions.md) exists to refuse, so
+  previews are rendered by `renderDeck` in the visitor's browser or they are not
+  shown at all.
 
 ## The three test layers
 
@@ -72,6 +110,7 @@ produced a plausible, working document while quietly doing nothing. See the end 
 | Behaviour | `pnpm run test:unit` |
 | Anything touching fidelity | `pnpm run test:oracle`, and update the coverage snapshot deliberately — never a blind `-u` |
 | Renderer, surface reading, or the heuristic lane | `pnpm run test:browser` |
+| `docs/`, or anything under `site/` | `pnpm run site:build` — dead-link checking is on, and it is the acceptance test for the docs mirror |
 | Anything at all | `pnpm run check` |
 
 **After changing what `src/index.ts` exports, read `dist/index.d.ts`.** The public
