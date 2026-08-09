@@ -4,13 +4,13 @@
  * Pure and isomorphic (no DOM beyond the SVG→PNG raster helper, which is guarded
  * by a browser `Image`/`canvas`): drives a ts-pptx writer through `addImage` /
  * `addShape` / `addTable` / `addText`. Items are typed against the IR
- * (`../ir/model`); the writer/slide are the structural shapes in `./pptx-types`,
+ * (`./model`); the writer/slide are the structural shapes in `./pptx-types`,
  * so this layer stays decoupled from the full writer types and unit-testable
  * against an injected writer.
  */
 
 import { DEFAULT_FONT, PX_PER_IN } from '../constants'
-import type { Item, Rect, SlideModel, SlideSize, TextItem } from '../ir/model'
+import type { Item, Rect, SlideModel, SlideSize, TextItem } from './model'
 import { emitPathItem } from './custgeom'
 import type { PptxSlide, PptxWriter } from './pptx-types'
 

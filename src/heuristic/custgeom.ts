@@ -2,7 +2,7 @@
  * Emit layer — IR `path` item → ts-pptx `custGeom` shape.
  *
  * Pure and isomorphic (no DOM): this is the editable-vector counterpart of the
- * SVG→PNG raster fallback in `emit/slide.ts`. The IR's {@link FreeformPoint}
+ * SVG→PNG raster fallback in `./slide.ts`. The IR's {@link FreeformPoint}
  * mirrors ts-pptx's freeform point DSL one-to-one, so points pass through
  * unchanged; coordinates are already in the shape box's own inch space (0..w,
  * 0..h), which is exactly what ts-pptx's `custGeom` emitter expects.
@@ -11,7 +11,7 @@
  * (a stroke-only icon), and omitting `line` leaves the shape unstroked.
  */
 
-import type { PathItem } from '../ir/model'
+import type { PathItem } from './model'
 import type { PptxSlide, PptxWriter } from './pptx-types'
 
 /** Build the ts-pptx `addShape('custGeom', …)` options for a path item. */

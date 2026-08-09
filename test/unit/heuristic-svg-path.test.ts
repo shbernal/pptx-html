@@ -2,7 +2,7 @@
  * Pure SVG-geometry parser, headless. Exercises `parsePathData` and the
  * basic-shape → `d` helpers. These run in node with no DOM: the
  * correctness-critical core of vectorization lives here, where it's cheap to test
- * exhaustively. The DOM glue (`extract/svg.ts`) is covered by the browser layer.
+ * exhaustively. The DOM glue (`heuristic/svg.ts`) is covered by the browser layer.
  */
 
 import { describe, expect, it } from 'vitest'
@@ -14,7 +14,7 @@ import {
 	parsePathData,
 	pointsToPathData,
 	rectToPathData,
-} from '../../src/extract/svg-path'
+} from '../../src/heuristic/svg-path'
 
 describe('parsePathData — commands', () => {
 	it('parses an absolute move + line triangle with close', () => {

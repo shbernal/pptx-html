@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Iconify resolution: fetch icon SVGs (or render via the Iconify custom element)
  * and inline them into slide HTML before the render frames are built, so per-slide
@@ -14,17 +13,29 @@
 
 import { wait, waitForIconEls } from './frame'
 
+/** Resolve an iconify icon name (e.g. `mdi:home`) to an SVG string, or null. */
+export type IconResolver = (name: string) => Promise<string | null>
+
+/** Normalised `<svg>` prototypes, keyed by icon name. */
+type IconProtos = Record<string, SVGElement>
+
+/** An `<iconify-icon>` element, narrowed to the shadow root the fallback reads. */
+interface IconElement extends Element {
+	shadowRoot: ShadowRoot | null
+	loadIcon?: () => void
+}
+
 // Replace every <iconify-icon> in an HTML string with an inline <svg> taken from
 // `svgByName`, carrying over the original element's class/style so it keeps its
 // size (1em) and colour (currentColor). Unknown/unresolved icons are left as-is.
-function inlineIconsInHtml(html, svgByName) {
+function inlineIconsInHtml(html: string, svgByName: IconProtos): string {
 	const doc = new DOMParser().parseFromString('<div id="__icnroot">' + html + '</div>', 'text/html')
 	const root = doc.getElementById('__icnroot')
 	if (!root) return html
 	Array.from(root.querySelectorAll('iconify-icon')).forEach((ic) => {
-		const proto = svgByName[ic.getAttribute('icon')]
+		const proto = svgByName[ic.getAttribute('icon') ?? '']
 		if (!proto) return
-		const svg = proto.cloneNode(true)
+		const svg = proto.cloneNode(true) as SVGElement
 		const style = ic.getAttribute('style')
 		const cls = ic.getAttribute('class')
 		if (style) svg.setAttribute('style', (svg.getAttribute('style') || '') + ';' + style)
@@ -34,35 +45,39 @@ function inlineIconsInHtml(html, svgByName) {
 	return root.innerHTML
 }
 
-function findIconifyScriptSrc(headHTML) {
+function findIconifyScriptSrc(headHTML: string): string {
 	const doc = new DOMParser().parseFromString('<head>' + (headHTML || '') + '</head>', 'text/html')
-	const script = Array.from(doc.querySelectorAll('script[src]')).find((el) => /iconify/i.test(el.getAttribute('src') || ''))
-	return script ? script.getAttribute('src') : ''
+	const script = Array.from(doc.querySelectorAll('script[src]')).find((el) =>
+		/iconify/i.test(el.getAttribute('src') || '')
+	)
+	return script?.getAttribute('src') || ''
 }
 
-function loadMainScript(src) {
+function loadMainScript(src: string): Promise<void> {
 	const absolute = new URL(src, document.baseURI || window.location.href).href
-	const existing = Array.from(document.scripts).find((script) => script.src === absolute || script.getAttribute('src') === src)
+	const existing = Array.from(document.scripts).find(
+		(script) => script.src === absolute || script.getAttribute('src') === src
+	)
 	if (existing) return Promise.resolve()
 	return new Promise((resolve, reject) => {
 		const script = document.createElement('script')
 		script.src = absolute
 		script.async = true
-		script.onload = resolve
+		script.onload = () => resolve()
 		script.onerror = () => reject(new Error('Iconify script could not be loaded for PPTX export.'))
 		document.head.appendChild(script)
 	})
 }
 
-async function ensureMainIconify(headHTML) {
+async function ensureMainIconify(headHTML: string): Promise<boolean> {
 	try {
-		if (window.customElements && window.customElements.get('iconify-icon')) return true
+		if (window.customElements?.get('iconify-icon')) return true
 		const src = findIconifyScriptSrc(headHTML)
 		if (!src || !window.customElements) return false
 		await Promise.race([loadMainScript(src), wait(8000)])
 		await Promise.race([window.customElements.whenDefined('iconify-icon'), wait(8000)])
 		return !!window.customElements.get('iconify-icon')
-	} catch (e) {
+	} catch {
 		return false
 	}
 }
@@ -70,25 +85,30 @@ async function ensureMainIconify(headHTML) {
 // Default icon resolver: fetch the raw SVG markup for an iconify icon
 // name (`prefix:icon`) from api.iconify.design. Returns the SVG string, or null on
 // any failure. Consumers/tests inject an alternative via `opts.resolveIcon`.
-export async function defaultResolveIcon(name) {
+export async function defaultResolveIcon(name: string): Promise<string | null> {
 	const idx = String(name || '').indexOf(':')
 	if (idx <= 0) return null
 	const prefix = name.slice(0, idx)
 	const icon = name.slice(idx + 1)
 	if (!prefix || !icon) return null
 	try {
-		const url = 'https://api.iconify.design/' + encodeURIComponent(prefix) + '/' + encodeURIComponent(icon) + '.svg?height=1em&width=1em'
+		const url =
+			'https://api.iconify.design/' +
+			encodeURIComponent(prefix) +
+			'/' +
+			encodeURIComponent(icon) +
+			'.svg?height=1em&width=1em'
 		const response = await fetch(url, { mode: 'cors' })
 		if (!response.ok) return null
 		return await response.text()
-	} catch (e) {
+	} catch {
 		return null
 	}
 }
 
 // Normalise an inline <svg> element to a 1em box that inherits text colour, so it
 // flows like the original <iconify-icon>. Mutates and returns the passed node.
-function normalizeIconSvg(svg) {
+function normalizeIconSvg(svg: SVGElement): SVGElement {
 	if (!svg.getAttribute('xmlns')) svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
 	svg.setAttribute('width', '1em')
 	svg.setAttribute('height', '1em')
@@ -99,14 +119,14 @@ function normalizeIconSvg(svg) {
 
 // Parse SVG markup (from a resolver) into a normalised, inline-ready <svg> proto,
 // or null if it isn't valid SVG. Browser-only (DOMParser).
-function protoFromSvgString(svgText) {
+function protoFromSvgString(svgText: string | null): SVGElement | null {
 	if (!svgText) return null
 	try {
 		const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml')
-		const svg = doc.documentElement && doc.documentElement.tagName.toLowerCase() === 'svg' ? doc.documentElement : null
-		if (!svg || svg.querySelector('parsererror')) return null
-		return normalizeIconSvg(svg.cloneNode(true))
-	} catch (e) {
+		const root = doc.documentElement
+		if (!root || root.tagName.toLowerCase() !== 'svg' || root.querySelector('parsererror')) return null
+		return normalizeIconSvg(root.cloneNode(true) as SVGElement)
+	} catch {
 		return null
 	}
 }
@@ -116,32 +136,44 @@ function protoFromSvgString(svgText) {
 // depending on Iconify custom-element paint timing; the custom element path
 // remains as a fallback for anything the resolver could not return.
 // Returns icon-inlined slide HTML, or null to fall back to the original slides.
-export async function inlineDeckIcons(headHTML, slides, resolveIcon) {
+export async function inlineDeckIcons(
+	headHTML: string,
+	slides: string[],
+	resolveIcon?: IconResolver
+): Promise<string[] | null> {
 	const resolve = typeof resolveIcon === 'function' ? resolveIcon : defaultResolveIcon
 	try {
 		if (!slides.some((s) => /<iconify-icon/i.test(s))) return null
-		const names = new Set()
+		const names = new Set<string>()
 		slides.forEach((s) => {
 			const re = /<iconify-icon\b[^>]*?\sicon=["']([^"']+)["']/gi
-			let m
-			while ((m = re.exec(s))) names.add(m[1])
+			let m = re.exec(s)
+			while (m) {
+				names.add(m[1])
+				m = re.exec(s)
+			}
 		})
 		if (!names.size) return null
-		const svgByName = {}
-		await Promise.all(Array.from(names).map(async (name) => {
-			const proto = protoFromSvgString(await resolve(name))
-			if (proto) svgByName[name] = proto
-		}))
+		const svgByName: IconProtos = {}
+		await Promise.all(
+			Array.from(names).map(async (name) => {
+				const proto = protoFromSvgString(await resolve(name))
+				if (proto) svgByName[name] = proto
+			})
+		)
 		const missing = Array.from(names).filter((name) => !svgByName[name])
 		if (!missing.length) return slides.map((s) => inlineIconsInHtml(s, svgByName))
-		if (!(await ensureMainIconify(headHTML))) return Object.keys(svgByName).length ? slides.map((s) => inlineIconsInHtml(s, svgByName)) : null
+		if (!(await ensureMainIconify(headHTML))) {
+			return Object.keys(svgByName).length ? slides.map((s) => inlineIconsInHtml(s, svgByName)) : null
+		}
 		const host = document.createElement('div')
 		host.setAttribute('aria-hidden', 'true')
-		host.style.cssText = 'position:fixed;left:-99999px;top:0;width:24px;height:24px;overflow:visible;font-size:24px;line-height:1;color:#000;pointer-events:none;'
-		const els = []
-		const byName = {}
+		host.style.cssText =
+			'position:fixed;left:-99999px;top:0;width:24px;height:24px;overflow:visible;font-size:24px;line-height:1;color:#000;pointer-events:none;'
+		const els: IconElement[] = []
+		const byName: Record<string, IconElement> = {}
 		missing.forEach((name) => {
-			const ic = document.createElement('iconify-icon')
+			const ic = document.createElement('iconify-icon') as IconElement
 			ic.setAttribute('icon', name)
 			host.appendChild(ic)
 			els.push(ic)
@@ -151,16 +183,16 @@ export async function inlineDeckIcons(headHTML, slides, resolveIcon) {
 		try {
 			await waitForIconEls(els, 12000, 12000)
 			Object.keys(byName).forEach((name) => {
-				const svg = byName[name].shadowRoot && byName[name].shadowRoot.querySelector('svg')
+				const svg = byName[name].shadowRoot?.querySelector('svg')
 				if (!svg) return
-				svgByName[name] = normalizeIconSvg(svg.cloneNode(true))
+				svgByName[name] = normalizeIconSvg(svg.cloneNode(true) as SVGElement)
 			})
 			if (!Object.keys(svgByName).length) return null
 			return slides.map((s) => inlineIconsInHtml(s, svgByName))
 		} finally {
 			host.remove()
 		}
-	} catch (e) {
+	} catch {
 		return null
 	}
 }

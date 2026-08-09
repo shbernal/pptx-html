@@ -82,12 +82,37 @@ It stays honest by the same rule — closest editable construct, plus a `Warning
   sectioned slides, common Tailwind-shaped utility styling, iconify icons,
   gradients, tables, lists. Extend it by adding fixtures.
 - **Out of scope:** rendering arbitrary web pages. This is not a browser.
-- **Environment:** **browser only.** It needs a real DOM — iframe,
-  `getComputedStyle`, `getBoundingClientRect`, canvas, fonts — and is not
-  Node-portable. Layout tests run in headless Chromium (Playwright), not
-  jsdom/happy-dom.
+- **Environment:** the loop is host-agnostic and runs in Node and in the browser
+  alike. The heuristic lane is **browser only** — it needs a real DOM (iframe,
+  `getComputedStyle`, `getBoundingClientRect`, canvas, fonts) and its layout
+  tests run in headless Chromium (Playwright), not jsdom/happy-dom.
 
 ## Public API
+
+Four legs, one loop:
+
+```ts
+import { importDeck, renderDeck, parseDeck, emitDeck } from 'dom2pptx'
+
+const { render } = await importDeck(pptxBytes)
+const { html } = await renderDeck(render, { bytes: pptxBytes }) // editable HTML
+const parsed = await parseDeck(html) // the model back, plus a lane per slide
+const { bytes } = await emitDeck(parsed, { source: pptxBytes }) // → .pptx
+```
+
+`renderDeck` writes the model into the document as a JSON island beside the
+visible SVG, and `parseDeck` reads *that* — never `getComputedStyle`. It reports
+per slide which lane it took (`exact`, `reconciled`, `drifted`, `heuristic`) and
+throws rather than guessing when a document's integrity hashes do not match.
+`emitDeck` needs the source package because masters, layouts, theme and any
+carried slide's XML live there: the document carries the edits, the caller
+supplies the substance.
+
+What a rendered document may be edited in is declared, not implied — run text,
+`bold` / `italic` / `sizePt` / `color`, and node deletion. `project(ir)` is that
+surface and `freeze(ir)` is its complement; both are exported.
+
+The heuristic lane, for HTML this library did not render:
 
 ```ts
 import { convertDeck, convertSlide } from 'dom2pptx'
@@ -98,7 +123,9 @@ await convertSlide(headHTML, slideHTML, opts) // → { model, warnings }
 
 See `src/index.ts` for `ConvertOptions` — including the injectable `resolveIcon`
 and `pptxFactory` seams, the `output` delivery mode, and the opt-in
-`vectorizeSvg` — and `src/ir/model.ts` for the IR types.
+`vectorizeSvg`. The loop's model types come from `src/ir/render.ts`; the
+heuristic lane's separate, DOM-shaped model is exported under the `heuristic`
+namespace and is deliberately not the same type.
 
 ## Development
 

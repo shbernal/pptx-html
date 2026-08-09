@@ -1,6 +1,6 @@
 /**
  * custGeom emit round-trip, headless. Feeds hand-written `path` IR items through
- * `emit/custgeom`, serializes on `@shbernal/ts-pptx`, then parses the deck back
+ * `heuristic/custgeom`, serializes on `@shbernal/ts-pptx`, then parses the deck back
  * with ts-pptx's `read` model and asserts the freeform geometry survives. This is
  * where custGeom fidelity is proven without a browser.
  */
@@ -10,9 +10,9 @@ import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
 // @ts-expect-error — read entry typed via package exports.
 import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
-import { pathShapeOptions } from '../../src/emit/custgeom'
-import { addModelToSlide } from '../../src/emit/slide'
-import type { PathItem, SlideModel } from '../../src/ir/model'
+import { pathShapeOptions } from '../../src/heuristic/custgeom'
+import type { PathItem, SlideModel } from '../../src/heuristic/model'
+import { addModelToSlide } from '../../src/heuristic/slide'
 
 const SIZE = { width: 13.333, height: 7.5 }
 

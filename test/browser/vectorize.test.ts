@@ -10,7 +10,7 @@
 // @ts-expect-error — ts-pptx read entry typed via package exports.
 import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
-import { parseDeckHtml } from '../../src/extract/parse'
+import { parseDeckHtml } from '../../src/heuristic/parse'
 import { convertDeck, convertSlide } from '../../src/index'
 import iconRowHtml from '../fixtures/icon-row.html?raw'
 import type { RawModel } from './helpers'

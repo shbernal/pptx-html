@@ -4,7 +4,7 @@
  * The shortest file here, and deliberately so: the read model already decodes
  * `a:custGeom` into a typed {@link GeometryCommand} list whose verbs are the ones
  * the write API's freeform DSL takes, so there is no second path vocabulary to
- * invent. `src/extract/svg-path.ts` has one of its own for the DOM lane, and part
+ * invent. `src/heuristic/svg-path.ts` has one of its own for the DOM lane, and part
  * 06 reconciles it onto this — not the other way round, because this one is the
  * format's.
  *

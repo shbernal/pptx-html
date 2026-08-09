@@ -1,6 +1,6 @@
 ---
 name: ts-pptx-upstream
-description: File gaps in @shbernal/ts-pptx as GitHub issues on shbernal/ts-pptx the moment they surface, instead of noting them in chat or in a doc. Use when work in dom2pptx hits a missing read accessor, a write option that cannot express the source, a writer bug worked around in src/repair/, a FidelityNote with cause `unread` or `unwritable`, or an oracle lane that loses something on a round trip — and also when checking whether an ask is already filed, when a new ts-pptx release lands and workarounds may be deletable, or when deciding whether a problem belongs upstream at all. Not for problems in this repo's own HTML side (renderer, island, parser, extraction heuristics) and not for OOXML limitations, which no upstream change can fix.
+description: File gaps in @shbernal/ts-pptx as GitHub issues on shbernal/ts-pptx the moment they surface, instead of noting them in chat or in a doc. Use when work in dom2pptx hits a missing read accessor, a write option that cannot express the source, a writer bug that would otherwise need a post-write workaround, a FidelityNote with cause `unread` or `unwritable`, or an oracle lane that loses something on a round trip — and also when checking whether an ask is already filed, when a new ts-pptx release lands and workarounds may be deletable, or when deciding whether a problem belongs upstream at all. Not for problems in this repo's own HTML side (renderer, island, parser, extraction heuristics) and not for OOXML limitations, which no upstream change can fix.
 ---
 
 # Filing upstream asks against `@shbernal/ts-pptx`
@@ -38,9 +38,11 @@ it comes back from `readModelToIr` for free:
 | `unwritable` | reads fine, the write API cannot express it | **yes** — a missing writer option |
 | `unsupported` | OOXML or output-tier limitation | **no** — no converter work fixes it |
 
-Also file: a writer bug this repo works around in `src/repair/`, and any
-round-trip loss an oracle lane has to declare for itself because upstream's own
-note set does not cover the case.
+Also file: any writer bug this repo would otherwise have to work around after the
+fact, and any round-trip loss an oracle lane has to declare for itself because
+upstream's own note set does not cover the case. There is deliberately no local
+post-write repair layer — the one that existed was deleted for hiding both its
+own obsolescence and its own damage — so an issue here *is* the remedy.
 
 Do **not** file: anything about HTML — the renderer, the IR island, the parser,
 the extraction heuristics. The round-trip guarantee itself is a property of this

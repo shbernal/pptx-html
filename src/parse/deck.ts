@@ -77,6 +77,13 @@ export async function parseDeck(source: string | ParentNode, options: ParseOptio
 	const blocks = blocksOf(source)
 	const opened = await openIsland(blocks)
 
+	// No island: this document was not rendered by `renderDeck`, so there is no
+	// model to read and nothing here will invent one. The heuristic lane is a
+	// *different entry point* (`convertDeck`), not a fallback inside this one —
+	// see the trap it exists to avoid in `heuristic/model.ts`. Returning `ir: null`
+	// rather than an inferred model is what keeps a caller from receiving a
+	// guessed deck through the function whose whole contract is that it does not
+	// guess.
 	if (opened === null) {
 		return {
 			ir: null,
@@ -85,7 +92,7 @@ export async function parseDeck(source: string | ParentNode, options: ParseOptio
 			slides: [],
 			assets: { bytesFor: () => undefined, missing: [], warnings: [] },
 			warnings: [
-				'the document carries no IR island, so the deck can only be inferred from the DOM; this is the heuristic lane and it makes no round-trip guarantee',
+				'the document carries no IR island, so there is no model to read back; this is the heuristic lane, which is `convertDeck` and makes no round-trip guarantee',
 			],
 		}
 	}

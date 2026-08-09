@@ -10,7 +10,7 @@
  * is center-parameterized and does not round-trip SVG's endpoint arcs cleanly.
  *
  * The browser glue that reads the SVG DOM, resolves colors and scales these
- * segments into slide-space inches lives in `extract/svg.ts`.
+ * segments into slide-space inches lives in `./svg.ts`.
  */
 
 /** A neutral, absolute-coordinate path segment in the SVG's own user space. */

@@ -40,15 +40,19 @@
 			"assist": { "enabled": false }
 		},
 		{
-			// The lifted engine modules stay untyped (`@ts-nocheck`) until later phases
-			// migrate them onto the writer API and type the IR boundary. Relax the rules
-			// that fight verbatim browser code — idiomatic-JS preferences (template
-			// literals, optional chaining, concise arrow bodies handed to `forEach`) and
-			// annotation demands that a `@ts-nocheck` file cannot satisfy. None of these
-			// flag a defect in this code; they would only invite churn in a byte-for-byte
-			// port. The clean public seam (`index.ts`, `ir/`, `constants.ts`) is not
-			// listed here and keeps the full recommended set above.
-			"includes": ["src/extract/**/*.ts", "src/emit/**/*.ts", "src/repair/**/*.ts", "src/engine.ts"],
+			// The heuristic lane is a byte-for-byte port of the original browser engine.
+			// Its host-side modules are now typed, but the code itself is still the
+			// ported code, and `extractor.ts` is a stringified `eval` payload that
+			// cannot be checked where it runs at all. Relax the rules that fight it —
+			// idiomatic-JS preferences (template literals, optional chaining, concise
+			// arrow bodies handed to `forEach`) and annotation demands a `@ts-nocheck`
+			// file cannot satisfy. None of these flags a defect here; enforcing them
+			// would rewrite verbatim code wholesale and bury the real diffs.
+			//
+			// Scoped to this directory only. The loop — `index.ts`, `ir/`, `import/`,
+			// `render/`, `parse/`, `emit/`, `loop.ts` — keeps the full recommended set,
+			// which is the point of the lane living behind its own boundary.
+			"includes": ["src/heuristic/**/*.ts"],
 			"linter": {
 				"rules": {
 					"complexity": {

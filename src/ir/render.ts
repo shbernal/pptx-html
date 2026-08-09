@@ -168,7 +168,7 @@ export interface Placement {
  *
  * `custom` reuses the read model's own {@link GeometryCommand} vocabulary rather
  * than a private one, so an imported freeform maps across one-to-one and
- * `src/emit/custgeom.ts` keeps passing the same verbs to the writer's freeform
+ * `src/heuristic/custgeom.ts` keeps passing the same verbs to the writer's freeform
  * DSL. Coordinates are raw path units in each path's own `0..w`/`0..h` space —
  * not EMU — exactly as the read model reports them.
  */

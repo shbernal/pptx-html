@@ -3,16 +3,20 @@ import { defineConfig } from 'vitest/config'
 
 // Three test layers, kept as separate projects so each runs in the right
 // environment:
-//   - `unit`    — node, no DOM, fast. Feeds hand-written SlideModel fixtures into
-//                 `emit/*` and parses the result back with ts-pptx's `read` model.
+//   - `unit`    — node, no DOM, fast. The pure pieces of both lanes: the paint
+//                 model and its editable surface, the island and reconcile logic,
+//                 and hand-written `heuristic/*` fixtures emitted and read back
+//                 with ts-pptx's `read` model.
 //   - `oracle`  — node. The round-trip gate: generates the corpus, runs each deck
 //                 through a lane, and diffs the result under the normalized read
-//                 model. Import and emit need no DOM; the render/parse lane will
-//                 join the `browser` project when it exists.
-//   - `browser` — real Chromium via Playwright. Loads HTML slide fixtures through
-//                 the full extract path (`convertSlide` / `convertDeck`) with an
-//                 injected offline `resolveIcon`. jsdom/happy-dom are insufficient
-//                 (no real getBoundingClientRect / getComputedStyle layout / canvas).
+//                 model. The whole loop runs here — `parseDeck` needs no DOM, so
+//                 the browser project only has to prove the DOM reading itself.
+//   - `browser` — real Chromium via Playwright. Two things that cannot be faked:
+//                 reading the editable surface back out of a rendered document,
+//                 and the heuristic lane's extract path (`convertSlide` /
+//                 `convertDeck`) with an injected offline `resolveIcon`.
+//                 jsdom/happy-dom are insufficient (no real
+//                 getBoundingClientRect / getComputedStyle layout / canvas).
 export default defineConfig({
 	test: {
 		projects: [

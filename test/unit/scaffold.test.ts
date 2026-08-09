@@ -1,25 +1,44 @@
 import { describe, expect, it } from 'vitest'
-import type { SlideModel } from '../../src/index'
-import { convertDeck, convertSlide } from '../../src/index'
+import type { Background, heuristic } from '../../src/index'
+import { convertDeck, convertSlide, emitDeck, importDeck, parseDeck, project, renderDeck } from '../../src/index'
 
-// Public-surface smoke test. `convertDeck` and `convertSlide` are both wired to
-// the real (browser-only) engine and its extract path, so they need a real DOM:
-// their behaviour is exercised in the
-// browser/e2e layer (`test/browser/`), not here — this file only checks the
-// exported surface and the IR type.
+// Public-surface smoke test. What it is actually pinning is the *shape* of the
+// surface: four legs of one loop, plus a second entry point that infers, and two
+// model vocabularies that must stay distinguishable at the top level.
+//
+// Behaviour lives elsewhere — the loop in `test/oracle/`, the browser-only
+// heuristic lane in `test/browser/`. This file checks only that the names are
+// there and that the two models do not quietly become one.
 
 describe('dom2pptx public API', () => {
-	it('exports convertDeck and convertSlide as functions', () => {
-		expect(typeof convertDeck).toBe('function')
-		expect(typeof convertSlide).toBe('function')
+	it('exports the four legs of the loop', () => {
+		expect([importDeck, renderDeck, parseDeck, emitDeck].map((leg) => typeof leg)).toEqual([
+			'function',
+			'function',
+			'function',
+			'function',
+		])
 	})
 
-	it('the IR slide model type is importable and structurally usable', () => {
-		const model: SlideModel = {
+	it('exports the heuristic lane and the editable surface beside it', () => {
+		expect(typeof convertDeck).toBe('function')
+		expect(typeof convertSlide).toBe('function')
+		expect(typeof project).toBe('function')
+	})
+
+	it('keeps the two models apart at the type level', () => {
+		// `Background` means different things in the two lanes — a paint-model
+		// union in `RenderIr`, a DOM-shaped `{ type, value }` in the heuristic
+		// lane's model. Before the namespace, `export type *` from both would have
+		// made one of them silently win. This block only compiles while they are
+		// separately nameable.
+		const inferred: heuristic.SlideModel = {
 			background: { type: 'color', value: 'FFFFFF' },
 			items: [{ type: 'shape', position: { x: 0, y: 0, w: 1, h: 1 }, z: 0, fill: '250F6B' }],
 		}
-		expect(model.items).toHaveLength(1)
-		expect(model.items[0].type).toBe('shape')
+		const modeled: Background = { source: 'master', fill: { kind: 'solid', color: { kind: 'srgb', hex: 'FFFFFF' } } }
+
+		expect(inferred.items[0].type).toBe('shape')
+		expect(modeled.source).toBe('master')
 	})
 })

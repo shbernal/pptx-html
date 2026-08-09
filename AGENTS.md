@@ -106,9 +106,9 @@ definition have no model to draw from. The real options (PowerPoint COM
 preview generator is a **test utility, not a package feature**. One under `test/`
 for visual review of the corpus is welcome; nothing goes in `src/`.
 
-Canvas use that remains in `src/extract/` and `src/emit/` is *not* this: it
-rasterizes individual CSS gradients and re-encodes images, and each of those is a
-modeled IR element. It is not slide rasterization.
+Canvas use that remains in `src/heuristic/` is *not* this: it rasterizes
+individual CSS gradients and re-encodes images, and each of those is a modeled
+element. It is not slide rasterization.
 
 ## Architecture & Boundaries
 
@@ -116,15 +116,31 @@ One-way dependency: **consumer app → dom2pptx → ts-pptx**. No cycles.
 
 - `dom2pptx` does **not** know about AI or UI. `@shbernal/ts-pptx` is its only
   runtime dependency; consumers never import `ts-pptx` directly.
-- The IR (`src/ir/`) is the boundary between the internal layers:
-  - `src/import/` (`.pptx` → IR) is **isomorphic** — it drives the read model's
-    typed object graph and runs in Node and in Chromium alike.
-  - `src/extract/` (DOM → IR) is **browser-only** (iframe, `getComputedStyle`,
-    `getBoundingClientRect`, canvas, fonts).
-  - `src/emit/` (IR → ts-pptx) is **pure and isomorphic** — unit-testable
-    without a browser. This is where custGeom correctness lives.
-- Keep the IR as the single source of truth for the slide model. Changing the IR
-  shape touches both layers; do it deliberately.
+- **`src/` is two lanes, and the directory layout says which is which.**
+  - The **loop** — `src/import/` → `src/render/` → `src/parse/` → `src/emit/`,
+    joined by `src/loop.ts`, over the model in `src/ir/`. All of it is
+    isomorphic: it drives the read model's typed object graph and runs in Node
+    and in Chromium alike. This is the lane Invariant R is about.
+  - The **heuristic lane** — `src/heuristic/`, entered by `convertDeck` /
+    `convertSlide`. DOM → an inferred model → the writer. **Browser-only**
+    (iframe, `getComputedStyle`, `getBoundingClientRect`, canvas, fonts), and
+    best-effort by construction.
+  - They share the writer and nothing else. Do not let a code path serve both:
+    the two have different contracts, and merging them weakens the strong one
+    without any test going red.
+- `src/heuristic/model.ts` is **not** `RenderIr` and must not become it. Deriving
+  a paint model from a DOM would mean inventing node identity and placeholder
+  inheritance that the page does not have — inference dressed as fidelity — and
+  would put one type behind two incompatible guarantees. Three of its type names
+  (`Rect`, `TableCell`, `Background`) mean something different from the loop's,
+  which is why `src/index.ts` exports it under a `heuristic` namespace.
+- `src/heuristic/extractor.ts` holds the package's only `@ts-nocheck`. It is
+  stringified and `eval`'d inside the slide iframe, so it cannot be checked where
+  it runs; `src/heuristic/read.ts` validates its whole result against the model
+  before anything reaches the writer. That validation is the *entire* argument
+  for tolerating the suppression — adding a second unchecked consumer of the
+  extractor's output breaks it, retyping the extractor in place would not
+  strengthen it.
 
 ## Two IRs, On Purpose
 
@@ -185,8 +201,8 @@ same code runs in Chromium — and it holds to three rules:
 
 - **No XML.** Everything comes through `@shbernal/ts-pptx/read`'s typed object
   graph. When the read model exposes no accessor, that is an upstream ask, not a
-  licence to reach into `Shape.element_`. Raw OOXML lives in `src/repair/` and
-  nowhere else.
+  licence to reach into `Shape.element_`. **No code in `src/` touches OOXML
+  directly** — see *Raw OOXML Work* below for why the one place that did is gone.
 - **The contract side is not reimplemented.** `readModelToIr` is called for
   `DeckIr`; only the render side is local.
 - **Media identity is joined by content hash.** Upstream's asset names
@@ -319,16 +335,18 @@ spec — this package drives a writer, it does not emit XML. Check in this order
    `exports` map. The subpaths that matter here:
    - `@shbernal/ts-pptx` — the writer: `addShape` / `addText` / `addTable` /
      `addImage` option shapes, `ShapeType.custGeom`, and the freeform point DSL
-     that `src/emit/custgeom.ts` passes through unchanged.
+     that `src/heuristic/custgeom.ts` passes through unchanged.
    - `@shbernal/ts-pptx/read` — `Presentation.load`, the round-trip oracle the
      unit tests already assert against.
    - `@shbernal/ts-pptx/inspect` — per-element view (box, fill, text runs,
      paragraph boundaries, `a:bodyPr` autofit mode). Use it to confirm what an
-     emit path or a repair actually produced.
-   - `@shbernal/ts-pptx/measure` — font metrics and measured text fit, for any
-     mapping decision that depends on whether text will fit its frame.
-   - `@shbernal/ts-pptx/zip` — the fflate ZIP toolkit `src/repair/` uses. Do not
-     add a separate ZIP dependency.
+     emit path actually produced.
+   - `@shbernal/ts-pptx/measure` — font metrics and measured text fit. Read-only,
+     and **not from the emit path**: a measurement taken at emit time makes the
+     same IR produce different decks on different machines. Measuring belongs in
+     `src/heuristic/`, resolved into that lane's model where it is taken.
+   - `@shbernal/ts-pptx/zip` — the fflate ZIP toolkit, if a test ever needs to
+     look inside a package. Do not add a separate ZIP dependency.
 2. **The `ooxml` MCP** (ECMA-376 schema/spec) — for raw XML only, see below.
 3. **Web search** — last resort.
 
@@ -336,22 +354,21 @@ Do not vendor large spec text into the repo.
 
 ## Raw OOXML Work
 
-`src/repair/repair.ts` is the only code here that touches OOXML directly,
-rewriting `ppt/slides/slideN.xml`, `presentation.xml`, `[Content_Types].xml`,
-and the `.rels` parts after the writer has run. Everything else goes through
-ts-pptx's DSL and should stay that way.
+**There is none, and there must not be another.** Everything goes through
+ts-pptx's DSL. `src/repair/repair.ts` used to rewrite `ppt/slides/slideN.xml`,
+`presentation.xml`, `[Content_Types].xml` and the `.rels` parts after the writer
+had run; it was measured against ts-pptx 3.0.0 across the whole corpus and
+deleted. Four of its five rules never fired, and both that did were wrong — one
+flattened an inherited autofit into an explicit one, the other **deleted every
+speaker note in the deck**. It also swallowed exceptions and returned the
+unrepaired file, so its output depended on whether something threw.
 
-- Consult the `ooxml` MCP before changing any of those transforms. Children of
-  `a:bodyPr` are a schema-ordered sequence, attributes like `p:sldSz@type` are
-  enumerations, and dropping relationship entries can leave a package
-  PowerPoint refuses to open.
-- Verify, do not eyeball: write a deck, run the repair, read it back with
-  `read` / `inspect` in a unit test. The file is `@ts-nocheck` and the
-  transforms are regex over XML, so nothing else will catch a mistake.
-- `repairPptxBase64` catches every failure and returns the *unrepaired* deck, so
-  a broken repair degrades silently. That is why the round-trip assertion is not
-  optional.
-- These repairs are stopgaps for ts-pptx bugs (autofit defaults, duplicate
-  `cNvPr` ids, generated notes masters, missing slide-size type). Per **Fix
-  Upstream When Possible**, prefer moving one upstream to extending it here, and
-  delete the local repair once a release carries the fix.
+The lesson is worth more than the code was: **a layer that silently "fixes"
+things hides both its own obsolescence and its own damage.** Every one of those
+defects was invisible from outside — the deck opened, the text was there, and
+only the notes were gone.
+
+`test/oracle/writer-output.test.ts` now asserts the conditions the module existed
+for do not occur. If the writer regresses, the answer is an upstream issue and a
+failing test, **not a second repair pass**. If you find yourself reaching for a
+post-write rewrite, read that file first — it names each rule and why it went.

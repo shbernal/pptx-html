@@ -15,8 +15,8 @@
  * and off by default.
  */
 
-import type { Item, PathItem, Rect, FreeformPoint } from '../ir/model'
-import type { SlideModel } from '../ir/model'
+import type { Item, PathItem, Rect, FreeformPoint } from './model'
+import type { SlideModel } from './model'
 import {
 	parsePathData,
 	rectToPathData,

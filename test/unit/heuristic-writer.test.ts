@@ -11,7 +11,7 @@ import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
 // @ts-expect-error — read entry typed via package exports.
 import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
-import { addModelToSlide } from '../../src/emit/slide'
+import { addModelToSlide } from '../../src/heuristic/slide'
 
 const SIZE = { width: 13.333, height: 7.5 }
 

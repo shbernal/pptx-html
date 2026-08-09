@@ -1,34 +1,35 @@
 /**
- * **Legacy IR — the adapter, not the model.** The typed, drawable model is
- * `./render` (`RenderIr`); this file is what the existing `extract/` and
- * `emit/` layers still speak, kept only so they keep building while the import
- * and render layers land. It is scheduled for deletion once `emit/` is fed from
- * `DeckIr` and `extract/` produces `RenderIr` — leaving it in place is how IR v2
- * quietly becomes IR v1.5, so do not extend it.
+ * **The heuristic lane's model.** DOM-shaped, inferred, and local to this
+ * directory: `extractor.ts` produces it from a rendered page and `slide.ts`
+ * spends it on the writer. Nothing outside `src/heuristic/` speaks it.
  *
- * The shortcomings are the reason `RenderIr` exists and are worth naming: runs,
- * table cells and borders are `Record<string, unknown>` passed through opaquely,
- * so there is no schema to read a deck *into*; items are positional, with no
- * stable identity to align two sides of a diff by; there is no rotation or flip;
- * colour is a hex string, which discards the `schemeClr` token and its
- * transforms; fill is one optional string, so `null` means both "no fill" and
- * "not stated"; and there are no groups, no placeholder inheritance and no
- * paragraph properties.
+ * It is **not** `RenderIr`, and that is a decision rather than unfinished work.
+ * `RenderIr` is a *read* model of a real package — node identity taken from
+ * `cNvPr/@id`, placeholder inheritance, `props` (what the shape stated) beside
+ * `resolved` (what to paint), EMU geometry, colour as a token plus its
+ * transforms. A rendered web page supplies none of that, so producing `RenderIr`
+ * from a DOM would mean *inventing* identity and inheritance — inference wearing
+ * the costume of fidelity. Worse, the two lanes would then share one type with
+ * two incompatible guarantees behind it. Keeping this model separate is what
+ * makes "this lane infers" checkable by looking at an import.
  *
- * ---
+ * Its shortcomings are therefore load-bearing, and they are the reason
+ * `RenderIr` exists: runs, table cells and borders are
+ * `Record<string, unknown>` passed through opaquely, so there is no schema to
+ * read a deck *into*; items are positional, with no stable identity to align two
+ * sides of a diff by; there is no rotation or flip; colour is a hex string,
+ * which discards the `schemeClr` token and its transforms; fill is one optional
+ * string, so `null` means both "no fill" and "not stated"; and there are no
+ * groups, no placeholder inheritance and no paragraph properties. A model with
+ * those gaps cannot carry a round-trip guarantee — which is precisely why this
+ * lane does not claim one.
  *
- * Intermediate representation (IR) — the contract between the browser-only
- * `extract/` layer (DOM → IR) and the pure `emit/` layer (IR → ts-pptx).
- *
- * Positions are in **inches** (slide-space). This file is the single source of
- * truth for the IR shape; both layers depend on it and nothing else.
- *
- * The text / list / table item shapes are deliberately ts-pptx-flavoured: runs
- * and table cells are `{ text, options }` objects passed straight to ts-pptx's
- * `addText` / `addTable`, and text styling lives in a `style` object the emit
- * layer spreads into text options. This mirrors what `extract/extractor.ts`
- * actually produces, which is what lets `emit/slide.ts` be type-checked against
- * the IR rather than suppressed with `@ts-nocheck`.
+ * Positions are in **inches** (slide-space). The text / list / table item shapes
+ * are deliberately ts-pptx-flavoured: runs and table cells are
+ * `{ text, options }` objects passed straight to `addText` / `addTable`, and
+ * text styling lives in a `style` object `slide.ts` spreads into text options.
+ * That mirrors what `extractor.ts` actually produces, which is what lets the
+ * emitter be type-checked against the model rather than suppressed.
  */
 
 /** A rectangle in slide-space, inches. */
@@ -155,7 +156,7 @@ export interface TableItem extends BaseItem {
 	border?: Border
 }
 
-/** Freeform / custGeom path. Emitted by `emit/custgeom.ts`. */
+/** Freeform / custGeom path. Emitted by `./custgeom.ts`. */
 export interface PathItem extends BaseItem {
 	type: 'path'
 	points: FreeformPoint[]

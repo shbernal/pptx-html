@@ -1,16 +1,24 @@
 // @ts-nocheck
 /**
- * The browser model extractor — DOM → IR.
+ * The browser model extractor — DOM → the heuristic lane's model.
  *
  * IMPORTANT: this function is **stringified and `eval`'d inside the slide
- * iframe** (see `extract/read.ts`). It must therefore stay entirely
- * self-contained: it may only reference its own nested helpers and DOM globals,
- * never module-scope imports. That is also why PX_PER_IN / PT_PER_PX are
- * redefined here instead of imported from `../constants`.
+ * iframe** (see `./read.ts`). It must therefore stay entirely self-contained: it
+ * may only reference its own nested helpers and DOM globals, never module-scope
+ * imports. That is also why PX_PER_IN / PT_PER_PX are redefined here instead of
+ * imported from `../constants`.
+ *
+ * **The one `@ts-nocheck` in the package, and it is quarantined rather than
+ * pending.** It runs in a realm with no modules and returns across an `eval`
+ * boundary as `unknown`, so nothing here can be checked where it executes.
+ * `./read.ts` validates the whole result against `./model.ts` before any of it
+ * reaches the writer — which is what keeps the suppression confined to the one
+ * function that earns it instead of spreading downstream. Retyping this file in
+ * place would not change what is checked at the point that matters; adding a
+ * second unchecked consumer of its output would.
  *
  * Kept byte-for-byte faithful to the original browser engine so output stays
- * identical. It is intentionally untyped (`@ts-nocheck`); typing the IR boundary
- * here is deferred work.
+ * identical.
  */
 export async function browserExtractor(config) {
 	const PX_PER_IN = 96

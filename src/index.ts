@@ -1,122 +1,128 @@
 /**
  * dom2pptx — public API.
  *
- * Turns HTML from the DOM into editable PPTX: it builds an intermediate slide
- * model (see `./ir/model`) from the rendered DOM and emits it through
- * `@shbernal/ts-pptx`. This package owns the HTML → ts-pptx link only; it does
- * not write OOXML itself, and it does not generate the HTML.
+ * The package is a **loop**, and the four legs below are it:
  *
- * Every element is **modeled**, **carried** or **warned** — never approximated
- * into something that cannot be read back. This lane (HTML that carries no IR)
- * is the inference lane, so its mapping is heuristic: an unmappable construct
- * raises a `Warning` rather than being silently dropped or rasterized.
+ * ```
+ * .pptx  ──importDeck──►  RenderIr  ──renderDeck──►  HTML   (what a human edits)
+ *   ▲                        ▲                        │
+ *   └──emitDeck──────────────┴──────parseDeck─────────┘     (what a machine reads)
+ * ```
  *
- * This is a **browser** package: it needs a real DOM (iframe, `getComputedStyle`,
- * `getBoundingClientRect`, canvas, fonts) and is not Node-portable as written.
+ * with one property to defend: for a deck written by `@shbernal/ts-pptx`,
+ * `import → render → parse → emit` produces a deck equal to the input **under
+ * the normalized read model**. Not byte-identical — zip order, `rId` numbering
+ * and timestamps all vary legally. Slides whose features the model cannot
+ * express are carried across intact rather than approximated, and nothing is
+ * lost quietly: every element is **modeled**, **carried** or **warned**.
  *
- * `convertDeck` runs the full engine (`./engine`, split across `extract` and
- * `emit`); `convertSlide` is the per-slide entry that stops at the IR so the
- * model boundary can be asserted directly.
+ * The rendered HTML has two channels. The visible one (SVG and HTML) is allowed
+ * to approximate — a preset geometry it cannot draw is marked and moved past.
+ * The JSON island beside it is not, and it is the only channel `parseDeck`
+ * trusts: the return path *parses the model*, it never re-derives it from
+ * `getComputedStyle`. That is what makes an unresolved shape a cosmetic problem
+ * rather than a lossy one.
+ *
+ * `emitDeck` needs the source package (`{ source }`), because masters, layouts,
+ * theme and any carried slide's XML live there and nowhere else. The document
+ * carries the edits; the caller supplies the substance.
+ *
+ * ## The heuristic lane
+ *
+ * `convertDeck` / `convertSlide` are the other lane: HTML that carries no
+ * island, where the model is *inferred* from what the browser painted. It is
+ * best-effort by construction and shares no code path with the loop above — see
+ * `heuristic.SlideModel` for why its model is deliberately a different type. An
+ * unmappable construct raises a `Warning` rather than being silently dropped.
+ *
+ * ## Where this runs
+ *
+ * `importDeck`, `renderDeck` and `emitDeck` are host-agnostic. `parseDeck` uses
+ * a `ParentNode` when given one and falls back to scanning the document text
+ * otherwise, so it works in Node with no DOM. The heuristic lane is
+ * **browser-only**: it needs an iframe, `getComputedStyle`,
+ * `getBoundingClientRect`, canvas and fonts.
  */
 
-import { convertDeck as convertDeckEngine, convertSlide as convertSlideEngine } from './engine'
-import type { SlideModel } from './ir/model'
+import {
+	type ConvertOptions,
+	convertDeck as convertDeckEngine,
+	type ConvertResult,
+	convertSlide as convertSlideEngine,
+	type Warning,
+} from './heuristic/engine'
+import type { SlideModel } from './heuristic/model'
 
-// The legacy IR. `./ir/render` (`RenderIr`) and `./import` are deliberately
-// *not* re-exported here yet: two of the model's type names (`TableCell`,
-// `Background`) collide with the legacy ones below, and an `importDeck` whose
-// return type cannot be named is worse than none. Both problems disappear in the
-// same edit — when this line goes and `RenderIr` takes its place.
-export type * from './ir/model'
+// ---------------------------------------------------------------------------
+// The loop
+// ---------------------------------------------------------------------------
 
-/** How a non-fatal issue surfaced during conversion. */
-export interface Warning {
-	slide?: number
-	code?: string
-	message: string
-}
+export { type ImportedDeck, importDeck, importPresentation } from './import/deck'
+export { renderDeck, type RenderedDeck, type RenderOptions } from './render/document'
+export { type ParsedDeck, parseDeck, type ParseOptions } from './parse/deck'
+export { emitDeck, type EmittedDeck, type EmitOptions } from './loop'
 
-export interface ProgressEvent {
-	phase: 'parse' | 'render' | 'extract' | 'emit' | 'finalize'
-	completed?: number
-	total?: number
-	stopped?: boolean
-}
+/**
+ * The paint model the loop carries, and the handful of runtime values that go
+ * with it: `IR_VERSION`, the EMU conversions and the node-id constructors. A
+ * `export type *` here would emit those as *types* named after functions —
+ * declared, unusable, and wrong in a way only a consumer would discover.
+ */
+export * from './ir/render'
 
-/** Resolve an iconify icon name (e.g. `mdi:home`) to an SVG string, or null. */
-export type IconResolver = (name: string) => Promise<string | null>
+/** The vocabulary of the return path: how a document is trusted, and which lane a slide took. */
+export type { AssetResolver, ResolvedAssets } from './parse/assets'
+export { IslandError, type IslandFault } from './parse/island'
+export type { Lane, Reconciliation, SlideOutcome } from './parse/reconcile'
+export type { Integrity } from './render/island'
 
-/** Where the converted deck should be delivered. */
-export type OutputMode = 'download' | 'base64' | 'blob' | 'pptx-instance'
+/**
+ * The editable surface: `project` is the part of a deck a rendered document may
+ * change, `freeze` is its complement. Exported because "what may I safely edit
+ * in this HTML?" is a question a caller has to be able to answer without reading
+ * the renderer.
+ */
+export { EDITABLE_SURFACE, type EditableRunProp, freeze, project, type SanctionedProjection } from './ir/surface'
 
-export interface ConvertOptions {
-	author?: string
-	title?: string
-	lang?: string
-	/** Used for `output: 'download'`. */
-	fileName?: string
-	fontConfig?: Record<string, unknown>
-	onProgress?: (event: ProgressEvent) => void
-	/** Cooperative cancellation: return true to stop after the current slide. */
-	shouldStop?: () => boolean
-	/**
-	 * Icon resolver seam. Defaults to fetching from `api.iconify.design`.
-	 * Tests inject a static, offline resolver.
-	 */
-	resolveIcon?: IconResolver
-	/**
-	 * Writer factory seam: returns a fresh writer instance per call. Defaults to
-	 * `() => new TsPptx()`. Lets the emit layer be tested
-	 * against an injected/mock instance.
-	 */
-	pptxFactory?: () => unknown
-	/** Delivery mode. Defaults to `'download'`. Replaces the old `__TEST__` hack. */
-	output?: OutputMode
-	/**
-	 * Vectorize SVG/icon graphics into editable PowerPoint freeform shapes
-	 * (`custGeom`) instead of rasterizing them to PNG. Opt-in: anything that
-	 * can't be faithfully vectorized (transforms, gradient paints,
-	 * `<use>`/`<text>`, missing viewBox) silently falls back to the raster image,
-	 * so enabling this never drops content.
-	 */
-	vectorizeSvg?: boolean
-}
+// ---------------------------------------------------------------------------
+// The heuristic lane
+// ---------------------------------------------------------------------------
 
-export interface ConvertResult {
-	warnings: Warning[]
-	slideCount: number
-	totalSlideCount: number
-	stopped: boolean
-	/** Present when `output: 'base64'`. */
-	base64?: string
-	/** Present when `output: 'blob'`. */
-	blob?: Blob
-	/** Present when `output: 'pptx-instance'`: the underlying ts-pptx instance. */
-	pptx?: unknown
-}
+/**
+ * The inference lane's DOM-shaped model, namespaced. It is *not* `RenderIr`, on
+ * purpose (see `heuristic/model.ts`), and three of its type names — `Rect`,
+ * `TableCell`, `Background` — mean something different from the loop's.
+ * Namespacing it is what keeps the two vocabularies from being mistaken for one.
+ */
+export type * as heuristic from './heuristic/model'
+
+export type { ConvertOptions, ConvertResult, OutputMode, ProgressEvent, Warning } from './heuristic/engine'
+export type { IconResolver } from './heuristic/icons'
 
 /**
  * Convert a full HTML document (head + slide sections) into PPTX.
  *
- * Delegates to the lifted engine (on `@shbernal/ts-pptx`). Delivery is
- * controlled by `opts.output` (default `'download'`); `'base64'` / `'blob'` /
- * `'pptx-instance'` return the deck on the result instead. Icons resolve through
- * `opts.resolveIcon`, and the writer through `opts.pptxFactory`, both defaulted.
+ * The heuristic lane's deck entry point: no island is read, the model is
+ * inferred from the rendered page, and the result carries no round-trip
+ * guarantee. Delivery is controlled by `opts.output` (default `'download'`);
+ * `'base64'` / `'blob'` / `'pptx-instance'` return the deck on the result
+ * instead. Icons resolve through `opts.resolveIcon`, and the writer through
+ * `opts.pptxFactory`, both defaulted.
  */
 export async function convertDeck(fullHtmlString: string, opts?: ConvertOptions): Promise<ConvertResult> {
-	return convertDeckEngine(fullHtmlString, opts) as Promise<ConvertResult>
+	return convertDeckEngine(fullHtmlString, opts)
 }
 
 /**
- * Convert a single slide's HTML into its IR slide model (plus warnings).
- * Per-slide entry point for testing and granularity: it renders the slide and
- * returns the IR (the `extract` layer's output) without emitting PPTX, so the
- * model boundary can be asserted directly. Icons resolve through `opts.resolveIcon`.
+ * Convert a single slide's HTML into the heuristic lane's slide model (plus
+ * warnings). Per-slide entry point for testing and granularity: it renders the
+ * slide and stops at the model, so that boundary can be asserted directly. Icons
+ * resolve through `opts.resolveIcon`.
  */
 export async function convertSlide(
 	headHTML: string,
 	slideHTML: string,
 	opts?: ConvertOptions
 ): Promise<{ model: SlideModel; warnings: Warning[] }> {
-	return convertSlideEngine(headHTML, slideHTML, opts) as Promise<{ model: SlideModel; warnings: Warning[] }>
+	return convertSlideEngine(headHTML, slideHTML, opts)
 }

@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { parseDeckHtml } from '../../src/extract/parse'
+import { parseDeckHtml } from '../../src/heuristic/parse'
 import { convertSlide } from '../../src/index'
 import bulletsHtml from '../fixtures/bullets.html?raw'
 import coverHtml from '../fixtures/cover.html?raw'
