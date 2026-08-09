@@ -34,6 +34,8 @@ pnpm run test:unit    # node, no DOM, fast
 pnpm run test:oracle  # the round-trip gate, no DOM
 pnpm run test:browser # Playwright + headless Chromium
 pnpm run test         # build, then all three
+
+pnpm run example      # the loop end to end; needs `build` first
 ```
 
 ## The three test layers
@@ -76,7 +78,10 @@ produced a plausible, working document while quietly doing nothing. See the end 
 surface has a failure mode neither `tsc` nor the tests can see: nothing in-repo
 imports through the entry point, and `export type *` from a module that also
 exports values emits those values as *types named after functions* — declared,
-uncallable, and discovered only by a consumer.
+uncallable, and discovered only by a consumer. `examples/round-trip.mjs` is the
+one thing that imports the package *by name*, so it catches the coarse version of
+this — a broken `exports` map — but not the shape of a type. CI runs it; the
+reading is still on you.
 
 ## Where to look things up
 

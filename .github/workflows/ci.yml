@@ -58,6 +58,13 @@ jobs:
       - name: Build package artifacts
         run: pnpm run build
 
+      # The example is a public claim about the API, and it imports the package by
+      # name rather than by relative path — so it is the only thing here that
+      # exercises the `exports` map the way a consumer will. A rename that breaks
+      # the entry point is invisible to `tsc` and to every test; it fails here.
+      - name: Example
+        run: pnpm run example
+
       # The round-trip gate. Runs before the browser layer and on its own so a
       # fidelity regression is reported as one, rather than as a failure buried
       # in a suite that also needs a browser to start. Needs no DOM.

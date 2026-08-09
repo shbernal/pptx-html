@@ -19,6 +19,9 @@ coverage/
 /dist/
 /.tmp/
 
+### Decks and documents the example writes
+/examples/out/
+
 ### Editors
 .idea/
 *.swp

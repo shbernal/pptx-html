@@ -20,8 +20,8 @@ and the routing between them.
 
 - This repo builds `pptx-html`: it moves slides between HTML and PPTX by driving
   `@shbernal/ts-pptx`. Its role is the **HTML ⇄ ts-pptx** link, both directions.
-- This is a **standalone top-level project** (`~/dev/pptx-html`) with its own git.
-  It is not part of a workspace; run its commands from this directory.
+- This is a **standalone repository** with its own git. It is not a member of any
+  workspace; run its commands from the repository root.
 - Use `pnpm`. Node `>=24`. Keep source in `src/`, tests in `test/`. Treat `dist/`
   as generated build output.
 - **Skills live in `.agents/skills/`** — the tracked source of truth, runtime
@@ -31,6 +31,10 @@ and the routing between them.
 
   ```powershell
   New-Item -ItemType Junction -Path .claude\skills -Target .agents\skills
+  ```
+
+  ```bash
+  ln -s ../.agents/skills .claude/skills
   ```
 
   Repo-scoped skills only — anything not specific to this project belongs in the

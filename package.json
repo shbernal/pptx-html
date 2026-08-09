@@ -1,12 +1,19 @@
 {
 	"name": "pptx-html",
-	"version": "0.0.0",
-	"private": true,
+	"version": "0.1.0",
 	"author": {
 		"name": "shbernal",
 		"url": "https://github.com/shbernal/"
 	},
 	"description": "Turn HTML from the DOM into editable PowerPoint presentations via @shbernal/ts-pptx",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/shbernal/pptx-html.git"
+	},
+	"bugs": {
+		"url": "https://github.com/shbernal/pptx-html/issues"
+	},
+	"homepage": "https://github.com/shbernal/pptx-html#readme",
 	"keywords": [
 		"pptx",
 		"powerpoint",
@@ -34,7 +41,8 @@
 		}
 	},
 	"files": [
-		"dist"
+		"dist",
+		"CHANGELOG.md"
 	],
 	"types": "./dist/index.d.ts",
 	"scripts": {
@@ -53,7 +61,9 @@
 		"format:check": "biome format",
 		"check": "biome check",
 		"check:fix": "biome check --write",
-		"prepack": "pnpm run build"
+		"example": "node examples/round-trip.mjs",
+		"prepack": "pnpm run build",
+		"prepublishOnly": "pnpm run typecheck && pnpm run check && pnpm run test:oracle"
 	},
 	"dependencies": {
 		"@shbernal/ts-pptx": "^3.0.0"

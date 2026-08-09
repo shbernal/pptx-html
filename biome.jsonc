@@ -6,7 +6,22 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["src/**/*.ts", "test/**/*.ts", "*.json", "*.jsonc", "*.ts", "!dist", "!coverage", "!.tmp"]
+		// `.claude/skills` is a junction to `.agents/skills` (see AGENTS.md). Biome
+		// follows it, cannot dereference it, and reports a warning on every run — so
+		// a fresh checkout that followed the setup instructions greets its author
+		// with a failure-shaped message about a link that is working correctly.
+		"includes": [
+			"src/**/*.ts",
+			"test/**/*.ts",
+			"examples/**/*.mjs",
+			"*.json",
+			"*.jsonc",
+			"*.ts",
+			"!dist",
+			"!coverage",
+			"!.tmp",
+			"!.claude"
+		]
 	},
 	"formatter": {
 		"enabled": true,

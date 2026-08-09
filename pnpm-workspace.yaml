@@ -1,5 +1,6 @@
-# Package-local pnpm config (single package, not a grouping workspace — the
-# grouping dir stays workspace-free per ../AGENTS.md).
+# Package-local pnpm config. This file exists for the settings below, not to
+# declare a workspace: this repo is a single package and defines no `packages:`
+# globs, so nothing outside it is ever linked in.
 #
 # lefthook's postinstall is denied on purpose, and there is deliberately no
 # `prepare: lefthook install` script. That postinstall syncs git hooks, and when

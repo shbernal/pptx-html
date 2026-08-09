@@ -67,6 +67,15 @@ fallback was removed rather than kept as an escape hatch. A slide flattened into
 picture is the one output that can never re-enter the loop, so producing a file
 that way is a failure wearing a success's clothes.
 
+## Install
+
+```bash
+npm install pptx-html
+```
+
+The writer, [`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx),
+comes with it.
+
 ## What it looks like
 
 Four legs, one loop:
@@ -112,8 +121,8 @@ gates CI. What that guarantee currently covers:
   alike. The heuristic lane is **browser only** — it needs a real DOM (iframe,
   `getComputedStyle`, `getBoundingClientRect`, canvas, fonts), and its tests run
   in headless Chromium, not jsdom.
-- **Distribution.** Not published to npm during the prototype phase; consumers
-  link it locally. Node `>=24`.
+- **Distribution.** Published to npm as `pptx-html`. ESM only, Node `>=24`.
+  Pre-1.0: the loop's four legs are stable, the heuristic lane's model is not.
 
 Fidelity claims in these docs are held to what the oracle actually gates. Where
 something is not covered, it says so.
@@ -127,11 +136,15 @@ something is not covered, it says so.
 
 ## Further reading
 
+- [examples/round-trip.mjs](./examples/round-trip.mjs) — the loop end to end and
+  runnable: `pnpm run build && pnpm run example`. It edits a run, writes the deck
+  back out, and re-imports it to show the edit arrived.
 - [docs/](./docs/index.md) — the design record: [Invariant R and the
   oracle](./docs/round-trip.md), [architecture](./docs/architecture.md), and
   [decisions that must not be undone](./docs/decisions.md).
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — install, build, the three test layers,
   and what to run for which kind of change.
+- [CHANGELOG.md](./CHANGELOG.md) — what changed, per release.
 
 ## License
 
