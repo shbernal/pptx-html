@@ -59,7 +59,7 @@ describe('every corpus deck renders and comes back whole', () => {
 
 describe('the asset mode does not reach the model', () => {
 	it('gives an inline and a ref document the same modelHash', async () => {
-		// The property that keeps part 02 on one baseline instead of one per mode.
+		// The property that keeps the oracle on one baseline instead of one per mode.
 		// It holds because the island carries the manifest and never the bytes.
 		const { ir, bytes } = await importCorpus('picture')
 		const inline = await renderDeck(ir, { assets: 'inline', bytes })
@@ -125,7 +125,7 @@ describe('what the picture admits to', () => {
 
 describe('the editable surface reaches the document', () => {
 	it('marks every run in surface as editable and addressable', async () => {
-		// Part 06 reads these addresses back. If the renderer and `src/ir/surface.ts`
+		// The parser reads these addresses back. If the renderer and `src/ir/surface.ts`
 		// ever disagree about what is editable, the failure is silent in both
 		// directions — an edit the page invited that the parser calls drift, or an
 		// edit the parser expects that the page never offered.

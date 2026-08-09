@@ -5,8 +5,8 @@
  *
  * SVG text positions glyphs exactly and wraps nothing: every line break would
  * have to be computed here, which means measuring text, which means the same IR
- * renders differently on two machines. Part 05 is allowed to be lossy about the
- * picture but the charter forbids measurement-derived decisions from leaking
+ * renders differently on two machines. The renderer is allowed to be lossy about
+ * the picture but the charter forbids measurement-derived decisions from leaking
  * back, and a bespoke line breaker is a large project whose output would still
  * not match PowerPoint's. The browser already has a line breaker; `foreignObject`
  * is how an SVG borrows it.

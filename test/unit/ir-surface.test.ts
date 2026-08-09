@@ -82,7 +82,7 @@ describe('project', () => {
 
 describe('freeze is the complement of project', () => {
 	it('is unchanged by an in-surface edit', () => {
-		// This is the load-bearing property. Part 06 hashes the frozen model to
+		// This is the load-bearing property. The parser hashes the frozen model to
 		// decide whether anything *outside* the surface moved, so a legitimate
 		// text or bold edit has to leave it bit-identical.
 		const edited = clone(SAMPLE_IR)
@@ -108,7 +108,7 @@ describe('freeze is the complement of project', () => {
 	it('changes when an out-of-surface character property moves', () => {
 		// `underline` is a run property like `bold`, and the only thing separating
 		// them is this list. If `freeze` stripped by shape rather than by name,
-		// this would pass silently and part 06 would accept an edit it cannot emit.
+		// this would pass silently and emit would accept an edit it cannot apply.
 		const drifted = clone(SAMPLE_IR)
 		const title = drifted.slides[0]?.nodes[0] as ShapeNode
 		const run = title.text?.paragraphs[0]?.runs[1]

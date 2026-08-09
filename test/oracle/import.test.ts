@@ -43,7 +43,7 @@ describe('the imported model survives the JSON island', () => {
 			// fixture to, applied to what the importer really emits: no `undefined`,
 			// no `Uint8Array`, no exotic prototypes, no non-finite numbers. A mapper
 			// that returned a `Buffer` or wrote an explicit `undefined` would pass
-			// every structural assertion below and fail only in part 06.
+			// every structural assertion below and fail only on the way back.
 			const ir = await importCorpus(entry.name)
 			const offenders: string[] = []
 			walk(ir, '$', offenders)
@@ -78,7 +78,7 @@ describe('identity', () => {
 	it('is stable across two imports of the same bytes', async () => {
 		// The property the whole differ depends on: ids are derived from the source,
 		// so a second import agrees with the first. A generated id would make every
-		// comparison in part 06 vacuous.
+		// comparison the return path makes vacuous.
 		const bytes = await corpusBytes(CORPUS[0])
 		const first = await importDeck(bytes)
 		const second = await importDeck(bytes)

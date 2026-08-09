@@ -9,11 +9,11 @@
  *
  * ## Why it is data and not prose
  *
- * Part 05 renders the surface into the document (those are the nodes it makes
- * `contenteditable`) and part 06 hashes the complement of it to detect drift. If
- * each part carried its own idea of what is editable, the two would diverge and
- * the failure mode would be silent: an edit the renderer invited but the parser
- * treats as drift, or worse, the reverse. So the list below is the single
+ * The renderer writes the surface into the document (those are the nodes it
+ * makes `contenteditable`) and the parser hashes the complement of it to detect
+ * drift. If each side carried its own idea of what is editable, the two would
+ * diverge and the failure mode would be silent: an edit the renderer invited but
+ * the parser treats as drift, or worse, the reverse. So the list below is the single
  * source, and both {@link project} and {@link freeze} are derived from it rather
  * than restating it.
  *
@@ -113,7 +113,8 @@ export interface SanctionedProjection {
  * Reduce an IR to what the surface permits: every editable value, addressed by
  * node id rather than by position.
  *
- * This is what part 05 renders as editable regions and what part 06 reads back.
+ * This is what the renderer marks as editable regions and what the parser reads
+ * back.
  * A difference between the projection that went out and the one that came back
  * is an *edit*; a difference anywhere else is *drift* — see {@link freeze}.
  */
@@ -190,7 +191,7 @@ export function editableRunProps(props: RunProperties): Pick<RunProperties, Edit
  * The IR with every editable value stripped — the half that is *not* allowed to
  * change.
  *
- * Part 06 hashes this. Hashing the whole IR would flag a legitimate text edit as
+ * The parser hashes this. Hashing the whole IR would flag a legitimate text edit as
  * drift; hashing only the projection would catch nothing, since the projection
  * is exactly the part that is meant to move. Deriving both from
  * {@link EDITABLE_SURFACE} is what keeps the two halves complementary by

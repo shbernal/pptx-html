@@ -18,7 +18,7 @@
  *
  * The cost is that **the document needs JavaScript to look right**. It does not
  * need JavaScript to round-trip: the island and the asset block are both inert
- * text, and part 06 reads them without executing anything. That asymmetry is the
+ * text, and the parser reads them without executing anything. That asymmetry is the
  * whole point, and it costs nothing in reach — a sanitizer aggressive enough to
  * strip `<script>` has already destroyed the island, so there is no context that
  * keeps the round-trip but loses the pictures.

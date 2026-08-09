@@ -36,9 +36,9 @@
  *
  * ## JSON is the wire format
  *
- * Part 05 embeds this model in the rendered document as a JSON island and part
- * 06 parses it back, so every type here must survive `JSON.parse(JSON.stringify(…))`
- * unchanged. Concretely: no `undefined` values (an absent field is a missing
+ * `src/render/` embeds this model in the rendered document as a JSON island and
+ * `src/parse/` reads it back, so every type here must survive
+ * `JSON.parse(JSON.stringify(…))` unchanged. Concretely: no `undefined` values (an absent field is a missing
  * key, which is the single spelling of "absent"), no `Date`, no `Map`/`Set`, and
  * **no `Uint8Array`** — bytes live behind an {@link AssetRef}, never inline.
  */
@@ -52,9 +52,9 @@ import type { ColorMapToken, ColorTransform, GeometryCommand, LineSpacing, Theme
 export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
 
 /**
- * The shape version of this IR. Part 05's HTML island carries it and part 06's
- * parser refuses a mismatch loudly rather than mis-reading a document written by
- * an older renderer. Bump on any change that is not purely additive-optional.
+ * The shape version of this IR. The HTML island carries it and the parser
+ * refuses a mismatch loudly rather than mis-reading a document written by an
+ * older renderer. Bump on any change that is not purely additive-optional.
  *
  * `1` was the legacy DOM-shaped IR in `./model`.
  */

@@ -7,8 +7,8 @@
  * single transform on the group instead of arithmetic threaded through every
  * path command and every text box.
  *
- * The group's `data-d2p-node` is a **link**, not state: it lets part 06 (and a
- * human with dev tools) find the island entry a painted element came from. The
+ * The group's `data-d2p-node` is a **link**, not state: it lets the parser (and
+ * a human with dev tools) find the island entry a painted element came from. The
  * model itself is never written into attributes — see `island.ts` for why.
  */
 

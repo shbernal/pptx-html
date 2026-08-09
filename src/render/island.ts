@@ -3,8 +3,8 @@
  *
  * The rendered document has two channels (see `document.ts`): a visual one made
  * of SVG and HTML, and this one, a verbatim copy of the {@link RenderIr} in a
- * `<script type="application/json">` block. Part 06 parses *this* and never
- * re-derives the model from the DOM, because `getComputedStyle` has no
+ * `<script type="application/json">` block. The return path parses *this* and
+ * never re-derives the model from the DOM, because `getComputedStyle` has no
  * representation for placeholder inheritance, colour transforms, autofit mode or
  * geometry adjust values — it would answer every question with a plausible
  * number and no way to tell which ones were invented.
@@ -28,8 +28,8 @@
  *   projection and nothing else. It answers "did a human edit the text", and a
  *   mismatch is the normal signal that routes a slide to the reconciled lane.
  *
- * With a single hash those two questions collapse into one answer, and part 06
- * cannot tell a legitimate edit from corruption: every edit would look like
+ * With a single hash those two questions collapse into one answer, and the
+ * return path cannot tell a legitimate edit from corruption: every edit would look like
  * tampering, or nothing would. They are complementary by construction because
  * both derive from `src/ir/surface.ts` rather than from two separate ideas of
  * what is editable.
@@ -38,7 +38,7 @@
 import type { RenderIr } from '../ir/render'
 import { project } from '../ir/surface'
 
-/** The island block's `id`. Part 06 looks the model up by exactly this. */
+/** The island block's `id`. The parser looks the model up by exactly this. */
 export const ISLAND_ID = 'dom2pptx-ir'
 
 /** The integrity block's `id` — the two hashes and the IR version. */

@@ -6,9 +6,9 @@ import { CORPUS, corpusBytes } from '../corpus/decks'
 /**
  * Which corpus decks exercise each node kind.
  *
- * Part 03 could only assert that a kind *named* a deck, because nothing built a
- * `RenderIr` from a package yet. Now the importer does, so every claim below is
- * checked against what that deck actually produces — a kind whose decks stopped
+ * Before the importer existed this could only assert that a kind *named* a deck,
+ * because nothing built a `RenderIr` from a package. Now it does, so every claim
+ * below is checked against what that deck actually produces — a kind whose decks stopped
  * producing it fails here rather than sitting in the model unexercised, and a
  * claim that was always wrong cannot survive being written down.
  */

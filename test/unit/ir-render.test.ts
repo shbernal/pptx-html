@@ -22,7 +22,7 @@ const NODES = SAMPLE_IR.slides.flatMap((slide) => allNodes(slide.nodes))
 
 describe('the IR survives the JSON island', () => {
 	it('is identical after a JSON round trip', () => {
-		// Part 05 embeds this model in the rendered document and part 06 parses it
+		// The renderer embeds this model in the document and the parser reads it
 		// back. `toStrictEqual` rather than `toEqual` on purpose: it distinguishes
 		// a missing key from a key holding `undefined`, which is exactly the
 		// distinction JSON erases and the one the model forbids.
@@ -33,7 +33,7 @@ describe('the IR survives the JSON island', () => {
 		// The round-trip test above passes for a `Uint8Array` too — it just comes
 		// back as `{"0":…}` and compares unequal only if something reads it. This
 		// walks the model instead, so a `Date`, a `Map`, or inline media bytes are
-		// caught at the point they are introduced rather than in part 06.
+		// caught at the point they are introduced rather than on the way back.
 		const offenders: string[] = []
 		walk(SAMPLE_IR, '$', offenders)
 		expect(offenders).toEqual([])

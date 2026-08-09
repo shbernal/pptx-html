@@ -12,7 +12,7 @@
  * things in it are documented approximations. The island is not lossy at all,
  * and it is the only channel the return path trusts. A slide that renders
  * *wrong* still round-trips *exactly*, which is the property this split exists
- * to buy and the one part 06 tests by deliberately breaking a renderer.
+ * to buy, and the oracle tests it by deliberately breaking a renderer.
  *
  * ## The renderer never touches the IR
  *

@@ -1,7 +1,7 @@
 /**
  * The island's own rules, on a fixture rather than a corpus deck.
  *
- * These are the properties part 06 is entitled to assume, and every one of them
+ * These are the properties the return path is entitled to assume, and every one of them
  * fails *silently* if it is wrong: a truncated island parses as a smaller deck,
  * a hash over the wrong bytes reports tampering on an untouched document, and a
  * `surfaceHash` that moves with the whole model turns every text edit into
@@ -16,7 +16,7 @@ import { SAMPLE_IR } from '../fixtures/render-ir'
 
 const NO_ASSETS = { assets: 'ref' } as const
 
-/** The island's text, taken the way part 06 will take it: by block id. */
+/** The island's text, taken the way the parser takes it: by block id. */
 function islandOf(html: string, id: string = ISLAND_ID): string {
 	const match = new RegExp(`<script type="application/json" id="${id}">(.*?)</script>`, 's').exec(html)
 	if (match?.[1] === undefined) throw new Error(`no block with id ${id}`)
@@ -50,7 +50,7 @@ describe('the two hashes', () => {
 		// The distinction the whole scheme rests on. An edit inside the surface is a
 		// *different model*, so `modelHash` moves too — what must hold is the
 		// converse: something outside the surface must move `modelHash` while
-		// leaving `surfaceHash` alone, so part 06 can tell drift from an edit.
+		// leaving `surfaceHash` alone, so the parser can tell drift from an edit.
 		const before = await integrityOf(SAMPLE_IR, islandTextOf(SAMPLE_IR))
 
 		const moved: RenderIr = JSON.parse(JSON.stringify(SAMPLE_IR))
@@ -88,7 +88,7 @@ describe('the two hashes', () => {
 
 describe('the renderer is read-only', () => {
 	it('leaves the IR it was given untouched', async () => {
-		// The trap part 05 is most likely to fall into later: normalizing a colour or
+		// The trap the renderer is most likely to fall into later: normalizing a colour or
 		// clamping a box back into the model. It breaks Invariant R somewhere else
 		// entirely, so it is asserted here rather than left to review.
 		const untouched = JSON.parse(JSON.stringify(SAMPLE_IR))

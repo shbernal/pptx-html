@@ -15,8 +15,8 @@
  * this wrong both over- and under-excludes). Printing source and then evaluating
  * it would test a TypeScript emitter; this tests the mapping.
  *
- * The interpreter itself now lives in `src/emit/script.ts` — part 06 made it the
- * package's emit leg. What stays here is the *lane*: the deck it replays against
+ * The interpreter itself lives in `src/emit/script.ts`, as the package's emit
+ * leg. What stays here is the *lane*: the deck it replays against
  * and the notes it declares, which are the oracle's business and not the
  * emitter's.
  */
