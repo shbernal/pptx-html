@@ -186,6 +186,10 @@ show the shape at its other end: what the comment turns into once the release
 lands, which is a sentence about why the deleted stopgap existed rather than a
 deletion nobody can date.
 
+`ts-pptx-upstream`, the skill the package ships, is the normative reference for
+writing the report itself. See [AGENTS.md](./AGENTS.md#upstream) for what belongs
+upstream and what stays here.
+
 ## Commits
 
 Conventional-commit subjects (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`),

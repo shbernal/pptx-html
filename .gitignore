@@ -39,3 +39,9 @@ coverage/
 ### `.claude/skills` is a junction on Windows; tools that read it as a symlink
 ### rather than a directory skip a `skills/` pattern, so match it without the slash.
 .claude/skills
+
+### Skills installed from a dependency rather than authored here. `skills-lock.json`
+### is the tracked record; `npx skills experimental_install` restores the copy, which
+### then always matches the installed package version. A skill this repo writes itself
+### is not covered by this and stays tracked.
+/.agents/skills/ts-pptx-upstream/

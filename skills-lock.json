@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "ts-pptx-upstream": {
+      "source": "./node_modules/@shbernal/ts-pptx",
+      "sourceType": "local",
+      "computedHash": "cda173f62180c81b0d668d19a90b2a320cbe3f712cb6066bf940db3a72e0fdeb"
+    }
+  }
+}

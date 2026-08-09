@@ -23,7 +23,11 @@
 			"!dist",
 			"!coverage",
 			"!.tmp",
-			"!.claude"
+			"!.claude",
+			// Written by `npx skills add`, two-space indented. Formatting it to tabs
+			// would be undone by the next install, so the check would fail on a file
+			// nobody edits by hand.
+			"!skills-lock.json"
 		]
 	},
 	"formatter": {

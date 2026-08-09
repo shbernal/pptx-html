@@ -25,21 +25,26 @@ and the routing between them.
   workspace; run its commands from the repository root.
 - Use `pnpm`. Node `>=24`. Keep source in `src/`, tests in `test/`. Treat `dist/`
   as generated build output.
-- **Skills live in `.agents/skills/`** — the tracked source of truth, runtime
-  agnostic. `.claude/skills/` is a junction to it (`.gitignore`d), so Claude Code
-  loads the same files every other runtime does and there is one copy to edit.
-  Recreate it after a fresh clone:
-
-  ```powershell
-  New-Item -ItemType Junction -Path .claude\skills -Target .agents\skills
-  ```
+- **Skills live in `.agents/skills/`**, runtime agnostic, with each runtime's own
+  directory (`.claude/skills/`, `.gitignore`d) linking into it — so every runtime
+  loads the same files and there is one copy to edit.
+- **`ts-pptx-upstream` is installed from the dependency, not authored here.** It
+  ships inside `@shbernal/ts-pptx`, which is what keeps it matching the installed
+  version; editing the copy would only diverge from it, and a change to it belongs
+  in the ts-pptx repo. `skills-lock.json` is the tracked record and the copy is
+  `.gitignore`d. Install it after a fresh clone, and again after bumping the pin:
 
   ```bash
-  ln -s ../.agents/skills .claude/skills
+  npx skills add ./node_modules/@shbernal/ts-pptx -s '*' -a claude-code -a codex -a universal -y
   ```
 
-  Repo-scoped skills only — anything not specific to this project belongs in the
-  personal skills repo instead.
+  Name the runtimes rather than passing `--all`: that flag writes an `agent/`
+  directory at the repo root for a runtime nobody here uses.
+  `skills experimental_install` is not the restore command — it repopulates
+  `.agents/skills/` from the lock file but creates none of the runtime links.
+
+  Skills this repo does write are repo-scoped only, and stay tracked — anything
+  not specific to this project belongs in the personal skills repo instead.
 - Preserve unrelated dirty state. Do not revert user changes.
 
 ## The non-negotiables
@@ -90,10 +95,25 @@ are easy to skip and expensive to skip:
 ## Upstream
 
 Gaps in `@shbernal/ts-pptx` are filed as GitHub issues **in the same unit of work
-that found them**, before the commit. `.agents/skills/ts-pptx-upstream/` is the
-normative reference: what to file, what not to (anything about *HTML* stays here),
-how to write an ask that is still actionable months later, and what to do when a
-release lands.
+that found them**, before the commit. The `ts-pptx-upstream` skill — shipped by
+the package itself, see above — is the normative reference for *how*: which error
+class means whose bug, reducing the failure to a script that builds its own deck
+rather than attaching a real one, which form to file under.
+
+Two things it cannot know, because they are this repo's:
+
+- **What not to file.** Anything about *HTML* — the renderer, the IR island, the
+  parser, the extraction heuristics — stays here. So does an OOXML limitation,
+  which no converter change fixes. The test is whether a fix would help *any*
+  consumer of the writer.
+- **The triage function.** `FidelityNote.cause`, which `readModelToIr` returns for
+  free: `unread` is a missing reader and `unwritable` a missing write option —
+  both worth filing; `unsupported` is the output tier's own limit and is not.
+
+There is deliberately no local post-write repair layer, so an issue upstream *is*
+the remedy. When a release lands, `gh issue list --repo shbernal/ts-pptx --state
+all`, bump the pin, delete the workarounds their comments point at, and close each
+issue with the test that now passes rather than with "done".
 
 Anything discovered while building the custGeom/SVG-path vectorizer — a missing
 custGeom case, a measure gap — goes upstream, not patched locally.
