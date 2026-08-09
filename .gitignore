@@ -19,6 +19,12 @@ coverage/
 /dist/
 /.tmp/
 
+### Generated site. `site/docs/` is a mirror of `docs/` written by
+### site/scripts/sync-docs.ts; `docs/` is the tracked source of truth.
+/site/docs/
+/site/.vitepress/cache/
+/site/.vitepress/dist/
+
 ### Decks and documents the example writes
 /examples/out/
 

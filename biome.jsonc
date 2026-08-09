@@ -13,6 +13,9 @@
 		"includes": [
 			"src/**/*.ts",
 			"test/**/*.ts",
+			"site/**/*.ts",
+			// Named separately: the glob above does not reach a dot-directory.
+			"site/.vitepress/**/*.ts",
 			"examples/**/*.mjs",
 			"*.json",
 			"*.jsonc",

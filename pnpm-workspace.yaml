@@ -9,7 +9,14 @@
 # wrapper hardcoded to this repo's `node_modules`, which would then fire for
 # every repo on the machine. `lefthook run` needs no installed hooks, so hook
 # wiring is left to whatever the environment already provides.
+#
+# esbuild arrives under vitepress. It ships one prebuilt binary per platform as an
+# optional dependency, and pnpm installs the matching one; its postinstall only
+# re-resolves that same binary, so the site builds without it. Answered rather
+# than left blank because an unanswered build script makes `pnpm install` exit
+# non-zero, and every `pnpm run` performs that check first.
 allowBuilds:
+  esbuild: false
   lefthook: false
 minimumReleaseAgeExclude:
   - '@shbernal/ts-pptx@3.0.0'

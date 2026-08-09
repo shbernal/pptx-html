@@ -1,0 +1,35 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"display": "pptx-html site",
+	// Deliberately does not extend `../tsconfig.base.json`, which the rest of the
+	// repo does. Vite 5 arrives under VitePress and bundles esbuild 0.21, which
+	// does not know the `es2024` target the base config sets — and esbuild reads
+	// whatever tsconfig it finds next to the files it compiles, including the whole
+	// `extends` chain, so inheriting it means a warning on every build about a
+	// setting the site never asked for. The options below are the base config's,
+	// with `target` one step down.
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"lib": ["dom", "dom.iterable", "es2023"],
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"noImplicitAny": true,
+		"noEmit": true,
+		"strict": true,
+		// On here and nowhere else in the repo. `src/` checks its dependencies'
+		// declarations on purpose — it has one, and a broken `.d.ts` there is a real
+		// signal. The site pulls in VitePress's whole Vue toolchain, whose published
+		// types do not compile under this TypeScript version; checking them reports
+		// other people's bugs and hides ours.
+		"skipLibCheck": true,
+		"target": "es2022",
+		// The scripts run under Node's own type stripping and import each other by
+		// their real `.ts` paths, which is also what Vite resolves for the config.
+		"allowImportingTsExtensions": true,
+		"types": ["node"]
+	},
+	// This file sits inside `site/` rather than beside the others at the repo root
+	// so that Vite and esbuild find it for these files without being told to.
+	// TypeScript's wildcards skip dot-directories, so `.vitepress` needs naming.
+	"include": ["**/*.ts", ".vitepress/**/*.ts"]
+}
