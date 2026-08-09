@@ -5,10 +5,15 @@ on:
   push:
     branches:
       - main
-      - master
 
 permissions:
   contents: read
+
+# A push that supersedes an in-flight run makes that run's answer stale, and the
+# browser leg is the slowest thing here — cancel rather than pay for it twice.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
@@ -50,19 +55,24 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
+      - name: Build package artifacts
+        run: pnpm run build
+
       # The round-trip gate. Runs before the browser layer and on its own so a
       # fidelity regression is reported as one, rather than as a failure buried
       # in a suite that also needs a browser to start. Needs no DOM.
       - name: Round-trip oracle
         run: pnpm run test:oracle
 
+      - name: Unit tests
+        run: pnpm run test:unit
+
       # The browser test layer (test/browser/) runs the extract/e2e path in real
       # Chromium via Playwright; jsdom/happy-dom lack the layout + canvas it needs.
+      # Each project is invoked by name rather than through `pnpm run test`, which
+      # would rebuild and re-run the oracle a second time.
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Test
-        run: pnpm run test
-
-      - name: Build package artifacts
-        run: pnpm run build
+      - name: Browser tests
+        run: pnpm run test:browser
