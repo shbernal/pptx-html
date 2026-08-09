@@ -15,7 +15,13 @@
 import { withBase } from 'vitepress'
 import { ref } from 'vue'
 
-const INSTALL = 'npm i pptx-html'
+/**
+ * `pnpm` rather than `npm`, in the one place a visitor is most likely to copy a
+ * line without reading it. It is the package manager this repository declares
+ * and the one every command in `CONTRIBUTING.md` uses, so the front door should
+ * not suggest a different one.
+ */
+const INSTALL = 'pnpm add pptx-html'
 
 const copied = ref(false)
 

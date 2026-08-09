@@ -77,7 +77,7 @@ that way is a failure wearing a success's clothes.
 ## Install
 
 ```bash
-npm install pptx-html
+pnpm add pptx-html
 ```
 
 The writer, [`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx),
