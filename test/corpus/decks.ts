@@ -221,6 +221,70 @@ export const CORPUS: CorpusDeck[] = [
 		}
 	),
 
+	deck(
+		'line-cap',
+		'primitive',
+		'a:ln/@cap — geometry on a thick dashed rule, and a write/read pair the script tier drops',
+		(pptx) => {
+			// The cap is the point, so the rule is thick and dashed: at 6pt a round cap
+			// extends every dash by the stroke width and turns each one from a rectangle
+			// into a lozenge. On a hairline the difference would be unobservable and the
+			// deck would pass whether or not the attribute survived.
+			//
+			// It passes the round-trip gate today *while losing the cap*, and that is
+			// worth stating rather than discovering later: `readModelToIr` never reads
+			// `Shape.lineCap` (https://github.com/shbernal/ts-pptx/issues/8), so both
+			// sides of `diffDeckIr` are missing it equally and the difference cancels.
+			// The deck earns its place on the import side, where `import.test.ts` pins
+			// the cap the paint model does carry; it starts gating the script tier the
+			// day upstream maps the attribute.
+			pptx.addSlide().addShape('line', {
+				x: 1,
+				y: 1,
+				w: 6,
+				h: 0,
+				line: { color: '250F6B', width: 6, dashType: 'dash', cap: 'round' },
+				objectName: 'rule',
+			})
+		}
+	),
+
+	deck('bullet', 'primitive', 'a numbered list’s startAt and the bullet’s own font, size and colour', (pptx) => {
+		// `numberStartAt` is content, not styling: a list continuing "5. Deploy" that
+		// comes back as "1. Deploy" is a different slide. The glyph's own font/size/
+		// colour are here because they style the *bullet* rather than the run, so no
+		// run property carries them and only `bulletDetail` reaches them at all.
+		const slide = pptx.addSlide()
+		slide.addText([{ text: 'Deploy' }], {
+			x: 1,
+			y: 1,
+			w: 6,
+			h: 1,
+			bullet: {
+				type: 'number',
+				numberType: 'arabicPeriod',
+				numberStartAt: 5,
+				fontFace: 'Wingdings',
+				size: 80,
+				color: 'C00000',
+			},
+			objectName: 'steps',
+		})
+		// A picture bullet (`a:buBlip`) — the fourth kind, which the tagged-string
+		// accessor dropped to `null` entirely. It is here as a *declared* loss: the
+		// paint model resolves the image and can draw it, and upstream's text mapper
+		// has no asset resolver, so the script tier notes `text.bullet.picture` and
+		// falls back to a character. Watching that note stay declared is the point.
+		slide.addText([{ text: 'Starred' }], {
+			x: 1,
+			y: 2.5,
+			w: 6,
+			h: 1,
+			bullet: { image: { data: PIXEL_PNG } },
+			objectName: 'starred',
+		})
+	}),
+
 	deck('chart', 'hard', 'a full reader with no writer for every form — expected to be carried', (pptx) => {
 		pptx.addSlide().addChart([{ name: 'Share', labels: ['EMEA', 'AMER', 'APAC'], values: [48, 31, 21] }], {
 			type: 'bar',

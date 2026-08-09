@@ -13,7 +13,17 @@ import { CORPUS, corpusBytes } from '../corpus/decks'
  * claim that was always wrong cannot survive being written down.
  */
 const EXERCISED_BY: Record<NodeKind, string[]> = {
-	shape: ['text-box', 'autoshape', 'custgeom', 'gradient', 'layout-placeholder', 'rotated-flipped', 'theme-color'],
+	shape: [
+		'text-box',
+		'autoshape',
+		'custgeom',
+		'gradient',
+		'line-cap',
+		'bullet',
+		'layout-placeholder',
+		'rotated-flipped',
+		'theme-color',
+	],
 	picture: ['picture'],
 	connector: ['connector'],
 	table: ['table'],

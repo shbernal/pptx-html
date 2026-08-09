@@ -5,7 +5,7 @@ description: File gaps in @shbernal/ts-pptx as GitHub issues on shbernal/ts-pptx
 
 # Filing upstream asks against `@shbernal/ts-pptx`
 
-The dependency is pinned at `^2.0.0` and consumed from npm — no local link, no
+The dependency is pinned at `^3.0.0` and consumed from npm — no local link, no
 workspace override, no vendored patch. The only channel to upstream is a GitHub
 issue on **`shbernal/ts-pptx`** (public, `gh` authenticated on this machine).
 

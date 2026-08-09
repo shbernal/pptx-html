@@ -56,11 +56,11 @@
 		"prepack": "pnpm run build"
 	},
 	"dependencies": {
-		"@shbernal/ts-pptx": "^2.0.0"
+		"@shbernal/ts-pptx": "^3.0.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.7",
-		"@types/node": "^26.1.2",
+		"@types/node": "^26.2.0",
 		"@vitest/browser": "^4.1.10",
 		"@vitest/browser-playwright": "^4.1.10",
 		"lefthook": "^2.1.10",

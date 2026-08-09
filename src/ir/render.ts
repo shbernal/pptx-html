@@ -258,11 +258,10 @@ export type Gradient =
  * overloaded `null` to mean both, so a themed shape and a transparent one were
  * indistinguishable.
  *
- * Import currently produces `inherit` for both, because the read model exposes
- * no accessor for a shape's `a:noFill`
- * ({@link https://github.com/shbernal/ts-pptx/issues/1}). The distinction
- * is modeled anyway: the lane that *can* state it (the DOM lane, and emit) needs
- * it, and collapsing the two would make the gap invisible instead of pending.
+ * Import states both for a *shape*, off `Shape.fillNoFill` (added in ts-pptx
+ * 3.0.0, closing {@link https://github.com/shbernal/ts-pptx/issues/1}). A *table
+ * cell* still reports `inherit` for both, because `TableCell` has no equivalent
+ * reader — see the note in `import/paint.ts`.
  */
 export type Fill =
 	| { kind: 'inherit' }
@@ -307,10 +306,12 @@ export interface LineEnd {
  * from the theme's `a:lnRef`. Here the read model *does* distinguish the two
  * (`Shape.lineNoFill`), so both are reachable from import.
  *
- * `a:ln/@cap` and `@algn` are deliberately absent: the read model exposes no
- * accessor for either, so any value here would be a default this file invented
- * rather than something the deck said
- * ({@link https://github.com/shbernal/ts-pptx/issues/2}).
+ * `a:ln/@cap` is modeled and `@algn` is not, and the split is the round-trip rule
+ * rather than a reading one — ts-pptx 3.0.0 exposes both
+ * ({@link https://github.com/shbernal/ts-pptx/issues/2}), but only `@cap` has a
+ * write-API option (`ShapeLineProps.cap`) to come back through. A stated `@algn`
+ * is imported as a {@link FidelityNote}, which is what keeps it a *declared*
+ * difference rather than a field that silently never survives.
  */
 export type Stroke =
 	| { kind: 'inherit' }
@@ -324,6 +325,17 @@ export type Stroke =
 			gradient?: Gradient
 			/** `a:prstDash/@val`. Absent when unstated; a token outside {@link DashStyle} is a note. */
 			dash?: DashStyle
+			/**
+			 * `a:ln/@cap`, as the raw OOXML token. Absent when unstated — PowerPoint
+			 * draws `flat`, but an explicit `flat` and an absent one are different
+			 * decks for the same reason everything else here is optional.
+			 *
+			 * On a thick dashed rule the cap decides whether each dash reads as a
+			 * rectangle or a lozenge and extends every dash by the stroke width, so it
+			 * is geometry, not polish. SVG's `stroke-linecap` is the exact equivalent
+			 * (`flat`→`butt`, `rnd`→`round`, `sq`→`square`).
+			 */
+			cap?: 'flat' | 'rnd' | 'sq'
 			head?: LineEnd
 			tail?: LineEnd
 	  }
@@ -369,7 +381,19 @@ export interface Hyperlink {
 	tooltip?: string
 }
 
-/** A paragraph's bullet definition (`a:buNone` / `a:buChar` / `a:buAutoNum`). */
+/**
+ * A paragraph's bullet definition — the four mutually exclusive `a:pPr` bullet
+ * children (`a:buNone` / `a:buChar` / `a:buAutoNum` / `a:buBlip`).
+ *
+ * Every arm but `none` carries the bullet's own `a:buFont` / `a:buSzPct` /
+ * `a:buClr`, which style the *glyph* rather than the text and are therefore not
+ * reachable from the run properties. `none` carries none of them because there is
+ * no glyph to style.
+ *
+ * `a:buSzPts` (an absolute glyph size) is deliberately unmodeled: the write API's
+ * `bullet.size` is a percentage of the run size, so an absolute one has no way
+ * back and is imported as a `text.bullet.sizePt` note instead.
+ */
 export type Bullet =
 	| { kind: 'none' }
 	| { kind: 'character'; char: string; font?: string; color?: Color; sizePct?: number }
@@ -378,11 +402,28 @@ export type Bullet =
 			/** `a:buAutoNum/@type`, e.g. `arabicPeriod`. */
 			scheme: string
 			/**
-			 * `@startAt`. Absent means the schema default, 1 — the read model exposes no
-			 * accessor for it ({@link https://github.com/shbernal/ts-pptx/issues/3}, which
-			 * also covers the bullet's own `font`/`color`/`sizePct` below).
+			 * `@startAt`. Absent means the schema default, 1. Numbering is content, not
+			 * styling — a list continuing "5. Deploy" that comes back as "1. Deploy" is
+			 * a different slide.
 			 */
 			startAt?: number
+			font?: string
+			color?: Color
+			sizePct?: number
+	  }
+	| {
+			/**
+			 * `a:buBlip`, an image used as the glyph. Addressed by {@link AssetRef} like
+			 * every other picture in this model, never re-embedded.
+			 *
+			 * Modeled rather than dropped because the read model resolves the image part
+			 * and a renderer can paint it. It does not survive the emit leg — upstream's
+			 * text mapper has no asset resolver and declares a `text.bullet.picture`
+			 * note — so the loss is declared there rather than hidden here by pretending
+			 * the paragraph inherited its bullet.
+			 */
+			kind: 'picture'
+			asset: AssetRef
 			font?: string
 			color?: Color
 			sizePct?: number
@@ -590,9 +631,14 @@ export interface TableNode extends NodeBase {
  * {@link Placement} is already slide-absolute (see {@link Placement}), so a
  * renderer walks the tree for paint order and identity and never composes a
  * transform. Carrying `a:chOff`/`a:chExt` as well would be a second copy of the
- * same geometry that nothing keeps in step — and the read model exposes no
- * accessor for either ({@link https://github.com/shbernal/ts-pptx/issues/4}, filed
- * for a replica consumer's sake, not this one's), so it would have to be invented.
+ * same geometry that nothing keeps in step.
+ *
+ * That reason stands on its own now that the accessor exists: ts-pptx 3.0.0 added
+ * `GroupShape.childFrame` ({@link https://github.com/shbernal/ts-pptx/issues/4}),
+ * and it stays unread here deliberately. The ask was filed for a consumer that
+ * *rebuilds* a group as OOXML and needs the source child space to reproduce its
+ * scaling; this model paints, and `absoluteFrame` has already done that
+ * arithmetic.
  */
 export interface GroupNode extends NodeBase {
 	kind: 'group'

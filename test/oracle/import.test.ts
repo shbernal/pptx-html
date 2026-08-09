@@ -170,9 +170,6 @@ describe('absent means inherited', () => {
 	})
 
 	it('distinguishes an explicit no-line from an unstated one', async () => {
-		// `a:noFill` on a line is readable, so both states are reachable — unlike a
-		// shape's fill, where the read model exposes no equivalent and everything
-		// unstated reports as inherited.
 		const freeform = (await nodeNamed('custgeom', 'freeform')) as ShapeNode
 		const card = (await nodeNamed('autoshape', 'card')) as ShapeNode
 		const copy = (await nodeNamed('text-box', 'copy')) as ShapeNode
@@ -184,6 +181,85 @@ describe('absent means inherited', () => {
 			dash: 'solid',
 		})
 		expect(copy.stroke.kind).toBe('inherit')
+	})
+
+	it('distinguishes an explicit no-fill from an unstated one', async () => {
+		// Before `Shape.fillNoFill` (ts-pptx 3.0.0, closing upstream #1) this reported
+		// `inherit`, and so did every other text box in the corpus — the model said
+		// "takes its fill from the style reference" about a box whose XML says
+		// `a:noFill`. That is the flattening the two arms exist to prevent, and it was
+		// the corpus-wide default until the accessor landed.
+		const copy = (await nodeNamed('text-box', 'copy')) as ShapeNode
+		const card = (await nodeNamed('autoshape', 'card')) as ShapeNode
+		expect(copy.fill).toStrictEqual({ kind: 'none' })
+		expect(card.fill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: 'DDE3F0' } })
+
+		// The third arm has no corpus case on purpose rather than by omission: a fill
+		// of `inherit` needs a shape with a `p:style/a:fillRef` and no fill child, and
+		// this writer emits a fill or an `a:noFill` on everything it authors. The one
+		// call that produces the XML is `addShape({ fill: { type: 'none' } })`, and it
+		// produces it by mistake — https://github.com/shbernal/ts-pptx/issues/9. It is
+		// reachable from the DOM lane and from PowerPoint-authored decks, which is the
+		// deferred second corpus tier.
+		const fills = (await importCorpus('autoshape')).slides
+			.flatMap((slide) => flatten(slide.nodes))
+			.filter((node) => node.kind === 'shape')
+			.map((node) => node.fill.kind)
+		expect(fills).not.toContain('inherit')
+	})
+
+	it('keeps a stated line cap and leaves an unstated one absent', async () => {
+		// `@cap` is modeled because `ShapeLineProps.cap` can carry it back; `@algn` is
+		// a note instead, because nothing can. Neither is a default this file invents:
+		// an unstated cap is an absent key, not `'flat'`.
+		const rule = (await nodeNamed('line-cap', 'rule')) as ShapeNode
+		const card = (await nodeNamed('autoshape', 'card')) as ShapeNode
+		expect(rule.stroke).toStrictEqual({
+			kind: 'line',
+			widthPt: 6,
+			color: { kind: 'srgb', hex: '250F6B' },
+			dash: 'dash',
+			cap: 'rnd',
+		})
+		expect(card.stroke).not.toHaveProperty('cap')
+	})
+})
+
+describe('bullets', () => {
+	it('keeps a numbered list’s startAt and the bullet’s own font, size and colour', async () => {
+		// All four were unreachable before `bulletDetail` replaced the tagged string
+		// (upstream #3). `startAt` is the one that changes what the slide *says*.
+		const steps = (await nodeNamed('bullet', 'steps')) as ShapeNode
+		expect(steps.text?.paragraphs[0]?.props.bullet).toStrictEqual({
+			kind: 'number',
+			scheme: 'arabicPeriod',
+			startAt: 5,
+			font: 'Wingdings',
+			color: { kind: 'srgb', hex: 'C00000' },
+			sizePct: 80,
+		})
+	})
+
+	it('resolves a picture bullet to a hash-addressed asset, never inline bytes', async () => {
+		// The fourth kind, which the tagged string dropped to `null` outright. It is
+		// addressed the way every other picture in this model is — an `AssetRef`, so
+		// the JSON island stays free of `Uint8Array` and the image is one entry rather
+		// than one per paragraph that uses it.
+		const starred = (await nodeNamed('bullet', 'starred')) as ShapeNode
+		const bullet = starred.text?.paragraphs[0]?.props.bullet
+		expect(bullet?.kind).toBe('picture')
+		if (bullet?.kind !== 'picture') return
+		const ir = await importCorpus('bullet')
+		expect(ir.assets.map((asset) => asset.name)).toContain(bullet.asset.$asset)
+	})
+
+	it('leaves an inherited bullet absent and an explicit a:buNone stated', async () => {
+		// The distinction the `null` arm exists for: a paragraph inheriting the list
+		// style's bullet and one suppressing its own render differently, so `absent`
+		// and `{ kind: 'none' }` may never collapse together.
+		const copy = (await nodeNamed('text-box', 'copy')) as ShapeNode
+		const bullets = copy.text?.paragraphs.map((paragraph) => paragraph.props.bullet)
+		expect(bullets?.every((bullet) => bullet === undefined || bullet.kind === 'none')).toBe(true)
 	})
 })
 

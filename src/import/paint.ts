@@ -130,9 +130,21 @@ export interface FillSource {
 	readonly gradientFill: GradientFill | null
 	readonly patternFill: PatternFill | null
 	readonly pictureFill: PictureFill | null
+	/**
+	 * Optional because `Shape` has it and `TableCell` does not — the one member of
+	 * this set the two classes disagree about. Optional rather than two interfaces:
+	 * an absent reader and a `false` one mean different things here, and a cell
+	 * silently satisfying `fillNoFill: boolean` by structural luck is worse than
+	 * the arm below being unreachable for it.
+	 */
+	readonly fillNoFill?: boolean
 }
 
 export function fillOf(source: FillSource, scope: ImportScope): Fill {
+	// First because `EG_FillProperties` admits one child: a shape with `a:noFill`
+	// has no other fill for the branches below to find.
+	if (source.fillNoFill === true) return { kind: 'none' }
+
 	const picture = source.pictureFill
 	if (picture !== null) return pictureFillOf(picture, scope)
 
@@ -155,11 +167,15 @@ export function fillOf(source: FillSource, scope: ImportScope): Fill {
 	const solid = colorOf(source.fillSchemeColor, source.resolvedFill)
 	if (solid !== undefined) return { kind: 'solid', color: solid }
 
-	// Neither `a:noFill` nor a stated fill is distinguishable here: the read model
-	// exposes no accessor for the former, and this layer does not touch XML. So an
-	// unstated fill reports as inherited, which is the truthful half — and the
-	// ask is a reader, not a guess: https://github.com/shbernal/ts-pptx/issues/1
-	// Return `{ kind: 'none' }` off that accessor once a release carries it.
+	// A shape has already taken the `none` arm above. A table cell cannot: `TableCell`
+	// exposes `hasOwnFill` but no `noFill` reader, so an explicit `a:noFill` on a cell
+	// is indistinguishable from one inheriting the table style's shading, and both
+	// land here as inherited — the truthful half of the two.
+	//
+	// Deriving it from `hasOwnFill && every other accessor is null` would be a guess,
+	// not a read: the same shape is produced by any fill choice this decode does not
+	// model. The ask is the cell-side counterpart of `Shape.fillNoFill`:
+	// https://github.com/shbernal/ts-pptx/issues/7
 	return { kind: 'inherit' }
 }
 
@@ -185,6 +201,8 @@ export interface StrokeSource {
 	readonly lineNoFill: boolean
 	readonly lineWidthPt: number | null
 	readonly lineDash: string | null
+	readonly lineCap: string | null
+	readonly lineAlign: string | null
 	readonly lineSchemeColor: string | null
 	readonly resolvedLine: ResolvedColor | null
 	readonly lineGradient: GradientFill | null
@@ -239,22 +257,66 @@ function dashOf(dash: string | null, scope: ImportScope, construct: string): Das
 	return undefined
 }
 
+/**
+ * `a:ln/@cap`, which the write API can carry back (`ShapeLineProps.cap`), and
+ * `@algn`, which it cannot.
+ *
+ * Both are read as of ts-pptx 3.0.0. The split between modeling one and noting
+ * the other is the round-trip rule, not a reading limit: a field that could never
+ * come back would be a difference the model quietly absorbs instead of declaring.
+ *
+ * `line.cap` and `line.align` are coined keys — upstream's set has `line.dash`,
+ * `line.width` and `line.arrowSize` and reaches neither of these. Coining is for
+ * a construct upstream does not model at all, which is exactly the case here;
+ * the rule it does not break is inventing a *synonym* for a key that exists.
+ */
+const LINE_CAPS = new Set<string>(['flat', 'rnd', 'sq'])
+
+function capOf(cap: string | null, scope: ImportScope): 'flat' | 'rnd' | 'sq' | undefined {
+	if (cap === null) return undefined
+	if (LINE_CAPS.has(cap)) return cap as 'flat' | 'rnd' | 'sq'
+	note(
+		scope,
+		'line.cap',
+		'dropped',
+		'unsupported',
+		`a line cap of ${JSON.stringify(cap)} is outside ST_LineCap, so the line is drawn with the default flat cap`
+	)
+	return undefined
+}
+
+function noteLineAlign(align: string | null, scope: ImportScope): void {
+	if (align === null) return
+	note(
+		scope,
+		'line.align',
+		'dropped',
+		'unwritable',
+		`this outline states a:ln/@algn of ${JSON.stringify(align)}; the write API has no option for it, so the outline comes back centred on the shape's edge and a thick one sits half its width further out`
+	)
+}
+
 export function strokeOf(source: StrokeSource, scope: ImportScope): Stroke {
 	if (source.lineNoFill) return { kind: 'none' }
 
 	const color = colorOf(source.lineSchemeColor, source.resolvedLine)
 	const gradient = source.lineGradient === null ? null : gradientOf(source.lineGradient, scope)
 	const dash = dashOf(source.lineDash, scope, 'line.dash')
+	const cap = capOf(source.lineCap, scope)
 	const head = lineEndOf(source.lineEnds?.head, scope)
 	const tail = lineEndOf(source.lineEnds?.tail, scope)
+	noteLineAlign(source.lineAlign, scope)
 
-	// Nothing stated at all: the line comes from the theme's `a:lnRef`, which the
-	// read model does not resolve. Reporting `none` here would erase every themed
-	// outline in the deck.
+	// Nothing modeled stated at all: the line comes from the theme's `a:lnRef`, which
+	// the read model does not resolve. Reporting `none` here would erase every themed
+	// outline in the deck. `@algn` is deliberately not part of this test — it produced
+	// a note and nothing else, so a line stating only `@algn` still states nothing this
+	// model carries.
 	if (
 		color === undefined &&
 		gradient === null &&
 		dash === undefined &&
+		cap === undefined &&
 		head === undefined &&
 		tail === undefined &&
 		source.lineWidthPt === null
@@ -268,6 +330,7 @@ export function strokeOf(source: StrokeSource, scope: ImportScope): Stroke {
 		...(color === undefined ? {} : { color }),
 		...(gradient === null ? {} : { gradient }),
 		...(dash === undefined ? {} : { dash }),
+		...(cap === undefined ? {} : { cap }),
 		...(head === undefined ? {} : { head }),
 		...(tail === undefined ? {} : { tail }),
 	}

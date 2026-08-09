@@ -20,9 +20,17 @@
  * are fixed rather than inherited from a placeholder.
  */
 
-import type { AutofitMode, Paragraph as ReadParagraph, Run as ReadRun, TextFrame } from '@shbernal/ts-pptx/read'
+import type {
+	AutofitMode,
+	BulletDetail,
+	BulletStyle,
+	Paragraph as ReadParagraph,
+	Run as ReadRun,
+	TextFrame,
+} from '@shbernal/ts-pptx/read'
 import type {
 	Bullet,
+	Color,
 	Hyperlink,
 	Paragraph,
 	ParagraphProperties,
@@ -120,7 +128,7 @@ function paragraphOf(paragraph: ReadParagraph, scope: ImportScope): Paragraph {
 	const props: ParagraphProperties = {
 		level: paragraph.level,
 		...(modeledAlign === undefined ? {} : { align: modeledAlign }),
-		...bulletFields(paragraph.bullet),
+		...bulletFields(paragraph.bulletDetail, scope),
 		...(paragraph.marginLeftPt === null ? {} : { marginLeftPt: paragraph.marginLeftPt }),
 		...(paragraph.indentPt === null ? {} : { indentPt: paragraph.indentPt }),
 		...(paragraph.lineSpacing === null ? {} : { lineSpacing: paragraph.lineSpacing }),
@@ -132,18 +140,83 @@ function paragraphOf(paragraph: ReadParagraph, scope: ImportScope): Paragraph {
 }
 
 /**
- * The read model reports a bullet as one string — `'none'`, `'char:•'`,
- * `'autoNum:arabicPeriod'` — or `null` for "inherited from the list style". The
- * `null` case has to stay absent rather than becoming `{ kind: 'none' }`: a
+ * The bullet's own `a:buFont` / `a:buSzPct` / `a:buClr`, shared by the three arms
+ * that have a glyph to style.
+ *
+ * `a:buSzPts` is a note rather than a field: the write API's `bullet.size` is a
+ * percentage of the run size, so an absolute point size has no expression to come
+ * back through. `text.bullet.sizePt` is upstream's own key for exactly this, so
+ * this lane's note set and the script tier's describe the one loss the same way.
+ */
+function bulletStyleFields(
+	style: BulletStyle,
+	scope: ImportScope
+): { font?: string; color?: Color; sizePct?: number } {
+	if (style.sizePt !== null)
+		note(
+			scope,
+			'text.bullet.sizePt',
+			'dropped',
+			'unwritable',
+			`this bullet sets an absolute glyph size of ${style.sizePt}pt (a:buSzPts); bullet.size is a percentage of the run size, so the glyph follows the text size instead`
+		)
+
+	const color = colorOf(style.schemeColor, style.resolvedColor) ?? colorOfHex(style.color)
+	return {
+		...(style.font === null ? {} : { font: style.font }),
+		...(color === undefined ? {} : { color }),
+		...(style.sizePct === null ? {} : { sizePct: style.sizePct }),
+	}
+}
+
+/** `a:buClr` with a literal `a:srgbClr` and no theme context to resolve it against. */
+function colorOfHex(hex: string | null): Color | undefined {
+	return hex === null ? undefined : { kind: 'srgb', hex }
+}
+
+/**
+ * `Paragraph.bulletDetail` — a discriminated union as of ts-pptx 3.0.0, which
+ * replaced the tagged string (`'none'` / `'char:•'` / `'autoNum:arabicPeriod'`)
+ * this used to parse ({@link https://github.com/shbernal/ts-pptx/issues/3}). The
+ * old accessor was ambiguous for a glyph that is itself a colon, and had no room
+ * for `@startAt` or the bullet's own font/size/colour, all of which land here now.
+ *
+ * `null` still has to stay absent rather than becoming `{ kind: 'none' }`: a
  * paragraph inheriting the layout's bullet and one that explicitly suppresses its
  * bullet render differently.
  */
-function bulletFields(bullet: string | null): { bullet?: Bullet } {
+function bulletFields(bullet: BulletDetail | null, scope: ImportScope): { bullet?: Bullet } {
 	if (bullet === null) return {}
-	if (bullet === 'none') return { bullet: { kind: 'none' } }
-	if (bullet.startsWith('char:')) return { bullet: { kind: 'character', char: bullet.slice('char:'.length) } }
-	if (bullet.startsWith('autoNum:')) return { bullet: { kind: 'number', scheme: bullet.slice('autoNum:'.length) } }
-	return {}
+	if (bullet.kind === 'none') return { bullet: { kind: 'none' } }
+
+	const style = bulletStyleFields(bullet, scope)
+	if (bullet.kind === 'char') return { bullet: { kind: 'character', char: bullet.char, ...style } }
+	if (bullet.kind === 'autoNum') {
+		return {
+			bullet: {
+				kind: 'number',
+				scheme: bullet.scheme,
+				...(bullet.startAt === null ? {} : { startAt: bullet.startAt }),
+				...style,
+			},
+		}
+	}
+
+	// A picture bullet (`a:buBlip`). Modeled when its image resolves, because the
+	// renderer can paint it; the emit-side loss is upstream's `text.bullet.picture`
+	// note, not this lane's to restate.
+	const asset = bullet.imagePartName === null ? null : scope.assets.refFor(bullet.imagePartName)
+	if (asset === null) {
+		note(
+			scope,
+			'text.bullet.picture',
+			'dropped',
+			'unread',
+			'this paragraph uses an image as its bullet glyph (a:buBlip) that resolves to no media part, so there are no bytes to draw and the bullet is inherited instead'
+		)
+		return {}
+	}
+	return { bullet: { kind: 'picture', asset, ...style } }
 }
 
 function runOf(run: ReadRun, scope: ImportScope): TextRun {

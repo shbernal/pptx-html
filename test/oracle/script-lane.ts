@@ -20,12 +20,11 @@
  */
 
 import TsPptx from '@shbernal/ts-pptx'
-import { isGraphicFrame, type LayoutHandle, Presentation } from '@shbernal/ts-pptx/read'
+import { type LayoutHandle, Presentation } from '@shbernal/ts-pptx/read'
 import {
 	type AssetIr,
 	type CallIr,
 	type DeckIr,
-	type FidelityNote,
 	type IrValue,
 	isAssetRef,
 	type SlideIr,
@@ -33,47 +32,18 @@ import {
 import { EMU_PER_INCH } from '../../src/ir/render'
 import { type Loop, scriptTierNotes } from './roundtrip'
 
+/**
+ * The lane declares the tier's own losses and nothing else.
+ *
+ * It used to add one of its own — a table whose rows are **all** auto-height came
+ * back with explicit heights, and `readModelToIr` excluded that case from its
+ * `table.rowAuto` note explicitly. ts-pptx 3.0.0 fixed it
+ * (https://github.com/shbernal/ts-pptx/issues/5), so `scriptTierNotes` now covers
+ * it and a local compensation would be a second note for one loss.
+ */
 export const scriptLoop: Loop = async (input) => {
 	const bytes = await emitDeckIr(input.ir, input.bytes, input.pres)
-	return { bytes, notes: [...scriptTierNotes(input.ir), ...autoRowNotes(input.pres)] }
-}
-
-/**
- * The one loss this lane declares beyond the tier's own: a table whose rows are
- * **all** auto-height comes back with explicit heights.
- *
- * `a:tr/@h="0"` means "size to content", and `readModelToIr` correctly emits no
- * `rowH` for it — but `addTable` then divides the frame height evenly, so the
- * re-read reports three pinned rows where the source had three auto ones. The
- * table still looks identical; the *implicitness* is what is lost.
- *
- * Upstream already owns this construct and already notes the mixed case (some
- * rows auto, some not). It does not note the all-auto case, which is the more
- * common one — filed as https://github.com/shbernal/ts-pptx/issues/5, and this
- * whole function is deleted the day a release carries the note. The note is
- * scoped to the tables it actually applies to: a blanket one would excuse a
- * genuinely wrong `rowH` on any table in the deck.
- */
-function autoRowNotes(pres: Presentation): FidelityNote[] {
-	const notes: FidelityNote[] = []
-	for (const slide of pres.slides) {
-		for (const shape of slide.shapes) {
-			if (!isGraphicFrame(shape)) continue
-			const table = shape.table
-			if (table === null || table.rows.length === 0) continue
-			if (!table.rows.every((row) => (row.heightEmu ?? 0) === 0)) continue
-			notes.push({
-				slideNumber: slide.index + 1,
-				shapeName: shape.name,
-				construct: 'table.rowAuto',
-				disposition: 'approximated',
-				cause: 'unsupported',
-				detail:
-					'every row of this table is auto-height (a:tr/@h of 0), so the IR carries no rowH; addTable then divides the frame height evenly and the rows come back pinned to that share',
-			})
-		}
-	}
-	return notes
+	return { bytes, notes: scriptTierNotes(input.ir) }
 }
 
 /**

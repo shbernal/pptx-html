@@ -10,3 +10,5 @@
 # wiring is left to whatever the environment already provides.
 allowBuilds:
   lefthook: false
+minimumReleaseAgeExclude:
+  - '@shbernal/ts-pptx@3.0.0'
