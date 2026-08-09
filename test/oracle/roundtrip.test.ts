@@ -1,6 +1,7 @@
 import { diffDeckIr, type FidelityNote } from '@shbernal/ts-pptx/script'
 import { describe, expect, it } from 'vitest'
 import { CORPUS, corpusBytes } from '../corpus/decks'
+import { htmlLoop } from './html-lane'
 import { assertRoundTrip, carryLoop, describeReport, resaveLoop, roundTrip, viewDeck } from './roundtrip'
 import { scriptLoop } from './script-lane'
 
@@ -37,6 +38,17 @@ describe('lanes', () => {
 			// misattributed to the render or parse steps.
 			const result = await roundTrip(await corpusBytes(entry), scriptLoop)
 			assertRoundTrip(result, `${entry.name} (import → emit)`)
+		})
+	}
+
+	for (const entry of CORPUS) {
+		it(`${entry.name}: survives the whole loop through HTML`, async () => {
+			// Invariant R itself. Everything above is a leg of this: the re-save lane
+			// proves the harness, the carry lane proves the residual channel, the
+			// import → emit lane proves the two upstream mappers — and this one adds
+			// render and parse to the chain and asks the same question of all five.
+			const result = await roundTrip(await corpusBytes(entry), htmlLoop)
+			assertRoundTrip(result, `${entry.name} (html loop)`)
 		})
 	}
 

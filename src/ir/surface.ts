@@ -154,13 +154,24 @@ function collectRuns(owner: NodeId, text: TextBodyLike, into: ProjectedRun[]): v
 				paragraph: paragraphIndex,
 				run: runIndex,
 				text: run.text,
-				props: pickEditable(run.props),
+				props: editableRunProps(run.props),
 			})
 		})
 	})
 }
 
-function pickEditable(props: RunProperties): Pick<RunProperties, EditableRunProp> {
+/**
+ * A run's stated properties, narrowed to the surface.
+ *
+ * Exported because the renderer writes exactly this onto each run's span
+ * (`data-d2p-props`) and the return path reads exactly this back. That attribute
+ * is not a duplicate of the island: the *painted* style on a run is
+ * `props.X ?? resolved.X`, so reading a colour back off the rendered span would
+ * promote an inherited value into a stated one on every placeholder — the
+ * flattening this model is built to avoid. What the deck stated is a different
+ * fact from what the browser painted, and only the first is in surface.
+ */
+export function editableRunProps(props: RunProperties): Pick<RunProperties, EditableRunProp> {
 	const picked: Pick<RunProperties, EditableRunProp> = {}
 	for (const key of EDITABLE_RUN_PROPS) {
 		// Assign only what is stated. An absent key means *inherited*, and writing

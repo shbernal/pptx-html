@@ -27,7 +27,7 @@
 
 import type { RenderIr, RenderSlide } from '../ir/render'
 import { type AssetSource, hydrationScript, renderAssetBlock } from './assets'
-import { escapeForScript, INTEGRITY_ID, integrityOf, type Integrity, ISLAND_ID, serializeIsland } from './island'
+import { escapeForScript, INTEGRITY_ID, integrityOf, type Integrity, islandTextOf, ISLAND_ID } from './island'
 import { renderNode, type NodeContext } from './node'
 import { Defs, fillPaint } from './paint'
 import { escapeText } from './text'
@@ -124,7 +124,10 @@ export async function renderDeck(ir: RenderIr, options: RenderOptions): Promise<
 	const warnings: string[] = []
 	const body = ir.slides.map((slide) => renderSlide(slide, ir.size, warnings)).join('')
 
-	const island = serializeIsland(ir)
+	// The embedded form, not the raw JSON: `modelHash` covers the block's text
+	// exactly as written, so the reader can verify it without an inverse escape
+	// that does not exist. See `islandTextOf`.
+	const island = islandTextOf(ir)
 	const integrity = await integrityOf(ir, island)
 
 	// The island is serialized from the model as given, and the asset block from
@@ -139,7 +142,7 @@ export async function renderDeck(ir: RenderIr, options: RenderOptions): Promise<
 		`<title>Deck — ${ir.slides.length} slide${ir.slides.length === 1 ? '' : 's'}</title>` +
 		`<style>${STYLESHEET}</style></head><body>` +
 		`<div class="d2p-deck">${body}</div>` +
-		`<script type="application/json" id="${ISLAND_ID}">${escapeForScript(island)}</script>` +
+		`<script type="application/json" id="${ISLAND_ID}">${island}</script>` +
 		`<script type="application/json" id="${INTEGRITY_ID}">${escapeForScript(JSON.stringify(integrity))}</script>` +
 		assets.html +
 		hydrationScript() +

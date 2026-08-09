@@ -32,6 +32,7 @@
  */
 
 import type { Bullet, Paragraph, ParagraphProperties, TextBody, TextRun } from '../ir/render'
+import { editableRunProps } from '../ir/surface'
 import { cssColor, EMU_PER_POINT, escapeAttr } from './paint'
 
 /** Text-node escaping. `&` first, or it would double-escape the entities below. */
@@ -97,13 +98,23 @@ function runStyle(run: TextRun): string {
  * what keeps an edit from merging two runs or moving text across a formatting
  * boundary — an edit the return path would have to guess at, which is exactly
  * what the surface exists to prevent.
+ *
+ * `data-d2p-props` carries the other four surface values — and it is the *stated*
+ * ones, not the painted ones. The `style` beside it is `props.X ?? resolved.X`,
+ * which cannot be read back: a placeholder title painted at the layout's 44pt
+ * states no size at all, and taking 44 off the span would write the layout's
+ * value into the slide. The attribute is omitted entirely when the run states
+ * none of the four, so the common case costs nothing.
  */
 function renderRun(run: TextRun, nodeId: string, paragraph: number, index: number): string {
 	const style = runStyle(run)
 	const address = `${nodeId}/${paragraph}/${index}`
 	const link = run.props.hyperlink
+	const stated = editableRunProps(run.props)
+	const statedAttr =
+		Object.keys(stated).length === 0 ? '' : ` data-d2p-props="${escapeAttr(JSON.stringify(stated))}"`
 	const span =
-		`<span data-d2p-run="${escapeAttr(address)}" contenteditable="true"` +
+		`<span data-d2p-run="${escapeAttr(address)}" contenteditable="true"${statedAttr}` +
 		`${style === '' ? '' : ` style="${escapeAttr(style)}"`}>${escapeText(run.text)}</span>`
 
 	if (link?.url == null) return span

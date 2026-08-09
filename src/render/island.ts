@@ -61,7 +61,7 @@ export interface Integrity {
 	 * renderer *before* parsing a model whose shape it does not know.
 	 */
 	irVersion: number
-	/** Lowercase hex SHA-256 of the island's serialized JSON, as embedded. */
+	/** Lowercase hex SHA-256 of the island block's text, character for character. */
 	modelHash: string
 	/** Lowercase hex SHA-256 of the serialized {@link project} of the same IR. */
 	surfaceHash: string
@@ -70,14 +70,32 @@ export interface Integrity {
 /**
  * Serialize the IR for embedding.
  *
- * No pretty-printing and no key reordering. The bytes written here are the exact
- * bytes {@link modelHashOf} covers and the exact bytes part 06 re-hashes, so any
- * transformation applied on one side and not the other turns every document into
- * a tampering report. `RenderIr` is JSON-safe by contract (no `undefined`, no
- * `Map`, no `Uint8Array` — see `ir/render`), so this needs no replacer.
+ * No pretty-printing and no key reordering. `RenderIr` is JSON-safe by contract
+ * (no `undefined`, no `Map`, no `Uint8Array` — see `ir/render`), so this needs no
+ * replacer.
  */
 export function serializeIsland(ir: RenderIr): string {
 	return JSON.stringify(ir)
+}
+
+/**
+ * The island exactly as it appears in the document — serialized, then escaped.
+ *
+ * This, not {@link serializeIsland}, is what {@link Integrity.modelHash} covers,
+ * and the distinction is not cosmetic. Hashing the *unescaped* JSON would force
+ * the reader to undo {@link escapeForScript} before it could verify anything, and
+ * that inverse does not exist: a deck containing the literal seven characters
+ * `\` `\` `u` `0` `0` `3` `c` (a backslash in a run of text, JSON-escaped to a
+ * doubled one) is indistinguishable, by string replacement, from an escaped `<`.
+ * Undoing it would corrupt the very models most likely to be adversarial.
+ *
+ * Hashing the embedded form removes the inverse from the problem: the reader
+ * takes the block's text verbatim, hashes it, and compares. Nothing is
+ * transformed on one side and not the other, which is the failure that would
+ * report every untouched document as tampered with.
+ */
+export function islandTextOf(ir: RenderIr): string {
+	return escapeForScript(serializeIsland(ir))
 }
 
 /**
@@ -107,9 +125,10 @@ export async function sha256Hex(text: string): Promise<string> {
 /**
  * Both hashes for one IR, plus the version.
  *
- * `island` is passed in rather than re-serialized here so that the value hashed
- * is provably the value embedded — recomputing it would leave room for the two
- * to drift apart under a future change to {@link serializeIsland}.
+ * `island` is the **embedded text** ({@link islandTextOf}), passed in rather than
+ * re-derived here so that the value hashed is provably the value written into the
+ * document — recomputing it would leave room for the two to drift apart under a
+ * future change to the serialization.
  *
  * Neither hash covers asset *bytes*, only the manifest inside the island. That
  * is what makes `modelHash` identical under `assets: 'inline'` and

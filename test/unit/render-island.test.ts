@@ -11,7 +11,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RenderIr } from '../../src/ir/render'
 import { renderDeck } from '../../src/render/document'
-import { escapeForScript, INTEGRITY_ID, ISLAND_ID, integrityOf, serializeIsland } from '../../src/render/island'
+import { escapeForScript, INTEGRITY_ID, ISLAND_ID, integrityOf, islandTextOf } from '../../src/render/island'
 import { SAMPLE_IR } from '../fixtures/render-ir'
 
 const NO_ASSETS = { assets: 'ref' } as const
@@ -51,27 +51,27 @@ describe('the two hashes', () => {
 		// *different model*, so `modelHash` moves too — what must hold is the
 		// converse: something outside the surface must move `modelHash` while
 		// leaving `surfaceHash` alone, so part 06 can tell drift from an edit.
-		const before = await integrityOf(SAMPLE_IR, serializeIsland(SAMPLE_IR))
+		const before = await integrityOf(SAMPLE_IR, islandTextOf(SAMPLE_IR))
 
 		const moved: RenderIr = JSON.parse(JSON.stringify(SAMPLE_IR))
 		const shape = moved.slides[0]?.nodes.find((node) => node.kind === 'shape')
 		if (shape?.kind !== 'shape' || shape.placement === null) throw new Error('fixture shape changed')
 		shape.placement.box.x += 1
 
-		const after = await integrityOf(moved, serializeIsland(moved))
+		const after = await integrityOf(moved, islandTextOf(moved))
 		expect(after.modelHash).not.toBe(before.modelHash)
 		expect(after.surfaceHash).toBe(before.surfaceHash)
 	})
 
 	it('moves both when the edit is inside the surface', async () => {
-		const before = await integrityOf(SAMPLE_IR, serializeIsland(SAMPLE_IR))
+		const before = await integrityOf(SAMPLE_IR, islandTextOf(SAMPLE_IR))
 
 		const edited: RenderIr = JSON.parse(JSON.stringify(SAMPLE_IR))
 		const shape = edited.slides[0]?.nodes.find((node) => node.kind === 'shape')
 		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]?.runs[0]) throw new Error('fixture shape changed')
 		shape.text.paragraphs[0].runs[0].text += ' edited'
 
-		const after = await integrityOf(edited, serializeIsland(edited))
+		const after = await integrityOf(edited, islandTextOf(edited))
 		expect(after.surfaceHash).not.toBe(before.surfaceHash)
 	})
 
@@ -79,7 +79,7 @@ describe('the two hashes', () => {
 		// If these ever disagree, every untouched document reports as tampered with.
 		const { html, integrity } = await renderDeck(SAMPLE_IR, NO_ASSETS)
 		const embedded = islandOf(html)
-		expect(embedded).toBe(escapeForScript(serializeIsland(SAMPLE_IR)))
+		expect(embedded).toBe(islandTextOf(SAMPLE_IR))
 
 		const stated = JSON.parse(islandOf(html, INTEGRITY_ID))
 		expect(stated).toStrictEqual(integrity)

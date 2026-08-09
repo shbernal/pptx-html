@@ -29,8 +29,16 @@ export interface AssetIndex {
 	bytesFor(ref: AssetRef): Uint8Array | undefined
 }
 
-/** Lowercase hex SHA-256. `crypto.subtle` is present in Node and in the browser. */
-async function sha256Hex(bytes: Uint8Array): Promise<string> {
+/**
+ * Lowercase hex SHA-256 of raw bytes. `crypto.subtle` is present in Node and in
+ * the browser.
+ *
+ * Exported because it *defines* {@link AssetManifestEntry.sha256}, and the return
+ * path verifies resolved bytes against that field. Two implementations of "the
+ * manifest hash" is two things that must agree and nothing that makes them —
+ * and the failure would be a document that reports every asset as tampered with.
+ */
+export async function sha256OfBytes(bytes: Uint8Array): Promise<string> {
 	// A fresh copy: `digest` wants an ArrayBuffer, and a part's `bytes` may be a
 	// view onto a larger buffer, whose tail would otherwise be hashed too.
 	const digest = await crypto.subtle.digest('SHA-256', Uint8Array.from(bytes))
@@ -72,7 +80,7 @@ function uniqueName(candidate: string, taken: ReadonlyMap<string, unknown>): str
  */
 export async function buildAssetIndex(opc: OpcPackage, deck: DeckIr): Promise<AssetIndex> {
 	const carriedByHash = new Map<string, AssetIr>()
-	for (const asset of deck.assets) carriedByHash.set(await sha256Hex(asset.bytes), asset)
+	for (const asset of deck.assets) carriedByHash.set(await sha256OfBytes(asset.bytes), asset)
 
 	const manifest: AssetManifestEntry[] = []
 	const refByPart = new Map<string, AssetRef>()
@@ -81,7 +89,7 @@ export async function buildAssetIndex(opc: OpcPackage, deck: DeckIr): Promise<As
 
 	for (const [partName, part] of opc.parts) {
 		if (!isMediaPart(part.contentType)) continue
-		const hash = await sha256Hex(part.bytes)
+		const hash = await sha256OfBytes(part.bytes)
 		const seen = nameByHash.get(hash)
 		if (seen !== undefined) {
 			// Same bytes as a part already indexed: one asset, two references.
