@@ -64,6 +64,17 @@ they exist to make impossible, and they can only deliver that if it is an error.
 `pptx-html` **by name**, through the `exports` map, exactly as a consumer would —
 the same reason `examples/round-trip.mjs` does — so `dist/` has to exist.
 
+The home page (`site/index.md`) is a landing page rather than a doc page, and the
+two rows of slides drifting across it are **rendered on load, in the visitor's
+browser**, by `site/.vitepress/theme/home/`. `decks.ts` writes two eight-slide
+consulting decks with `@shbernal/ts-pptx`, `showcase.ts` runs
+`importDeck → renderDeck` and cuts the document into its `section.pxh-slide`
+elements verbatim, and each one is installed in a shadow root so the site's own
+stylesheet cannot restyle it. They are **not** corpus decks and must not become
+them: the corpus is the oracle's input domain, and widening it to decorate a page
+would change what the gate means. They are decks the writer can write, which is
+the domain the guarantee is scoped to, and the page says so under the rows.
+
 Two rules for anything under `site/**`:
 
 - **No claim the oracle does not gate.** The site is the project's marketing

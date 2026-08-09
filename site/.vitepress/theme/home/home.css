@@ -1,0 +1,246 @@
+/*
+ * The landing page's own layout.
+ *
+ * Scoped to `.pxh-home`, set by `site/index.md`'s frontmatter, for the same
+ * reason `wide.css` is scoped to `.pxh-wide`: this page is the one that is not
+ * prose, and the docs must keep their measure. Component-level styling lives in
+ * the components; what is here is the page — the full-bleed band, the column the
+ * prose sits in, and the two card grids.
+ */
+
+/* `layout: page` still hands VitePress's content wrapper its usual padding, and
+   the hero and the marquee both need the full width to work at all. */
+.pxh-home .VPContent {
+	padding: 0;
+}
+
+.pxh-home .VPPage {
+	padding: 0;
+}
+
+/* The measure everything below the marquee is set in. */
+.pxh-page {
+	max-width: 1152px;
+	margin: 0 auto;
+	padding: 8px 24px 96px;
+}
+
+.pxh-page section {
+	padding: 46px 0;
+	border-top: 1px solid var(--vp-c-divider);
+}
+
+.pxh-page section:first-of-type {
+	border-top: none;
+}
+
+.pxh-kicker {
+	margin: 0 0 10px;
+	font-size: 11.5px;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--vp-c-brand-1);
+}
+
+.pxh-page h2 {
+	margin: 0 0 14px;
+	font-size: 27px;
+	line-height: 1.25;
+	letter-spacing: -0.018em;
+	font-weight: 700;
+	color: var(--vp-c-text-1);
+	border: none;
+	padding: 0;
+}
+
+.pxh-page p {
+	max-width: 660px;
+	margin: 0 0 16px;
+	font-size: 15.5px;
+	line-height: 1.72;
+	color: var(--vp-c-text-2);
+}
+
+.pxh-page a {
+	color: var(--vp-c-brand-1);
+	font-weight: 500;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.pxh-page code {
+	padding: 2px 5px;
+	border-radius: 5px;
+	background: var(--vp-c-bg-soft);
+	font-size: 0.88em;
+	color: var(--vp-c-text-1);
+}
+
+/* The four-leg diagram. Monospace, so it is the same picture the README shows. */
+.pxh-loop {
+	margin: 22px 0 0;
+	padding: 20px 22px;
+	overflow-x: auto;
+	border: 1px solid var(--vp-c-divider);
+	border-radius: 12px;
+	background: var(--vp-c-bg-soft);
+	font-size: 12.5px;
+	line-height: 1.7;
+	color: var(--vp-c-text-2);
+}
+
+.pxh-invariant {
+	margin: 22px 0 0;
+	padding: 16px 20px;
+	border-left: 3px solid var(--vp-c-brand-1);
+	border-radius: 0 10px 10px 0;
+	background: var(--vp-c-bg-soft);
+}
+
+.pxh-invariant p {
+	margin: 0;
+	font-size: 14.5px;
+}
+
+.pxh-invariant strong {
+	color: var(--vp-c-text-1);
+}
+
+/* ── the three states ─────────────────────────────────────────────────────── */
+
+.pxh-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 14px;
+	margin-top: 26px;
+}
+
+.pxh-tile {
+	padding: 20px;
+	border: 1px solid var(--vp-c-divider);
+	border-radius: 12px;
+	background: var(--vp-c-bg-soft);
+}
+
+.pxh-tile h3 {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	margin: 0 0 8px;
+	font-size: 15px;
+	font-weight: 650;
+	color: var(--vp-c-text-1);
+}
+
+.pxh-tile h3::before {
+	content: '';
+	width: 9px;
+	height: 9px;
+	border-radius: 2px;
+	background: var(--pxh-tile-tint, var(--vp-c-brand-1));
+}
+
+.pxh-tile p {
+	margin: 0;
+	font-size: 13.5px;
+	line-height: 1.65;
+	color: var(--vp-c-text-2);
+}
+
+.pxh-tile.is-ruled-out {
+	/* The fourth state gets the full row and a dashed edge: it is the one on the
+	   list that does not exist, and reading as a peer of the other three would be
+	   the page saying the opposite of what it says. */
+	grid-column: 1 / -1;
+	border-style: dashed;
+	background: transparent;
+}
+
+/* ── what the guarantee covers ────────────────────────────────────────────── */
+
+.pxh-facts {
+	margin: 24px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.pxh-facts li {
+	display: grid;
+	grid-template-columns: 150px minmax(0, 1fr);
+	gap: 18px;
+	padding: 14px 0;
+	border-top: 1px solid var(--vp-c-divider);
+	font-size: 14.5px;
+	line-height: 1.7;
+	color: var(--vp-c-text-2);
+}
+
+.pxh-facts b {
+	font-size: 11.5px;
+	font-weight: 650;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--vp-c-text-1);
+	padding-top: 3px;
+}
+
+@media (max-width: 620px) {
+	.pxh-facts li {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 4px;
+	}
+}
+
+/* ── the closing calls to action ──────────────────────────────────────────── */
+
+.pxh-doors {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+	gap: 14px;
+	margin-top: 26px;
+}
+
+/* Wins over `.pxh-page a`, which underlines prose links and would underline the
+   whole card — heading, body and arrow. */
+.pxh-page a.pxh-door {
+	display: block;
+	color: inherit;
+	font-weight: 400;
+	text-decoration: none;
+	padding: 22px;
+	border: 1px solid var(--vp-c-divider);
+	border-radius: 12px;
+	background: var(--vp-c-bg-soft);
+	transition:
+		border-color 0.2s,
+		transform 0.2s;
+}
+
+.pxh-door:hover {
+	border-color: var(--vp-c-brand-1);
+	transform: translateY(-2px);
+}
+
+.pxh-door strong {
+	display: block;
+	margin-bottom: 6px;
+	font-size: 15px;
+	color: var(--vp-c-text-1);
+}
+
+.pxh-door span {
+	display: block;
+	font-size: 13px;
+	line-height: 1.6;
+	color: var(--vp-c-text-2);
+	font-weight: 400;
+}
+
+.pxh-door::after {
+	content: '→';
+	display: block;
+	margin-top: 14px;
+	font-size: 15px;
+	color: var(--vp-c-brand-1);
+}

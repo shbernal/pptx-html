@@ -1,93 +1,140 @@
 ---
-layout: home
+layout: page
+pageClass: pxh-home
 editLink: false
-hero:
-  name: 'pptx-html'
-  text: 'Edit a PowerPoint deck as a web page'
-  tagline: 'and get the deck back — not an approximation of it.'
-  actions:
-    - theme: brand
-      text: Playground
-      link: /playground
-    - theme: alt
-      text: Read the design record
-      link: /docs/
-features:
-  - title: Modeled
-    details: The intermediate representation represents it, and it survives the loop exactly.
-  - title: Carried
-    details: The IR does not model it, so its XML moves across untouched. No approximation, and no loss.
-  - title: Warned
-    details: It can be neither modeled nor carried, and the conversion says so. A visible failure, never a silent one.
+aside: false
+title: 'Edit a PowerPoint deck as a web page'
+description: 'pptx-html reads a .pptx into a slide model, renders it as editable HTML, reads the edit back and writes the deck out again — losslessly.'
 ---
 
-## The loop
+<script setup>
+// `withBase` because the site is served from `/pptx-html/` on GitHub Pages.
+// VitePress rewrites markdown links for that automatically, which is why every
+// link inside prose below is written as markdown — it is also what
+// `ignoreDeadLinks: false` checks. The card grids are hand-written HTML, so they
+// have to say it themselves.
+import { withBase } from 'vitepress'
+</script>
 
-`pptx-html` reads a `.pptx` into a slide model, renders that model as HTML, reads
-the edited HTML back, and writes a `.pptx` out again. Four legs, one loop:
+<HomeHero />
 
-```text
-.pptx  ──import──►  IR  ──render──►  HTML   (what a human sees / edits)
+<ClientOnly>
+	<SlideMarquee />
+</ClientOnly>
+
+<div class="pxh-page">
+
+<section>
+
+<p class="pxh-kicker">What it is</p>
+
+## Four functions, arranged in a circle
+
+`pptx-html` moves slides between HTML and PPTX by driving
+[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx). It reads a
+`.pptx` into a slide model, renders that model as HTML, reads the edited HTML back,
+and writes a `.pptx` out again — so a deck can be edited by anything that can edit
+a web page, and still be a deck afterwards.
+
+<pre class="pxh-loop">.pptx  ──import──►  IR  ──render──►  HTML   (what a human sees / edits)
   ▲                  ▲                 │
-  └────emit──────────┴─────parse───────┘   (what a machine reads back)
-```
+  └────emit──────────┴─────parse───────┘   (what a machine reads back)</pre>
 
-The loop only means anything if it is lossless, and that is the property the
-whole design is arranged around:
+<div class="pxh-invariant">
 
-> **Invariant R.** For any deck this pipeline can write, `import → render → parse
-> → emit` produces a deck **equal under the normalized read model** to the input.
-> Slides whose features the IR does not model are carried across
-> **byte-identical** rather than approximated.
+**Invariant R.** For any deck this pipeline can write, `import → render → parse →
+emit` produces a deck **equal under the normalized read model** to the input.
+Slides whose features the IR does not model are carried across **byte-identical**
+rather than approximated.
 
-Equality is normalized, not byte-for-byte: zip entry order, timestamps,
-relationship ids and element ids all vary legally, and both sides are
-canonicalized before diffing.
+</div>
 
-## The fourth state, ruled out
+Equality is normalized rather than byte-for-byte: zip entry order, timestamps,
+relationship ids and element ids all vary legally, and both sides are canonicalized
+before diffing. [The property, and the harness that gates it →](/docs/round-trip)
 
-Modeled, carried and warned are the three states above. What they exist to rule
-out is the fourth — *approximated*: content that comes out looking about right
-but has no way back. It is why the raster fallback was removed rather than kept
-as an escape hatch. A slide flattened into a picture is the one output that can
-never re-enter the loop, so producing a file that way is a failure wearing a
-success's clothes.
+</section>
 
-That is also why this site shows no pictures of slides. A screenshot of a deck
-would prove exactly the thing the project refuses to do. Anything this site shows
-of a deck has to be produced by running the library.
+<section>
+
+<p class="pxh-kicker">The three states</p>
+
+## Every construct is in one of three states, and never a fourth
+
+<div class="pxh-grid">
+	<div class="pxh-tile" style="--pxh-tile-tint: #3d5afe">
+		<h3>Modeled</h3>
+		<p>The intermediate representation represents it, and it survives the loop exactly.</p>
+	</div>
+	<div class="pxh-tile" style="--pxh-tile-tint: #00c2cb">
+		<h3>Carried</h3>
+		<p>The IR does not model it, so its XML moves across untouched. No approximation, and no loss.</p>
+	</div>
+	<div class="pxh-tile" style="--pxh-tile-tint: #f0a020">
+		<h3>Warned</h3>
+		<p>It can be neither modeled nor carried, and the conversion says so. A visible failure, never a silent one.</p>
+	</div>
+	<div class="pxh-tile is-ruled-out" style="--pxh-tile-tint: #c4405f">
+		<h3>Approximated</h3>
+		<p>The state that does not exist here: content that comes out looking about right and has no way back. It is why the raster fallback was removed rather than kept as an escape hatch — a slide flattened into a picture can never re-enter the loop — and why this site shows no pictures of slides.</p>
+	</div>
+</div>
 
 Those three states are a claim, and the [fidelity ledger](/docs/fidelity) is its
 evidence: what the loop currently models, carries and warns on, per deck, measured
 from the same corpus the round-trip oracle gates on.
 
-## What the guarantee covers
+</section>
+
+<section>
+
+<p class="pxh-kicker">Scope</p>
+
+## What the guarantee covers, and what it does not
 
 A generated corpus of 17 decks runs the full loop on every CI build, and the
-per-construct fidelity ledger is snapshotted so it cannot move silently. What
-that gate currently covers:
+per-construct fidelity ledger is snapshotted so it cannot move silently. Claims
+here are held to what that gate actually covers; where something is not covered,
+it says so.
 
-- **Input domain** — decks written by
-  [`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx), which is
-  what the generated corpus is made of. Decks authored in PowerPoint are a
-  deliberate second tier and are **not yet gated**.
-- **Environment** — the loop is host-agnostic and runs in Node and the browser
-  alike. The best-effort heuristic lane, for HTML this library did not render, is
-  browser-only: it needs a real DOM.
-- **Distribution** — published to npm as `pptx-html`. ESM only, Node `>=24`.
-  Pre-1.0: the loop's four legs are stable, the heuristic lane's model is not.
+<ul class="pxh-facts">
+	<li>
+		<b>Input domain</b>
+		<span>Decks written by <code>@shbernal/ts-pptx</code>, which is what the generated corpus is made of — and what the two decks moving above are written by. Decks authored in PowerPoint are a deliberate second tier and are <strong>not yet gated</strong>.</span>
+	</li>
+	<li>
+		<b>Environment</b>
+		<span>The loop is host-agnostic and runs in Node and the browser alike. The best-effort heuristic lane, for HTML this library did not render, is browser-only: it needs a real DOM.</span>
+	</li>
+	<li>
+		<b>Distribution</b>
+		<span>Published to npm as <code>pptx-html</code>. ESM only, Node <code>&gt;=24</code>. Pre-1.0: the loop's four legs are stable, the heuristic lane's model is not.</span>
+	</li>
+</ul>
 
-Claims here are held to what the oracle actually gates. Where something is not
-covered, it says so.
+</section>
 
-## Start here
+<section>
 
-- [Invariant R and the round-trip oracle](/docs/round-trip) — the property, and
-  the harness that turns it from a claim into a gate.
-- [Architecture](/docs/architecture) — the two lanes, the two models, and the
-  rules each part of the loop is built on.
-- [Decisions that must not be undone](/docs/decisions) — two capabilities that
-  were deliberately removed, and why adding them back would cost more than it
-  looks.
-- [README](https://github.com/shbernal/pptx-html#readme) — the introduction, with
-  install and the four-leg example.
+<p class="pxh-kicker">Where to go next</p>
+
+## Run it, or read why it is built this way
+
+<div class="pxh-doors">
+	<a class="pxh-door" :href="withBase('/playground')">
+		<strong>Playground</strong>
+		<span>All four legs, running on bytes that never leave your tab. Pick a corpus deck or drop one of your own, edit a run, then download both files and compare them.</span>
+	</a>
+	<a class="pxh-door" :href="withBase('/docs/')">
+		<strong>The design record</strong>
+		<span>Invariant R and the oracle, the two lanes and two models of the architecture, and the decisions that must not be undone.</span>
+	</a>
+	<a class="pxh-door" href="https://github.com/shbernal/pptx-html#readme">
+		<strong>README and source</strong>
+		<span>Install, the four-leg example, and the repository itself. MIT licensed.</span>
+	</a>
+</div>
+
+</section>
+
+</div>
