@@ -11,6 +11,18 @@ model is expected to move.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Rendered text is now legible.** `renderDeck` wrote text lengths as EMU in
+  `px`, which is the correct arithmetic for a `viewBox` measured in EMU and asks
+  for `font-size: 558800px` on a 44pt run — a length browsers cap (Chrome at
+  10000px). Every run above roughly a point painted at the same hairline height,
+  so slides previewed blank. The text frame now sits in a group scaled by
+  EMU-per-point, where a 44pt run is `font-size: 44px`. The island, the run
+  addresses and the emitted deck are unchanged: nothing about the round trip was
+  affected, which is why no test caught it, and `test/browser/paint.test.ts` now
+  measures the painted result rather than the markup that asked for it.
+
 ## [0.1.0] — 2026-08-09
 
 First public release.

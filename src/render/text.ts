@@ -17,10 +17,18 @@
  *
  * ## Units
  *
- * The slide's `viewBox` is in EMU, so one SVG user unit is one EMU, and inside a
- * `foreignObject` one CSS pixel is one user unit. Every length below is
- * therefore EMU written as `px` — a 44pt run is `font-size: 558800px`, which
- * looks alarming and is exactly right.
+ * Every length below is **points written as `px`** — a 44pt run is
+ * `font-size: 44px`. The frame is placed inside a group scaled by EMU-per-point
+ * (see `textFrame` in `node.ts`), so one CSS pixel here is one point of slide
+ * space rather than one EMU.
+ *
+ * That group is not decoration. The slide's `viewBox` is in EMU and inside a
+ * `foreignObject` one CSS pixel is one user unit, so writing these lengths in EMU
+ * — which this file used to do — asks for `font-size: 558800px`, and browsers cap
+ * `font-size` (Chrome at 10000px). Every run above roughly a point rendered at the
+ * same hairline size, so the picture came out blank while the island beside it was
+ * exact. Nothing about the round trip noticed, which is the separation working;
+ * it is still not a preview anybody can read.
  *
  * ## `props.X ?? resolved.X`, never one alone
  *
@@ -33,7 +41,7 @@
 
 import type { Bullet, Paragraph, ParagraphProperties, TextBody, TextRun } from '../ir/render'
 import { editableRunProps } from '../ir/surface'
-import { cssColor, EMU_PER_POINT, escapeAttr } from './paint'
+import { cssColor, escapeAttr } from './paint'
 
 /** Text-node escaping. `&` first, or it would double-escape the entities below. */
 export function escapeText(value: string): string {
@@ -46,9 +54,9 @@ const ANCHOR: Record<TextBody['anchor'], string> = {
 	bottom: 'flex-end',
 }
 
-/** Points → EMU, rounded to the integer the canvas is stated in. */
-function emu(points: number): number {
-	return Math.round(points * EMU_PER_POINT)
+/** Points, tidied — this file's `px` is the frame's own point-scaled unit. */
+function px(points: number): number {
+	return Math.round(points * 1000) / 1000
 }
 
 function runStyle(run: TextRun): string {
@@ -60,7 +68,7 @@ function runStyle(run: TextRun): string {
 	if (face !== undefined) style.push(`font-family:${JSON.stringify(face)},sans-serif`)
 
 	const size = props.sizePt ?? resolved.sizePt
-	if (size !== undefined) style.push(`font-size:${emu(size)}px`)
+	if (size !== undefined) style.push(`font-size:${px(size)}px`)
 
 	const bold = props.bold ?? resolved.bold
 	if (bold !== undefined) style.push(`font-weight:${bold ? 700 : 400}`)
@@ -80,7 +88,7 @@ function runStyle(run: TextRun): string {
 		if (props.underline === 'double' || props.strike === 'double') style.push('text-decoration-style:double')
 	}
 
-	if (props.spacingPt !== undefined) style.push(`letter-spacing:${emu(props.spacingPt)}px`)
+	if (props.spacingPt !== undefined) style.push(`letter-spacing:${px(props.spacingPt)}px`)
 	if (props.baselinePct !== undefined && props.baselinePct !== 0) {
 		// A baseline shift is a percentage of the font size, which is what `em` is.
 		style.push(`vertical-align:${props.baselinePct / 100}em`, 'font-size:0.65em')
@@ -159,16 +167,16 @@ function paragraphStyle(props: ParagraphProperties): string {
 	if (props.align !== undefined) style.push(`text-align:${props.align === 'justify' ? 'justify' : props.align}`)
 	// `@lvl` is an outline depth, and the list style it indexes into is not in the
 	// IR; a flat indent per level is the honest approximation of "deeper".
-	if (props.level > 0) style.push(`margin-left:${props.level * emu(18)}px`)
-	if (props.marginLeftPt !== undefined) style.push(`padding-left:${emu(props.marginLeftPt)}px`)
-	if (props.indentPt !== undefined) style.push(`text-indent:${emu(props.indentPt)}px`)
-	if (props.spaceBeforePt !== undefined) style.push(`margin-top:${emu(props.spaceBeforePt)}px`)
-	if (props.spaceAfterPt !== undefined) style.push(`margin-bottom:${emu(props.spaceAfterPt)}px`)
+	if (props.level > 0) style.push(`margin-left:${px(props.level * 18)}px`)
+	if (props.marginLeftPt !== undefined) style.push(`padding-left:${px(props.marginLeftPt)}px`)
+	if (props.indentPt !== undefined) style.push(`text-indent:${px(props.indentPt)}px`)
+	if (props.spaceBeforePt !== undefined) style.push(`margin-top:${px(props.spaceBeforePt)}px`)
+	if (props.spaceAfterPt !== undefined) style.push(`margin-bottom:${px(props.spaceAfterPt)}px`)
 	if (props.lineSpacing !== undefined) {
 		style.push(
 			props.lineSpacing.type === 'percent'
 				? `line-height:${props.lineSpacing.percent}%`
-				: `line-height:${emu(props.lineSpacing.valuePt)}px`
+				: `line-height:${px(props.lineSpacing.valuePt)}px`
 		)
 	}
 	return style.join(';')
@@ -227,7 +235,7 @@ export function renderTextBody(text: TextBody, nodeId: string): string {
 		'display:flex',
 		'flex-direction:column',
 		`justify-content:${ANCHOR[text.anchor]}`,
-		`padding:${emu(text.insetsPt.top)}px ${emu(text.insetsPt.right)}px ${emu(text.insetsPt.bottom)}px ${emu(text.insetsPt.left)}px`,
+		`padding:${px(text.insetsPt.top)}px ${px(text.insetsPt.right)}px ${px(text.insetsPt.bottom)}px ${px(text.insetsPt.left)}px`,
 		`white-space:${text.wrap ? 'pre-wrap' : 'pre'}`,
 		'overflow:hidden',
 	]

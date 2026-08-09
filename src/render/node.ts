@@ -14,7 +14,7 @@
 
 import type { Box, EdgeRect, Placement, RenderNode, TableNode } from '../ir/render'
 import { pathOf } from './geometry'
-import { type Defs, escapeAttr, fillPaint, strokePaint } from './paint'
+import { type Defs, EMU_PER_POINT, escapeAttr, fillPaint, strokePaint } from './paint'
 import { renderTextBody } from './text'
 
 export interface NodeContext {
@@ -45,9 +45,29 @@ function transformOf(placement: Placement): string {
 	return parts.join(' ')
 }
 
-/** A `<foreignObject>` covering the node's box. */
+/**
+ * A `<foreignObject>` covering the node's box, in a coordinate space of points.
+ *
+ * The `scale` is the whole reason this is a group and not one element. The slide's
+ * `viewBox` is in EMU and inside a `foreignObject` one CSS pixel is one user unit,
+ * so text written at EMU scale asks for `font-size: 304800px` on a 24pt run — and
+ * browsers cap `font-size` (Chrome at 10000px). Every run above roughly a point
+ * therefore came out the same hairline height and the picture was blank, while the
+ * island beside it stayed perfect. Scaling by EMU-per-point puts the frame in a
+ * space where a 24pt run is `font-size: 24px`: what the browser expects, and far
+ * from any cap.
+ */
 function textFrame(box: Box, html: string): string {
-	return `<foreignObject x="0" y="0" width="${box.w}" height="${box.h}">${html}</foreignObject>`
+	return (
+		`<g transform="scale(${EMU_PER_POINT})">` +
+		`<foreignObject x="0" y="0" width="${points(box.w)}" height="${points(box.h)}">${html}</foreignObject>` +
+		`</g>`
+	)
+}
+
+/** EMU → the point-scaled space {@link textFrame} establishes. */
+function points(emu: number): number {
+	return Math.round((emu / EMU_PER_POINT) * 1000) / 1000
 }
 
 /**
@@ -63,10 +83,11 @@ function placeholderBox(box: Box, standsFor: string): string {
 	return (
 		`<rect x="0" y="0" width="${box.w}" height="${box.h}" fill="#f4f5f8" stroke="#9aa1b1" ` +
 		`stroke-width="12700" stroke-dasharray="76200 38100"/>` +
-		`<foreignObject x="0" y="0" width="${box.w}" height="${box.h}">` +
+		`<g transform="scale(${EMU_PER_POINT})">` +
+		`<foreignObject x="0" y="0" width="${points(box.w)}" height="${points(box.h)}">` +
 		`<div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;align-items:center;` +
-		`justify-content:center;font:171450px sans-serif;color:#5b6272;text-align:center">` +
-		`${label} — carried, not editable</div></foreignObject>`
+		`justify-content:center;font:13.5px sans-serif;color:#5b6272;text-align:center">` +
+		`${label} — carried, not editable</div></foreignObject></g>`
 	)
 }
 
