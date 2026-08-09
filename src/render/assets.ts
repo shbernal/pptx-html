@@ -13,7 +13,7 @@
  * The obvious implementation — `<img src="data:image/png;base64,…">` on every
  * picture — writes every image into the document twice once the asset block is
  * there too, and more than twice for an image used on several slides. Instead
- * each painted image carries only `data-d2p-asset="<name>"`, and the script
+ * each painted image carries only `data-pxh-asset="<name>"`, and the script
  * below resolves it against the block once, through one Blob URL per asset.
  *
  * The cost is that **the document needs JavaScript to look right**. It does not
@@ -104,7 +104,7 @@ export function renderAssetBlock(manifest: readonly AssetManifestEntry[], bytes:
 
 /**
  * The hydration script: manifest name → Blob URL → every element that asked for
- * it by `data-d2p-asset`.
+ * it by `data-pxh-asset`.
  *
  * One Blob per asset, not per element, so a logo on twelve slides is decoded
  * once. It is emitted as source text rather than a bundled module because the
@@ -120,7 +120,7 @@ export function hydrationScript(): string {
 var block=document.getElementById(${JSON.stringify(ASSETS_ID)});
 if(!block)return;
 var assets=JSON.parse(block.textContent||'{}');
-var manifest=JSON.parse((document.getElementById(${JSON.stringify('dom2pptx-ir')})||{textContent:'{}'}).textContent||'{}').assets||[];
+var manifest=JSON.parse((document.getElementById(${JSON.stringify('pxh-ir')})||{textContent:'{}'}).textContent||'{}').assets||[];
 var typeByName={};
 manifest.forEach(function(entry){typeByName[entry.name]=entry.contentType});
 var urls={};
@@ -133,8 +133,8 @@ for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
 urls[name]=URL.createObjectURL(new Blob([bytes],{type:typeByName[name]||'application/octet-stream'}));
 return urls[name];
 }
-document.querySelectorAll('[data-d2p-asset]').forEach(function(node){
-var url=urlFor(node.getAttribute('data-d2p-asset'));
+document.querySelectorAll('[data-pxh-asset]').forEach(function(node){
+var url=urlFor(node.getAttribute('data-pxh-asset'));
 if(!url)return;
 if(node.tagName.toLowerCase()==='image')node.setAttribute('href',url);
 else node.setAttribute('src',url);

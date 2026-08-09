@@ -1,5 +1,5 @@
 /**
- * dom2pptx — public API.
+ * pptx-html — public API.
  *
  * The package is a **loop**, and the four legs below are it:
  *

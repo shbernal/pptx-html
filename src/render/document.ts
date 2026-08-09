@@ -53,16 +53,16 @@ export interface RenderedDeck {
 const STYLESHEET = `
 :root { color-scheme: light }
 body { margin: 0; background: #eceef2; font-family: system-ui, sans-serif }
-.d2p-deck { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px }
-.d2p-slide { background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.28); width: min(100%, 1280px) }
-.d2p-slide > svg { display: block; width: 100%; height: auto }
-.d2p-aside { width: min(100%, 1280px); font-size: 13px; color: #454a57 }
-.d2p-aside h2 { font-size: 13px; margin: 12px 0 4px }
-.d2p-aside ul { margin: 0; padding-left: 18px }
-.d2p-carried { color: #7a5200 }
+.pxh-deck { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px }
+.pxh-slide { background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.28); width: min(100%, 1280px) }
+.pxh-slide > svg { display: block; width: 100%; height: auto }
+.pxh-aside { width: min(100%, 1280px); font-size: 13px; color: #454a57 }
+.pxh-aside h2 { font-size: 13px; margin: 12px 0 4px }
+.pxh-aside ul { margin: 0; padding-left: 18px }
+.pxh-carried { color: #7a5200 }
 /* A run's own face is written inline; this is only what it falls back to. The
    island keeps the authored face regardless of what the browser painted. */
-.d2p-text { font-family: Calibri, Carlito, "Segoe UI", system-ui, sans-serif }
+.pxh-text { font-family: Calibri, Carlito, "Segoe UI", system-ui, sans-serif }
 `
 
 function renderSlide(slide: RenderSlide, size: RenderIr['size'], warnings: string[]): string {
@@ -83,14 +83,14 @@ function renderSlide(slide: RenderSlide, size: RenderIr['size'], warnings: strin
 		`role="img" aria-label="Slide ${slide.number}">` +
 		defs.render() +
 		`<rect x="0" y="0" width="${size.w}" height="${size.h}" ${background.attrs}` +
-		`${background.approx === undefined ? '' : ` data-d2p-approx="${background.approx}"`}/>` +
+		`${background.approx === undefined ? '' : ` data-pxh-approx="${background.approx}"`}/>` +
 		nodes +
 		`</svg>`
 
 	const asides: string[] = []
 	if (slide.source === 'carried') {
 		asides.push(
-			`<p class="d2p-carried">This slide holds a construct the write API cannot author, so it is carried ` +
+			`<p class="pxh-carried">This slide holds a construct the write API cannot author, so it is carried ` +
 				`from the source package verbatim rather than transcribed.</p>`
 		)
 	}
@@ -107,9 +107,9 @@ function renderSlide(slide: RenderSlide, size: RenderIr['size'], warnings: strin
 	}
 
 	return (
-		`<section class="d2p-slide" data-d2p-slide="${slide.number}"${slide.hidden ? ' data-d2p-hidden="true"' : ''}>` +
+		`<section class="pxh-slide" data-pxh-slide="${slide.number}"${slide.hidden ? ' data-pxh-hidden="true"' : ''}>` +
 		`${svg}</section>` +
-		(asides.length === 0 ? '' : `<aside class="d2p-aside">${asides.join('')}</aside>`)
+		(asides.length === 0 ? '' : `<aside class="pxh-aside">${asides.join('')}</aside>`)
 	)
 }
 
@@ -141,7 +141,7 @@ export async function renderDeck(ir: RenderIr, options: RenderOptions): Promise<
 		`<meta name="viewport" content="width=device-width,initial-scale=1"/>` +
 		`<title>Deck — ${ir.slides.length} slide${ir.slides.length === 1 ? '' : 's'}</title>` +
 		`<style>${STYLESHEET}</style></head><body>` +
-		`<div class="d2p-deck">${body}</div>` +
+		`<div class="pxh-deck">${body}</div>` +
 		`<script type="application/json" id="${ISLAND_ID}">${island}</script>` +
 		`<script type="application/json" id="${INTEGRITY_ID}">${escapeForScript(JSON.stringify(integrity))}</script>` +
 		assets.html +

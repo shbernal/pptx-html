@@ -3,7 +3,7 @@
  *
  * The corpus lanes cannot reach any of this: they render decks the writer
  * produced, and none of those contains a backslash in a run of text or a stray
- * `id="dom2pptx-ir"` in its markup. Each case below is constructed, because each
+ * `id="pxh-ir"` in its markup. Each case below is constructed, because each
  * one fails by producing a *plausible* wrong answer rather than an error.
  */
 

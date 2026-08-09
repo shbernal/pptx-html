@@ -58,7 +58,7 @@ describe('an untouched document', () => {
 describe('an edited document', () => {
 	it('carries retyped text back and marks only that slide reconciled', async () => {
 		const dom = await documentOf(SAMPLE_IR)
-		const span = dom.querySelector('[data-d2p-run]')
+		const span = dom.querySelector('[data-pxh-run]')
 		if (span === null) throw new Error('the rendered document has no editable runs')
 		span.textContent = 'typed by a human'
 
@@ -70,13 +70,13 @@ describe('an edited document', () => {
 	it('reads a changed character property from the attribute, not from the painted style', async () => {
 		// The distinction that keeps a placeholder from being flattened: the span's
 		// `style` is `props ?? resolved`, so reading a size off it would write the
-		// layout's value into the slide. Only `data-d2p-props` is in surface.
+		// layout's value into the slide. Only `data-pxh-props` is in surface.
 		const dom = await documentOf(SAMPLE_IR)
-		const span = dom.querySelector('[data-d2p-run]')
+		const span = dom.querySelector('[data-pxh-run]')
 		if (span === null) throw new Error('the rendered document has no editable runs')
-		span.setAttribute('data-d2p-props', JSON.stringify({ bold: true }))
+		span.setAttribute('data-pxh-props', JSON.stringify({ bold: true }))
 
-		const address = span.getAttribute('data-d2p-run')
+		const address = span.getAttribute('data-pxh-run')
 		const read = readSurface(dom, SAMPLE_IR)
 			.projection.slides.flatMap((slide) => slide.nodes)
 			.flatMap((node) => node.runs)
@@ -91,15 +91,15 @@ describe('an edited document', () => {
 		const dom = await documentOf(SAMPLE_IR)
 		const doomedNode = SAMPLE_IR.slides[0]?.nodes[1]
 		if (doomedNode === undefined) throw new Error('the fixture lost its second node')
-		dom.querySelector(`[data-d2p-node="${doomedNode.id}"]`)?.remove()
+		dom.querySelector(`[data-pxh-node="${doomedNode.id}"]`)?.remove()
 
 		const first = readSurface(dom, SAMPLE_IR)
 		expect(first.deleted).toContain(doomedNode.id)
 		expect(first.anomalies).toEqual([])
 
-		const survivor = dom.querySelector('[data-d2p-run]')
+		const survivor = dom.querySelector('[data-pxh-run]')
 		if (survivor === null) throw new Error('the document has no runs left')
-		const address = survivor.getAttribute('data-d2p-run')
+		const address = survivor.getAttribute('data-pxh-run')
 		survivor.remove()
 
 		const second = readSurface(dom, SAMPLE_IR)
@@ -109,9 +109,9 @@ describe('an edited document', () => {
 
 	it('refuses a property the surface does not define instead of writing it', async () => {
 		const dom = await documentOf(SAMPLE_IR)
-		const span = dom.querySelector('[data-d2p-run]')
+		const span = dom.querySelector('[data-pxh-run]')
 		if (span === null) throw new Error('the rendered document has no editable runs')
-		span.setAttribute('data-d2p-props', JSON.stringify({ bold: true, fontFace: 'Comic Sans MS' }))
+		span.setAttribute('data-pxh-props', JSON.stringify({ bold: true, fontFace: 'Comic Sans MS' }))
 
 		const reading = readSurface(dom, SAMPLE_IR)
 		expect(reading.anomalies.join('\n')).toContain('"fontFace"')
@@ -120,10 +120,10 @@ describe('an edited document', () => {
 
 	it('ignores a run address the model does not have', async () => {
 		const dom = await documentOf(SAMPLE_IR)
-		const span = dom.querySelector('[data-d2p-run]')
+		const span = dom.querySelector('[data-pxh-run]')
 		if (span === null) throw new Error('the rendered document has no editable runs')
 		const invented = span.cloneNode(true) as Element
-		invented.setAttribute('data-d2p-run', 's1.sp999/0/0')
+		invented.setAttribute('data-pxh-run', 's1.sp999/0/0')
 		span.parentElement?.append(invented)
 
 		const reading = readSurface(dom, SAMPLE_IR)

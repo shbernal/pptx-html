@@ -203,9 +203,9 @@ async function renderSlideModel(
 async function buildDeck(headHTML: string, slides: string[], lang: string, opts: ConvertOptions) {
 	const pptx = createPptx(opts)
 	pptx.layout = 'LAYOUT_16x9'
-	pptx.author = opts.author || 'dom2pptx'
-	pptx.subject = opts.title || 'dom2pptx PPTX export'
-	pptx.company = 'dom2pptx'
+	pptx.author = opts.author || 'pptx-html'
+	pptx.subject = opts.title || 'pptx-html PPTX export'
+	pptx.company = 'pptx-html'
 	pptx.lang = lang || 'en'
 	pptx.theme = {
 		headFontFace: DEFAULT_FONT.latin,

@@ -10,7 +10,7 @@ import { convertDeck, convertSlide, emitDeck, importDeck, parseDeck, project, re
 // heuristic lane in `test/browser/`. This file checks only that the names are
 // there and that the two models do not quietly become one.
 
-describe('dom2pptx public API', () => {
+describe('pptx-html public API', () => {
 	it('exports the four legs of the loop', () => {
 		expect([importDeck, renderDeck, parseDeck, emitDeck].map((leg) => typeof leg)).toEqual([
 			'function',

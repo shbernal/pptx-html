@@ -48,7 +48,7 @@ describe('every corpus deck renders and comes back whole', () => {
 			expect(html.startsWith('<!doctype html>')).toBe(true)
 			expect(JSON.parse(blockOf(html, ISLAND_ID))).toStrictEqual(ir)
 			// One `<section>` per slide, whatever the slides contain.
-			expect(html.match(/class="d2p-slide"/g)?.length ?? 0).toBe(ir.slides.length)
+			expect(html.match(/class="pxh-slide"/g)?.length ?? 0).toBe(ir.slides.length)
 			// A warning is allowed (an unplaceable node, an oversized block); a
 			// *missing asset* is not, because the importer supplies every one it
 			// registered and a gap would mean the two disagree about the manifest.
@@ -104,7 +104,7 @@ describe('what the picture admits to', () => {
 		for (const entry of CORPUS) {
 			const { ir, bytes } = await importCorpus(entry.name)
 			const { html } = await renderDeck(ir, { bytes })
-			expect([entry.name, html.match(/data-d2p-approx="geometry:[^"]+"/g) ?? []]).toStrictEqual([entry.name, []])
+			expect([entry.name, html.match(/data-pxh-approx="geometry:[^"]+"/g) ?? []]).toStrictEqual([entry.name, []])
 		}
 	})
 
@@ -142,7 +142,7 @@ describe('the editable surface reaches the document', () => {
 			)
 
 		expect(runs.length).toBeGreaterThan(0)
-		for (const address of runs) expect(html).toContain(`data-d2p-run="${address}"`)
+		for (const address of runs) expect(html).toContain(`data-pxh-run="${address}"`)
 		expect(html.match(/contenteditable="true"/g)?.length ?? 0).toBe(runs.length)
 	})
 })

@@ -15,7 +15,7 @@
  * sanitizer or an editor that rewrites attributes. One opaque blob either
  * survives intact or is visibly gone; a model scattered across a hundred
  * `data-ir-*` attributes degrades silently, one attribute at a time. Per-element
- * `data-d2p-node` attributes still exist on the visual nodes, but only to *link*
+ * `data-pxh-node` attributes still exist on the visual nodes, but only to *link*
  * a painted element back to its island entry — never to carry state.
  *
  * ## Two hashes, not one
@@ -39,13 +39,13 @@ import type { RenderIr } from '../ir/render'
 import { project } from '../ir/surface'
 
 /** The island block's `id`. The parser looks the model up by exactly this. */
-export const ISLAND_ID = 'dom2pptx-ir'
+export const ISLAND_ID = 'pxh-ir'
 
 /** The integrity block's `id` — the two hashes and the IR version. */
-export const INTEGRITY_ID = 'dom2pptx-integrity'
+export const INTEGRITY_ID = 'pxh-integrity'
 
 /** The asset block's `id`, present only under `assets: 'inline'`. */
-export const ASSETS_ID = 'dom2pptx-assets'
+export const ASSETS_ID = 'pxh-assets'
 
 /**
  * What the integrity block holds.

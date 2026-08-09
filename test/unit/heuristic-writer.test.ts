@@ -28,7 +28,7 @@ function domFreeModel() {
 				z: 3,
 				tag: 'h1',
 				position: { x: 0.5, y: 2.4, w: 6, h: 0.8 },
-				text: [{ text: 'Hello dom2pptx', options: {} }],
+				text: [{ text: 'Hello pptx-html', options: {} }],
 				style: { fontFace: 'Aptos', fontSize: 28, color: 'FFFFFF', bold: true, align: 'left', valign: 'top' },
 			},
 			{
@@ -81,7 +81,7 @@ describe('emit → ts-pptx → read round-trip', () => {
 		const { base64 } = await emitToBase64(domFreeModel())
 		const pres = await loadDeck(base64)
 		const allText = pres.slides[0].shapes.map((shape: { text?: string }) => shape.text || '').join(' ')
-		expect(allText).toContain('Hello dom2pptx')
+		expect(allText).toContain('Hello pptx-html')
 	})
 
 	it('states the slide size the layout asked for', async () => {

@@ -7,7 +7,7 @@
  * single transform on the group instead of arithmetic threaded through every
  * path command and every text box.
  *
- * The group's `data-d2p-node` is a **link**, not state: it lets the parser (and
+ * The group's `data-pxh-node` is a **link**, not state: it lets the parser (and
  * a human with dev tools) find the island entry a painted element came from. The
  * model itself is never written into attributes — see `island.ts` for why.
  */
@@ -80,7 +80,7 @@ function placeholderBox(box: Box, standsFor: string): string {
  * computed rather than clamped.
  */
 function croppedImage(asset: string, box: Box, crop: EdgeRect | undefined): string {
-	const attrs = `data-d2p-asset="${escapeAttr(asset)}" preserveAspectRatio="none"`
+	const attrs = `data-pxh-asset="${escapeAttr(asset)}" preserveAspectRatio="none"`
 	if (crop === undefined) return `<image ${attrs} x="0" y="0" width="${box.w}" height="${box.h}"/>`
 
 	const visibleW = 1 - crop.left - crop.right
@@ -125,8 +125,8 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 
 			const fill = fillPaint(cell.fill, context.defs)
 			parts.push(
-				`<g data-d2p-node="${escapeAttr(cell.id)}" transform="translate(${x} ${y})"` +
-					`${fill.approx === undefined ? '' : ` data-d2p-approx="${fill.approx}"`}>` +
+				`<g data-pxh-node="${escapeAttr(cell.id)}" transform="translate(${x} ${y})"` +
+					`${fill.approx === undefined ? '' : ` data-pxh-approx="${fill.approx}"`}>` +
 					`<rect x="0" y="0" width="${cellW}" height="${cellH}" ${fill.attrs}/>` +
 					edges(cell.borders, cellW, cellH, context) +
 					(cell.text === null
@@ -169,7 +169,7 @@ export function renderNode(node: RenderNode, context: NodeContext): string {
 	}
 
 	const box = node.placement.box
-	const attrs = [`data-d2p-node="${escapeAttr(node.id)}"`, `transform="${transformOf(node.placement)}"`]
+	const attrs = [`data-pxh-node="${escapeAttr(node.id)}"`, `transform="${transformOf(node.placement)}"`]
 	if (node.hidden === true) attrs.push('style="display:none"')
 	if (node.alt !== undefined) attrs.push(`aria-label="${escapeAttr(node.alt)}"`)
 
@@ -195,7 +195,7 @@ function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
 				.join(' ')
 			return (
 				`<path d="${path.d}" ${fill.attrs} ${stroke.attrs}` +
-				`${approx === '' ? '' : ` data-d2p-approx="${escapeAttr(approx)}"`}/>` +
+				`${approx === '' ? '' : ` data-pxh-approx="${escapeAttr(approx)}"`}/>` +
 				(node.text === null ? '' : textFrame(box, renderTextBody(node.text, node.id)))
 			)
 		}
@@ -215,7 +215,7 @@ function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
 		case 'connector': {
 			const path = pathOf(node.geometry, box.w, box.h)
 			const stroke = strokePaint(node.stroke, context.defs)
-			return `<path d="${path.d}" fill="none" ${stroke.attrs}${stroke.approx === undefined ? '' : ` data-d2p-approx="${stroke.approx}"`}/>`
+			return `<path d="${path.d}" fill="none" ${stroke.attrs}${stroke.approx === undefined ? '' : ` data-pxh-approx="${stroke.approx}"`}/>`
 		}
 
 		case 'table':

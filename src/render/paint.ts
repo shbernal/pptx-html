@@ -13,7 +13,7 @@
  *   Drawing it as transparent would erase every themed shape in the deck, which
  *   is the one outcome that makes the preview actively misleading — a shape that
  *   is *there* would look like a shape that is *not*. Every element painted this
- *   way carries `data-d2p-approx`, so the guess is auditable in the DOM instead
+ *   way carries `data-pxh-approx`, so the guess is auditable in the DOM instead
  *   of passing for something the deck said.
  * - **An inherited line is not painted.** The shapes that state no line are
  *   overwhelmingly the ones whose style reference is `a:lnRef idx="0"` — no line
@@ -46,7 +46,7 @@ export class Defs {
 	private next = 0
 
 	add(build: (id: string) => string): string {
-		const id = `d2p-p${this.next++}`
+		const id = `pxh-p${this.next++}`
 		this.entries.push(build(id))
 		return `url(#${id})`
 	}
@@ -101,7 +101,7 @@ function pictureDef(assetName: string, defs: Defs): string {
 	return defs.add(
 		(id) =>
 			`<pattern id="${id}" width="1" height="1" patternContentUnits="objectBoundingBox">` +
-			`<image data-d2p-asset="${escapeAttr(assetName)}" width="1" height="1" preserveAspectRatio="none"/>` +
+			`<image data-pxh-asset="${escapeAttr(assetName)}" width="1" height="1" preserveAspectRatio="none"/>` +
 			`</pattern>`
 	)
 }

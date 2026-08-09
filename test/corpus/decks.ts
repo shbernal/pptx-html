@@ -42,8 +42,8 @@ export interface CorpusDeck {
 function newDeck(): TsPptx {
 	const pptx = new TsPptx()
 	pptx.layout = 'LAYOUT_16x9'
-	pptx.author = 'dom2pptx corpus'
-	pptx.company = 'dom2pptx'
+	pptx.author = 'pptx-html corpus'
+	pptx.company = 'pptx-html'
 	pptx.subject = 'round-trip corpus'
 	pptx.title = 'round-trip corpus'
 	return pptx

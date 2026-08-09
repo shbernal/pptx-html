@@ -99,7 +99,7 @@ function runStyle(run: TextRun): string {
  * boundary — an edit the return path would have to guess at, which is exactly
  * what the surface exists to prevent.
  *
- * `data-d2p-props` carries the other four surface values — and it is the *stated*
+ * `data-pxh-props` carries the other four surface values — and it is the *stated*
  * ones, not the painted ones. The `style` beside it is `props.X ?? resolved.X`,
  * which cannot be read back: a placeholder title painted at the layout's 44pt
  * states no size at all, and taking 44 off the span would write the layout's
@@ -112,9 +112,9 @@ function renderRun(run: TextRun, nodeId: string, paragraph: number, index: numbe
 	const link = run.props.hyperlink
 	const stated = editableRunProps(run.props)
 	const statedAttr =
-		Object.keys(stated).length === 0 ? '' : ` data-d2p-props="${escapeAttr(JSON.stringify(stated))}"`
+		Object.keys(stated).length === 0 ? '' : ` data-pxh-props="${escapeAttr(JSON.stringify(stated))}"`
 	const span =
-		`<span data-d2p-run="${escapeAttr(address)}" contenteditable="true"${statedAttr}` +
+		`<span data-pxh-run="${escapeAttr(address)}" contenteditable="true"${statedAttr}` +
 		`${style === '' ? '' : ` style="${escapeAttr(style)}"`}>${escapeText(run.text)}</span>`
 
 	if (link?.url == null) return span
@@ -149,9 +149,9 @@ function renderBullet(bullet: Bullet, ordinal: number): string {
 	if (bullet.kind === 'character') return `<span${attrs}>${escapeText(bullet.char)}</span>`
 	if (bullet.kind === 'number') {
 		const start = bullet.startAt ?? 1
-		return `<span${attrs} data-d2p-approx="bullet:scheme">${start + ordinal}.</span>`
+		return `<span${attrs} data-pxh-approx="bullet:scheme">${start + ordinal}.</span>`
 	}
-	return `<img data-d2p-asset="${escapeAttr(bullet.asset.$asset)}"${attrs} alt=""/>`
+	return `<img data-pxh-asset="${escapeAttr(bullet.asset.$asset)}"${attrs} alt=""/>`
 }
 
 function paragraphStyle(props: ParagraphProperties): string {
@@ -238,10 +238,10 @@ export function renderTextBody(text: TextBody, nodeId: string): string {
 	if (text.vertical === 'vert270') frame.push('writing-mode:vertical-rl', 'transform:rotate(180deg)')
 
 	const approx =
-		text.vertical === 'eaVert' || text.vertical === 'wordArtVert' ? ' data-d2p-approx="text:vertical"' : ''
+		text.vertical === 'eaVert' || text.vertical === 'wordArtVert' ? ' data-pxh-approx="text:vertical"' : ''
 
 	return (
-		`<div xmlns="http://www.w3.org/1999/xhtml" class="d2p-text"${approx} style="${escapeAttr(frame.join(';'))}">` +
+		`<div xmlns="http://www.w3.org/1999/xhtml" class="pxh-text"${approx} style="${escapeAttr(frame.join(';'))}">` +
 		`${body}</div>`
 	)
 }

@@ -165,7 +165,7 @@ function collectRuns(owner: NodeId, text: TextBodyLike, into: ProjectedRun[]): v
  * A run's stated properties, narrowed to the surface.
  *
  * Exported because the renderer writes exactly this onto each run's span
- * (`data-d2p-props`) and the return path reads exactly this back. That attribute
+ * (`data-pxh-props`) and the return path reads exactly this back. That attribute
  * is not a duplicate of the island: the *painted* style on a run is
  * `props.X ?? resolved.X`, so reading a colour back off the rendered span would
  * promote an inherited value into a stated one on every placeholder — the

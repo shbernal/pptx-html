@@ -2,8 +2,8 @@
  * Reading the editable surface back out of a document.
  *
  * This is the only place in the return path that looks at the visual DOM, and it
- * looks at exactly two things: the text inside each `[data-d2p-run]` span, and
- * the `data-d2p-props` attribute beside it. Nothing else. It does not read a
+ * looks at exactly two things: the text inside each `[data-pxh-run]` span, and
+ * the `data-pxh-props` attribute beside it. Nothing else. It does not read a
  * computed style, a transform, a path or a fill, because the island already
  * states all of those *better* than the DOM can — and re-deriving them is the
  * inference this architecture exists to avoid.
@@ -22,7 +22,7 @@
  *
  * The plan's drifted lane is "the DOM differs outside the surface". Detected in
  * full: a run element removed, a run address that is not in the model, a
- * duplicate address, and a `data-d2p-props` that is not a well-formed set of the
+ * duplicate address, and a `data-pxh-props` that is not a well-formed set of the
  * four editable properties. **Not** detected: a moved box, a recoloured path, a
  * rewritten transform.
  *
@@ -56,25 +56,25 @@ export interface SurfaceReading {
 	anomalies: string[]
 }
 
-/** `data-d2p-props`, validated. Anything unexpected is refused rather than coerced. */
+/** `data-pxh-props`, validated. Anything unexpected is refused rather than coerced. */
 function readProps(raw: string | null, address: string, anomalies: string[]): Pick<RunProperties, 'bold' | 'italic' | 'sizePt' | 'color'> {
 	if (raw === null) return {}
 	let parsed: unknown
 	try {
 		parsed = JSON.parse(raw)
 	} catch {
-		anomalies.push(`run ${address}: data-d2p-props is not JSON; the run's stated formatting was kept`)
+		anomalies.push(`run ${address}: data-pxh-props is not JSON; the run's stated formatting was kept`)
 		return {}
 	}
 	if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-		anomalies.push(`run ${address}: data-d2p-props is not an object; the run's stated formatting was kept`)
+		anomalies.push(`run ${address}: data-pxh-props is not an object; the run's stated formatting was kept`)
 		return {}
 	}
 
 	const entries = parsed as Record<string, unknown>
 	for (const key of Object.keys(entries)) {
 		if (!(EDITABLE_RUN_PROPS as readonly string[]).includes(key)) {
-			anomalies.push(`run ${address}: data-d2p-props carries ${JSON.stringify(key)}, which is not in the editable surface`)
+			anomalies.push(`run ${address}: data-pxh-props carries ${JSON.stringify(key)}, which is not in the editable surface`)
 		}
 	}
 
@@ -84,7 +84,7 @@ function readProps(raw: string | null, address: string, anomalies: string[]): Pi
 		if (value === undefined) continue
 		const complaint = key === 'color' ? colorComplaint(value) : scalarComplaint(key, value)
 		if (complaint !== null) {
-			anomalies.push(`run ${address}: data-d2p-props.${key} ${complaint}`)
+			anomalies.push(`run ${address}: data-pxh-props.${key} ${complaint}`)
 			continue
 		}
 		picked[key] = value
@@ -145,7 +145,7 @@ export function readSurface(root: ParentNode, ir: RenderIr): SurfaceReading {
 	const slides = island.slides.map((slide) => ({
 		number: slide.number,
 		nodes: slide.nodes.flatMap((node) => {
-			const element = root.querySelector(`[data-d2p-node="${cssEscape(node.id)}"]`)
+			const element = root.querySelector(`[data-pxh-node="${cssEscape(node.id)}"]`)
 			if (element === null) {
 				if (drawn.has(node.id)) {
 					deleted.push(node.id)
@@ -158,8 +158,8 @@ export function readSurface(root: ParentNode, ir: RenderIr): SurfaceReading {
 		}),
 	}))
 
-	for (const element of root.querySelectorAll('[data-d2p-run]')) {
-		const address = element.getAttribute('data-d2p-run') ?? ''
+	for (const element of root.querySelectorAll('[data-pxh-run]')) {
+		const address = element.getAttribute('data-pxh-run') ?? ''
 		if (!claimed.has(address)) {
 			anomalies.push(`run ${address} is in the document but not in the model; it was ignored`)
 		}
@@ -181,7 +181,7 @@ function collectDrawn(nodes: RenderIr['slides'][number]['nodes'], into: Set<Node
 
 function readRun(root: ParentNode, run: ProjectedRun, claimed: Set<string>, anomalies: string[]): ProjectedRun {
 	const address = `${run.node}/${run.paragraph}/${run.run}`
-	const matches = root.querySelectorAll(`[data-d2p-run="${cssEscape(address)}"]`)
+	const matches = root.querySelectorAll(`[data-pxh-run="${cssEscape(address)}"]`)
 	if (matches.length === 0) {
 		// The run's node survived but the run itself did not. Emptying a run is an
 		// edit; removing its element is a structural change the surface has no rule
@@ -200,7 +200,7 @@ function readRun(root: ParentNode, run: ProjectedRun, claimed: Set<string>, anom
 		paragraph: run.paragraph,
 		run: run.run,
 		text: element.textContent ?? '',
-		props: readProps(element.getAttribute('data-d2p-props'), address, anomalies),
+		props: readProps(element.getAttribute('data-pxh-props'), address, anomalies),
 	}
 }
 

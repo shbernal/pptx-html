@@ -31,7 +31,7 @@ exports[`emit is a function of the deck, not of the run > a deck that has been t
     },
   },
   "props": {
-    "author": "dom2pptx corpus",
+    "author": "pptx-html corpus",
     "revision": "1",
     "subject": "round-trip corpus",
     "title": "round-trip corpus",
@@ -116,7 +116,7 @@ exports[`emit is a function of the deck, not of the run > the canonical model of
     },
   },
   "props": {
-    "author": "dom2pptx corpus",
+    "author": "pptx-html corpus",
     "revision": "1",
     "subject": "round-trip corpus",
     "title": "round-trip corpus",

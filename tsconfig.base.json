@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
-	"display": "dom2pptx base",
+	"display": "pptx-html base",
 	"compilerOptions": {
 		"allowSyntheticDefaultImports": true,
 		"lib": ["dom", "dom.iterable", "es2024"],

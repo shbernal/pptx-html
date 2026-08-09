@@ -161,9 +161,9 @@ describe('what the return path refuses', () => {
 
 	it('refuses an island with no integrity block', async () => {
 		const { html } = await rendered('text-box')
-		const stripped = html.replace(/<script type="application\/json" id="dom2pptx-integrity">.*?<\/script>/s, '')
+		const stripped = html.replace(/<script type="application\/json" id="pxh-integrity">.*?<\/script>/s, '')
 		expect(stripped).not.toBe(html)
-		await expect(parseDeck(stripped, { parseHtml: null })).rejects.toThrow(/no dom2pptx-integrity block/)
+		await expect(parseDeck(stripped, { parseHtml: null })).rejects.toThrow(/no pxh-integrity block/)
 	})
 
 	it('rejects an asset whose bytes do not match the manifest', async () => {
