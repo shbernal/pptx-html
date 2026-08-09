@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitepress'
-import { readDocsSource } from '../scripts/docs-source.ts'
+import { LEDGER, readDocsSource } from '../scripts/docs-source.ts'
 import { pkg, repoUrl } from '../scripts/repo.ts'
 
 // Reading `docs/docs.json` here rather than restating the nav means the sidebar
@@ -32,10 +32,16 @@ export default defineConfig({
 		],
 
 		sidebar: {
-			'/docs/': docs.groups.map((group) => ({
-				text: group.text,
-				items: group.pages.map((page) => ({ text: page.title, link: docLink(page.slug) })),
-			})),
+			'/docs/': [
+				...docs.groups.map((group) => ({
+					text: group.text,
+					items: group.pages.map((page) => ({ text: page.title, link: docLink(page.slug) })),
+				})),
+				// Appended rather than added to `docs.json`: the ledger is generated from
+				// the corpus, so listing it there would put a file that does not exist in
+				// `docs/` into the record's own table of contents.
+				{ text: 'Evidence', items: [{ text: LEDGER.title, link: docLink(LEDGER.slug) }] },
+			],
 		},
 
 		search: { provider: 'local' },

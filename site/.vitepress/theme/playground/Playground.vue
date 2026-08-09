@@ -2,7 +2,7 @@
 import { onMounted, reactive, ref, shallowRef } from 'vue'
 import { type DeckSession, describe, idleStages, kb, openDeck, reread } from './loop.ts'
 import PipelineStrip from './PipelineStrip.vue'
-import { type Sample, samples } from './samples.ts'
+import { type Sample, sampleNamed, samples } from './samples.ts'
 import SurfacePanel from './SurfacePanel.vue'
 import { deleteNode, setProp, setText, type SlideRow, srgb, surfaceOf } from './surface.ts'
 
@@ -30,7 +30,20 @@ onMounted(() => {
 		sampleList.value = samples()
 	} catch (error) {
 		failure.value = describe(error)
+		return
 	}
+	// `?deck=` is how the fidelity ledger links a row to the deck it measured. It
+	// resolves against the whole corpus, not just the curated picker — but an
+	// unknown name says so rather than quietly loading something else.
+	const wanted = new URLSearchParams(window.location.search).get('deck')
+	if (wanted === null) return
+	const deck = sampleNamed(wanted)
+	if (deck === null) {
+		failure.value = `There is no deck called "${wanted}" in the corpus, so nothing was loaded. Pick one above.`
+		return
+	}
+	if (!sampleList.value.some((sample) => sample.name === deck.name)) sampleList.value = [...sampleList.value, deck]
+	void pick(deck)
 })
 
 /**

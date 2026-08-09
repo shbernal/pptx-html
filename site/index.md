@@ -57,6 +57,10 @@ That is also why this site shows no pictures of slides. A screenshot of a deck
 would prove exactly the thing the project refuses to do. Anything this site shows
 of a deck has to be produced by running the library.
 
+Those three states are a claim, and the [fidelity ledger](/docs/fidelity) is its
+evidence: what the loop currently models, carries and warns on, per deck, measured
+from the same corpus the round-trip oracle gates on.
+
 ## What the guarantee covers
 
 A generated corpus of 17 decks runs the full loop on every CI build, and the

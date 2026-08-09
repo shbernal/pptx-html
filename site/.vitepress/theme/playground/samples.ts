@@ -46,3 +46,18 @@ export function samples(): Sample[] {
 		return { name: deck.name, tier: deck.tier, why: deck.why, build: deck.build }
 	})
 }
+
+/**
+ * Any deck in the corpus by name, curated or not.
+ *
+ * The fidelity ledger lists all of them and links every row here, which is the
+ * whole payoff of that page — a row you can run rather than a number you have to
+ * take on trust. The picker stays curated; a deep link is not restricted to it.
+ * An unknown name returns `null` so the page can say so rather than silently
+ * loading something else.
+ */
+export function sampleNamed(name: string): Sample | null {
+	const deck = CORPUS.find((entry) => entry.name === name)
+	if (!deck) return null
+	return { name: deck.name, tier: deck.tier, why: deck.why, build: deck.build }
+}

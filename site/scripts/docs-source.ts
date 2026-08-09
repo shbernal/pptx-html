@@ -17,6 +17,22 @@ import { blobUrl, repoRoot } from './repo.ts'
 
 const DOCS_DIR = resolve(repoRoot, 'docs')
 
+/**
+ * The one page under `/docs/` that has no file in `docs/`.
+ *
+ * It is measured, not written: `site/scripts/build-ledger.ts` runs the oracle's
+ * coverage reporter over the corpus and emits it into the mirror. Named here so
+ * the generator and the sidebar agree, and kept out of `docs/docs.json` on
+ * purpose — that file describes the tracked design record, and listing a page
+ * that does not exist in `docs/` would break the cross-check that makes the
+ * record and the site impossible to drift apart.
+ */
+export const LEDGER = {
+	slug: 'fidelity',
+	title: 'Fidelity ledger',
+	description: 'What the loop models, carries and warns on, per corpus deck — measured, not asserted.',
+}
+
 /** Frontmatter the site renders: repo key → VitePress key. */
 const CARRIED: Record<string, string> = { title: 'title', summary: 'description' }
 

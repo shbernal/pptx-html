@@ -54,7 +54,7 @@
 		"test:oracle": "vitest run --project oracle",
 		"test:browser": "vitest run --project browser",
 		"test:watch": "vitest --watch --project unit",
-		"site:prepare": "node site/scripts/sync-docs.ts && node site/scripts/check-samples.ts",
+		"site:prepare": "node site/scripts/sync-docs.ts && node site/scripts/check-samples.ts && node site/scripts/build-ledger.ts",
 		"site:dev": "pnpm run site:prepare && vitepress dev site",
 		"site:build": "pnpm run site:prepare && vitepress build site",
 		"site:preview": "vitepress preview site",
