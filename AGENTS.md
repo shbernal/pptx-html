@@ -157,6 +157,27 @@ deciding what gets emitted. **Nothing in `src/emit/` may import `ir/render`**; t
 moment something is emitted from `RenderIr`, there are two writers and the oracle
 is judging one of them.
 
+`src/parse/edits.ts` is the **one** seam where the two models meet. It is
+one-directional, it writes nothing that did not change, and it carries only the
+delta. Two consequences worth protecting: the unedited loop exercises none of its
+structural mapping, so Invariant R for that case reduces to `import → emit`
+(already gated); and the two models stay free to disagree about defaults, which
+they do — `readModelToIr` resolves a run's colour to `000000` where the paint
+model correctly records that the run stated nothing. The `calls[i]` ↔ `nodes[i]`
+alignment it depends on is **asserted** (length plus `sourceName`), never trusted:
+both sides walk `slide.shapes` in document order, but that is a property of two
+independent traversals rather than a contract either publishes, and patching the
+run that happened to line up would put a user's text into another shape and look
+exactly like success.
+
+**Emit is a pure function of the IR.** Nothing in `src/emit/` or `src/loop.ts`
+measures text, reads a font metric or consults the host — measurement is resolved
+*into* a model where it is taken (`src/heuristic/`) and never recomputed at emit
+time. Otherwise the same IR yields different decks on different machines and
+Invariant R becomes machine-dependent. `test/oracle/determinism.test.ts` keeps a
+cross-process snapshot of the whole loop precisely because "deterministic by
+construction" is a claim, not a check.
+
 Rules `RenderIr` is built on, each of which something will break if ignored:
 
 - **EMU is the stored unit**, integers, for every position and size; `Pt` in a
@@ -245,6 +266,74 @@ failure is invisible in both directions.
   needing interpretation to get back into the deck stays out — the return path
   must never guess.
 
+## The Return Path
+
+The rendered document has **two channels**, and only one of them is trusted.
+
+- The **visual channel** (SVG and HTML) is allowed to approximate. A preset
+  geometry with no local formula is drawn as a plain box, marked
+  `data-d2p-approx`, and moved past. This costs nothing, and the reason is
+  structural: the picture is drawn *from* the model rather than being it.
+- The **JSON island** is not allowed to approximate. `src/parse/` reads that and
+  the declared surface attributes, and nothing else. It never consults
+  `getComputedStyle` — computed style is lossy (font fallback, sRGB
+  normalization, sub-pixel rounding) and has no representation for placeholder
+  inheritance, colour transforms, autofit mode or geometry adjust values.
+
+**Two hashes, because one would collapse two different events.**
+
+- `modelHash` is over the island block's text **exactly as embedded**, escapes
+  and all. A mismatch means the model was tampered with, and it **throws** — it
+  is not a lane. Hashing the escaped text is forced, not stylistic:
+  `escapeForScript` has no safe inverse, so a reader that un-escaped before
+  hashing would corrupt exactly the models most likely to be adversarial.
+- `surfaceHash` is over `project(ir)`. A mismatch means a sanctioned edit. Hash
+  the projection and never the raw DOM, or every browser normalization —
+  attribute order, whitespace, colour serialization — reads as an edit.
+
+**Four lanes, decided per slide and always reported**: `exact`, `reconciled`
+(a sanctioned edit, re-modeled), `drifted` (an edit outside the surface —
+island value kept, edit discarded, warned), `heuristic` (no island at all;
+that is `convertDeck`, not a fallback inside `parseDeck`). A caller must be able
+to see "slide 4 fell to heuristic" without opening the deck.
+
+The `drifted` lane is scoped to what the surface reader can see — a removed run,
+an unknown address, a duplicate, a malformed props attribute — and **not** to a
+moved box or a recoloured path. That gap is not a hole: an out-of-surface DOM
+edit is **inert, not dangerous**, because emit reads the island and the surface
+reading and nothing else. A shape dragged in dev tools is not misapplied, it is
+not applied. The loss is the user's edit, never the deck's fidelity. Closing the
+gap would mean re-deriving the model from the DOM to compare against — putting
+inference back into the trusted path to detect something that cannot hurt
+anything.
+
+**Emit takes the source package** (`emitDeck(parsed, { source })`). Masters,
+layouts, theme and any carried slide's XML live there and nowhere else, and
+embedding a whole `.pptx` in the HTML would make every document at least as large
+as the deck it shows. The document carries the edits; the caller supplies the
+substance — the same split as `AssetMode` one level down. The two are proved to
+be the same deck before anything is applied: a fresh import of the package must
+produce the document's `modelHash`, because an edit addressed by node id means
+nothing against another deck's shape tree.
+
+**Media rides on a render option, not in the model.** `renderDeck(ir, {assets})`
+takes `'inline'` (default) or `'ref'`; the island itself carries `AssetRef` keys
+and a hashed manifest and **never bytes**, so `modelHash` is mode-independent and
+the visual channel hydrates from the asset block rather than storing a second
+copy. Every resolved byte range is verified against the manifest's `sha256`
+before use — an unverifiable asset throws; an unresolvable one is a warning.
+
+## Two Ways To Carry A Slide, And They Are Not Interchangeable
+
+`importSlide(source: Presentation, index)` needs the **live source package** and
+reproduces the slide's rel graph intact. `appendSlides` takes a `SlideSource` — a
+one-method interface over plain serializable `ExtractedSlide`s — so it can be fed
+from bytes, but it costs placeholder inheritance and re-resolves `schemeClr`
+against the destination theme. That is free for v1's input domain (already
+concrete, absolutely positioned) and fatal for the deferred real-deck tier.
+`appendSlides` can position (`at?`); `importSlide` cannot. Ordering otherwise
+follows call order.
+
 ## Scope
 
 - **In scope:** a documented subset of HTML/CSS aimed at slide layouts (sectioned
@@ -275,14 +364,25 @@ failure is invisible in both directions.
 
 ## Testing
 
-- **Unit (`test/unit/`, no DOM, fast):** feed hand-written `SlideModel` fixtures
-  into `emit/*`, write to base64, and parse back with ts-pptx's `read`/`inspect`
-  to assert structure. Prefer structural assertions over binary goldens.
+- **Unit (`test/unit/`, no DOM, fast):** the pure pieces of both lanes — the paint
+  model and its surface, the island, the reconcile fold and the extractor
+  boundary; plus hand-written `heuristic/` fixtures written to base64 and parsed
+  back with ts-pptx's `read`/`inspect`. Prefer structural assertions over binary
+  goldens.
 - **Oracle (`test/oracle/`, no DOM):** the round-trip gate. See below.
-- **Browser/e2e (`test/browser/`, Playwright + headless Chromium):** load HTML
-  slide fixtures and run `convertSlide`/`convertDeck` with `output:'base64'` and a
-  static injected `resolveIcon`. jsdom/happy-dom are insufficient.
-- Keep most assertions in the headless unit layer; minimize the e2e surface.
+- **Browser/e2e (`test/browser/`, Playwright + headless Chromium):** the two
+  things that cannot be faked — reading the editable surface back out of a
+  rendered document, and the heuristic lane's extract path
+  (`convertSlide`/`convertDeck` with `output:'base64'` and a static injected
+  `resolveIcon`). jsdom/happy-dom are insufficient.
+- Keep most assertions in the headless layers; minimize the e2e surface.
+- **Assert on the lane a slide took, not just on the file that came out.** Three
+  bugs in the return path each made the system *quietly do nothing* and each
+  produced a plausible, working document: the parser handing back the island as
+  the edited model (so every edit was invisible), a colour compared by reference
+  (so every untouched slide read as edited), a colour validated as a string (so
+  every colour-bearing run raised an anomaly). A lane that degrades gracefully
+  hides its own bugs; the output alone will not tell you.
 
 ## The Round-Trip Oracle
 
@@ -321,7 +421,14 @@ done until the oracle covers it.**
 - For behavior changes, run `pnpm run test:unit`.
 - For anything touching fidelity, `pnpm run test:oracle` — and expect to update
   the coverage snapshot deliberately, never with a blind `-u`.
-- Lint and format with `pnpm run lint` / `pnpm run format:check`.
+- For anything touching the renderer, the surface reading or the heuristic lane,
+  `pnpm run test:browser`.
+- Lint and format with `pnpm run check`.
+- **After changing what `src/index.ts` exports, read `dist/index.d.ts`.** The
+  public surface has a failure mode neither `tsc` nor the tests can see: nothing
+  in-repo imports through the entry point, and `export type *` from a module that
+  also exports values emits those values as *types named after functions* —
+  declared, uncallable, and discovered only by a consumer.
 
 ## Reference Order
 
