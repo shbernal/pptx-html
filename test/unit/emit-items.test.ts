@@ -12,7 +12,6 @@ import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
 import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
 import { addModelToSlide } from '../../src/emit/slide'
-import { repairPptxBase64 } from '../../src/repair/repair'
 
 const SIZE = { width: 13.333, height: 7.5 }
 
@@ -44,7 +43,7 @@ async function emitToBase64(model: ReturnType<typeof listAndImageModel>) {
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
 	const issues = await addModelToSlide({ ShapeType }, slide, model, SIZE)
-	const base64 = await repairPptxBase64(await pptx.write({ outputType: 'base64' }))
+	const base64 = await pptx.write({ outputType: 'base64' })
 	return { issues, base64 }
 }
 

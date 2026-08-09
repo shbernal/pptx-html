@@ -1,8 +1,8 @@
 // @ts-nocheck
 /**
- * Deck orchestrator — ties the extract, emit and repair layers together: parse
+ * Deck orchestrator — ties the extract and emit layers together: parse
  * the deck, render each slide in a hidden frame, read its IR model, emit it onto
- * a ts-pptx slide, then repair and deliver the package.
+ * a ts-pptx slide, then deliver the package.
  *
  * The seams, all of them options on the `opts` argument:
  *  - the writer is `@shbernal/ts-pptx`, imported here and overridable via
@@ -22,7 +22,6 @@ import { composeSlideDocument, parseDeckHtml } from './extract/parse'
 import { readSlideModel } from './extract/read'
 import { vectorizeSvgImages } from './extract/svg'
 import { addModelToSlide } from './emit/slide'
-import { repairPptxBase64 } from './repair/repair'
 
 function getPptSize(pptx) {
 	return {
@@ -179,13 +178,14 @@ export async function convertDeck(fullHtmlString, opts) {
 async function deliverDeck(pptx, result, opts) {
 	const output = opts.output || 'download'
 	if (output === 'pptx-instance') {
-		// Hand back the live writer. Post-write OOXML repairs operate on serialized
-		// bytes, so they cannot apply here — the caller owns write()/repair if wanted.
+		// Hand back the live writer, unserialized.
 		result.pptx = pptx
 		return result
 	}
 
-	const base64 = await repairPptxBase64(await pptx.write({ outputType: 'base64' }))
+	// Written and delivered as-is. There used to be a post-write OOXML repair pass
+	// here; see `test/oracle/writer-output.test.ts` for why there is not.
+	const base64 = await pptx.write({ outputType: 'base64' })
 	if (output === 'base64') {
 		result.base64 = base64
 	} else if (output === 'blob') {

@@ -14,9 +14,9 @@
  * This is a **browser** package: it needs a real DOM (iframe, `getComputedStyle`,
  * `getBoundingClientRect`, canvas, fonts) and is not Node-portable as written.
  *
- * `convertDeck` runs the full engine (`./engine`, split across `extract` /
- * `emit` / `repair`); `convertSlide` is the per-slide entry that stops at the IR
- * so the model boundary can be asserted directly.
+ * `convertDeck` runs the full engine (`./engine`, split across `extract` and
+ * `emit`); `convertSlide` is the per-slide entry that stops at the IR so the
+ * model boundary can be asserted directly.
  */
 
 import { convertDeck as convertDeckEngine, convertSlide as convertSlideEngine } from './engine'

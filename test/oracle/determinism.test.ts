@@ -1,6 +1,7 @@
 import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
 import { buildLabelledDeck, CORPUS, corpusBytes, labelledProducer } from '../corpus/decks'
+import { htmlLoop } from './html-lane'
 import { type DeckView, viewDeck } from './roundtrip'
 
 // Two writer behaviours the rest of the plan leans on. Both are assumptions
@@ -35,6 +36,19 @@ describe('emit is a function of the deck, not of the run', () => {
 		if (!entry) throw new Error('corpus lost its autoshape deck')
 		const view = await viewDeck(await corpusBytes(entry))
 		expect(view.canonical).toMatchSnapshot()
+	})
+
+	it('a deck that has been through the whole loop matches its recorded form', async () => {
+		// The same tripwire, on the four legs joined. `IR₂ ≡ IR₁ ⇒ pptx₂ ≡ pptx₁` is
+		// what Invariant R rests on, and it is only true while emit is a function of
+		// the IR — so the loop needs its own cross-process check rather than
+		// inheriting the writer's. Anything the render or parse legs learn from the
+		// host would show up here and nowhere else in the suite.
+		const entry = CORPUS.find((candidate) => candidate.name === 'autoshape')
+		if (!entry) throw new Error('corpus lost its autoshape deck')
+		const input = await viewDeck(await corpusBytes(entry))
+		const produced = await htmlLoop(input)
+		expect((await viewDeck(produced.bytes)).canonical).toMatchSnapshot()
 	})
 })
 

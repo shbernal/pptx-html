@@ -1,8 +1,8 @@
 /**
  * Writer round-trip, headless. The emit layer for a DOM-free model (colour
  * background + shape + line + text + table) drives `@shbernal/ts-pptx`, the deck
- * is serialised, run through the repair pass, and parsed back with the writer's
- * `read` model to assert the conversion round-trips. Browser `convertDeck`
+ * is serialised and parsed back with the writer's `read` model to assert the
+ * conversion round-trips. Browser `convertDeck`
  * delivery is exercised by the Playwright harness.
  */
 
@@ -12,7 +12,6 @@ import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
 import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
 import { addModelToSlide } from '../../src/emit/slide'
-import { repairPptxBase64 } from '../../src/repair/repair'
 
 const SIZE = { width: 13.333, height: 7.5 }
 
@@ -56,7 +55,7 @@ async function emitToBase64(model: ReturnType<typeof domFreeModel>) {
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
 	const issues = await addModelToSlide({ ShapeType }, slide, model, SIZE)
-	const base64 = await repairPptxBase64(await pptx.write({ outputType: 'base64' }))
+	const base64 = await pptx.write({ outputType: 'base64' })
 	return { issues, base64 }
 }
 
@@ -65,7 +64,7 @@ function loadDeck(base64: string) {
 	return Presentation.load(Uint8Array.from(Buffer.from(base64, 'base64')))
 }
 
-describe('emit → ts-pptx → repair → read round-trip', () => {
+describe('emit → ts-pptx → read round-trip', () => {
 	it('emits a DOM-free model onto ts-pptx without per-item issues', async () => {
 		const { issues } = await emitToBase64(domFreeModel())
 		expect(issues).toEqual([])
@@ -85,10 +84,16 @@ describe('emit → ts-pptx → repair → read round-trip', () => {
 		expect(allText).toContain('Hello dom2pptx')
 	})
 
-	it('repair pass types the slide size as screen16x9', async () => {
+	it('states the slide size the layout asked for', async () => {
+		// This used to assert `type="screen16x9"`, which a post-write repair stamped
+		// on unconditionally — including onto decks that were not 16:9. It went
+		// unnoticed because this deck *is* 16:9: the writer's `LAYOUT_16x9` is 10in ×
+		// 5.625in, so the wrong rule and the right answer agreed here. The attribute
+		// is optional and PowerPoint infers it from the dimensions, which are the
+		// fact worth pinning.
 		const { base64 } = await emitToBase64(domFreeModel())
 		const pres = await loadDeck(base64)
 		const presXml = new TextDecoder().decode(pres.presentationPart.bytes)
-		expect(presXml).toMatch(/type="screen16x9"/)
+		expect(presXml).toMatch(/<p:sldSz[^>]*cx="9144000"[^>]*cy="5143500"/)
 	})
 })

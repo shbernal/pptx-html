@@ -1,5 +1,90 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`emit is a function of the deck, not of the run > a deck that has been through the whole loop matches its recorded form 1`] = `
+{
+  "chrome": {
+    "masters": [
+      {
+        "background": {
+          "color": "FFFFFF",
+        },
+        "title": "DEFAULT",
+      },
+    ],
+    "theme": {
+      "bodyFontFace": "Calibri",
+      "colorScheme": {
+        "accent1": "4472C4",
+        "accent2": "ED7D31",
+        "accent3": "A5A5A5",
+        "accent4": "FFC000",
+        "accent5": "5B9BD5",
+        "accent6": "70AD47",
+        "dk1": "000000",
+        "dk2": "44546A",
+        "folHlink": "954F72",
+        "hlink": "0563C1",
+        "lt1": "FFFFFF",
+        "lt2": "E7E6E6",
+      },
+      "headFontFace": "Calibri Light",
+    },
+  },
+  "props": {
+    "author": "dom2pptx corpus",
+    "revision": "1",
+    "subject": "round-trip corpus",
+    "title": "round-trip corpus",
+  },
+  "slideSize": {
+    "heightEmu": 5143500,
+    "widthEmu": 9144000,
+  },
+  "slides": [
+    {
+      "background": null,
+      "calls": [
+        {
+          "args": [
+            "roundRect",
+            {
+              "fill": {
+                "color": "DDE3F0",
+              },
+              "h": "1371600emu",
+              "line": {
+                "color": "250F6B",
+                "width": 2,
+              },
+              "objectName": "card",
+              "shapeAdjust": [
+                {
+                  "name": "adj",
+                  "value": 0.13333,
+                },
+              ],
+              "w": "2743200emu",
+              "x": "914400emu",
+              "y": "914400emu",
+            },
+          ],
+          "containedNames": [
+            "card",
+          ],
+          "method": "addShape",
+          "shapeName": "card",
+        },
+      ],
+      "hidden": false,
+      "layoutName": "DEFAULT",
+      "notesText": null,
+      "number": 1,
+      "transition": null,
+    },
+  ],
+}
+`;
+
 exports[`emit is a function of the deck, not of the run > the canonical model of a corpus deck matches its recorded form 1`] = `
 {
   "chrome": {

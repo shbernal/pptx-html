@@ -1,8 +1,8 @@
 /**
  * custGeom emit round-trip, headless. Feeds hand-written `path` IR items through
- * `emit/custgeom`, serializes on `@shbernal/ts-pptx`, runs the repair pass, then
- * parses the deck back with ts-pptx's `read` model and asserts the freeform
- * geometry survives. This is where custGeom fidelity is proven without a browser.
+ * `emit/custgeom`, serializes on `@shbernal/ts-pptx`, then parses the deck back
+ * with ts-pptx's `read` model and asserts the freeform geometry survives. This is
+ * where custGeom fidelity is proven without a browser.
  */
 
 // @ts-expect-error — ts-pptx ships its own types; node-resolved entry is fine for tests.
@@ -13,7 +13,6 @@ import { describe, expect, it } from 'vitest'
 import { pathShapeOptions } from '../../src/emit/custgeom'
 import { addModelToSlide } from '../../src/emit/slide'
 import type { PathItem, SlideModel } from '../../src/ir/model'
-import { repairPptxBase64 } from '../../src/repair/repair'
 
 const SIZE = { width: 13.333, height: 7.5 }
 
@@ -50,7 +49,7 @@ async function emit(items: PathItem[]) {
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
 	const issues = await addModelToSlide({ ShapeType }, slide, model(items), SIZE)
-	const base64 = await repairPptxBase64(await pptx.write({ outputType: 'base64' }))
+	const base64 = await pptx.write({ outputType: 'base64' })
 	return { issues, base64 }
 }
 
@@ -74,7 +73,7 @@ describe('pathShapeOptions — fill / stroke mapping', () => {
 	})
 })
 
-describe('emit → ts-pptx → repair → read round-trip (custGeom)', () => {
+describe('emit → ts-pptx → read round-trip (custGeom)', () => {
 	it('emits path items without per-item issues', async () => {
 		const { issues } = await emit([triangle(), cubicStroke()])
 		expect(issues).toEqual([])
