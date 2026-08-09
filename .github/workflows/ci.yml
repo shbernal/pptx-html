@@ -83,3 +83,84 @@ jobs:
 
       - name: Browser tests
         run: pnpm run test:browser
+
+  # The site is the project's marketing surface, and the one place where an
+  # overstated fidelity claim would be read by people who cannot check it. So the
+  # publish is wired behind the same gate the library is: `needs: validate` waits
+  # for every leg of the matrix, which makes it structurally impossible to publish
+  # a site whose round-trip oracle is failing. That job name is load-bearing —
+  # renaming `validate` silently removes the gate.
+  #
+  # Built on pull requests too, and only deployed from `main`. `site:build` runs
+  # VitePress with dead-link checking on, which is the acceptance test for the
+  # link rewriting in site/scripts/docs-source.ts; leaving it to the merge commit
+  # would mean a docs edit turns `main` red instead of the PR that wrote it.
+  build-site:
+    name: Build site
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.3.0
+          run_install: false
+
+      # One version, not the matrix. The matrix exists to prove the library across
+      # Node releases; the site is a single artifact and building it twice proves
+      # nothing about it.
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `dist/` first: the site imports `pptx-html` by name, through the `exports`
+      # map, exactly as a consumer would — so the playground fails here for the
+      # same reason a consumer's build would, rather than at runtime in a visitor's
+      # browser.
+      - name: Build package artifacts
+        run: pnpm run build
+
+      - name: Build site
+        run: pnpm run site:build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/.vitepress/dist
+
+  deploy-site:
+    name: Deploy site
+    needs: build-site
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    # Kept at job level. The workflow's own `permissions:` stays `contents: read`,
+    # so publishing rights belong to the one job that publishes rather than to
+    # every job in the file.
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      # Note that the workflow-level `cancel-in-progress` above reaches this job
+      # too — job-level concurrency cannot opt out of a cancelled run. That is
+      # acceptable rather than merely tolerated: `deploy-pages` cancels its pending
+      # deployment on cancellation, the live site is only ever swapped atomically,
+      # and the push that superseded this one publishes the newer commit anyway.
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
