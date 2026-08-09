@@ -36,4 +36,6 @@ coverage/
 ### Claude Code local/runtime files (shared config like .claude/settings.json stays tracked)
 .claude/settings.local.json
 .claude/*.lock
-.claude/skills/
+### `.claude/skills` is a junction on Windows; tools that read it as a symlink
+### rather than a directory skip a `skills/` pattern, so match it without the slash.
+.claude/skills
