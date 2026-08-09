@@ -1,0 +1,14 @@
+{
+	"name": "pptx-html",
+	"description": "Design record for the HTML ⇄ PPTX round-trip library.",
+	"navigation": [
+		{
+			"group": "Start",
+			"pages": ["index", "round-trip"]
+		},
+		{
+			"group": "Design",
+			"pages": ["architecture", "decisions"]
+		}
+	]
+}

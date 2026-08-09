@@ -1,98 +1,78 @@
-# dom2pptx
+# pptx-html
 
-Turn HTML from the DOM into PowerPoint (`.pptx`) decks, by way of
-[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx).
+**Edit a PowerPoint deck as a web page, and get the deck back — not an
+approximation of it.**
 
-This library owns the link between **HTML/DOM and `ts-pptx` calls**, in both
-directions. It reads a document, builds an intermediate slide model (IR), and
-drives the writer. It does not emit OOXML itself — that is `ts-pptx`'s job — and
-it does not generate the HTML — that is the caller's job.
+`pptx-html` moves slides between HTML and PPTX by driving
+[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx). It owns
+the HTML ⇄ `ts-pptx` link in both directions: it reads a `.pptx` into a slide
+model, renders that model as HTML, reads the edited HTML back, and writes a
+`.pptx` out again.
 
-```
-your app / AI agent               produces / displays HTML slides
-        │  imports
-        ▼
-dom2pptx (this package)           HTML ⇄ IR ⇄ ts-pptx calls
-        │  depends on
-        ▼
-@shbernal/ts-pptx                 IR-agnostic OOXML reader + emitter
-```
+## Why this exists
 
-## Why
+Two problems, one shape.
 
-The centre of the project is a **loop**, not a one-way conversion:
+**Decks are trapped in a desktop application.** HTML renders in a browser
+instantly; PPTX does not. If you want to preview a deck on the web — or let
+someone edit it there — you have to leave the format, and everything that
+converts a deck to HTML converts it *away*: the result looks about right and
+cannot become a deck again.
 
-```
+**AI agents write good HTML and bad OOXML.** Ask a model for a slide and it will
+produce clean markup. Ask it for a `.pptx` and it will produce a corrupt zip.
+The adapter that turns the first into the second is the missing piece.
+
+Both want the same thing: a conversion that survives the trip home.
+
+## The loop
+
+```text
 .pptx  ──import──►  IR  ──render──►  HTML   (what a human sees / edits)
   ▲                  ▲                 │
   └────emit──────────┴─────parse───────┘   (what a machine reads back)
 ```
 
-**1. Preview and edit decks on the web.** HTML renders in a browser instantly;
-PPTX does not. A deck goes out as HTML, gets looked at and edited there, and
-comes back as a `.pptx` — the page is the preview *and* the editing surface.
+The loop only means anything if it is lossless, and that is the property the
+whole design is arranged around:
 
-**2. Let AI agents build decks.** Models are good at emitting HTML and bad at
-emitting OOXML. Give an agent an HTML target and it can produce a deck; this
-library is the adapter that makes the HTML land as editable slides.
-
-The loop only means anything if it is lossless, which is the property the whole
-design is arranged around:
-
-> **Invariant R.** For any deck this pipeline can write, `import → render →
-> parse → emit` produces a deck **equal under the normalized read model** to the
-> input. Slides whose features the IR does not model are carried across
+> **Invariant R.** For any deck this pipeline can write, `import → render → parse
+> → emit` produces a deck **equal under the normalized read model** to the input.
+> Slides whose features the IR does not model are carried across
 > **byte-identical** rather than approximated.
 
 Equality is normalized, not byte-for-byte: zip entry order, timestamps,
-relationship ids and element ids all vary legally, and the comparison
-canonicalizes both sides before diffing.
-
-**Status.** The forward half (HTML → IR → `.pptx`) is what ships today. The
-import and return halves are under construction; until the round-trip oracle
-gates CI, treat Invariant R as the charter, not as a shipped guarantee.
+relationship ids and element ids all vary legally, and both sides are
+canonicalized before diffing. This is not an aspiration in a design doc — a
+generated corpus of 17 decks runs the full loop on every CI build, and the
+per-construct fidelity ledger is snapshotted so it cannot move silently.
 
 ## Modeled, carried, or warned — never approximated
 
-HTML/CSS and PPTX are different formats and neither is a superset of the other:
-box layout, text flow, filters and blend modes have no exact OOXML equivalent,
-and PowerPoint's own model (placeholders, theme colors, freeform geometry) has
+HTML/CSS and PPTX are different formats and neither is a superset of the other.
+Box layout, text flow, filters and blend modes have no exact OOXML equivalent,
+and PowerPoint's own model — placeholders, theme colours, freeform geometry — has
 no exact CSS equivalent. That does not make the output a guess. Every element
 lands in exactly one of three states:
 
 - **Modeled** — the IR represents it, and it survives the loop exactly.
 - **Carried** — the IR does not model it, so its XML moves across untouched. No
   approximation, and no loss.
-- **Warned** — it can be neither modeled nor carried, and the conversion says
-  so. A visible failure, never a silent one.
+- **Warned** — it can be neither modeled nor carried, and the conversion says so.
+  A visible failure, never a silent one.
 
 What this rules out is the fourth state — *approximated*: content that comes out
-looking about right but has no way back. That is why the `html2canvas` raster
-fallback was removed rather than kept as an escape hatch. A slide flattened into
-a picture is the one output that can never re-enter the loop, so producing a file
+looking about right but has no way back. It is why the `html2canvas` raster
+fallback was removed rather than kept as an escape hatch. A slide flattened into a
+picture is the one output that can never re-enter the loop, so producing a file
 that way is a failure wearing a success's clothes.
 
-Inference is still how the **secondary** lane works: HTML that carries no IR of
-its own is read from the rendered DOM, and that reading is genuinely heuristic.
-It stays honest by the same rule — closest editable construct, plus a `Warning`.
-
-## Scope
-
-- **In scope:** a documented subset of HTML/CSS aimed at slide layouts —
-  sectioned slides, common Tailwind-shaped utility styling, iconify icons,
-  gradients, tables, lists. Extend it by adding fixtures.
-- **Out of scope:** rendering arbitrary web pages. This is not a browser.
-- **Environment:** the loop is host-agnostic and runs in Node and in the browser
-  alike. The heuristic lane is **browser only** — it needs a real DOM (iframe,
-  `getComputedStyle`, `getBoundingClientRect`, canvas, fonts) and its layout
-  tests run in headless Chromium (Playwright), not jsdom/happy-dom.
-
-## Public API
+## What it looks like
 
 Four legs, one loop:
 
 ```ts
-import { importDeck, renderDeck, parseDeck, emitDeck } from 'dom2pptx'
+import { importDeck, renderDeck, parseDeck, emitDeck } from 'pptx-html'
 
 const { render } = await importDeck(pptxBytes)
 const { html } = await renderDeck(render, { bytes: pptxBytes }) // editable HTML
@@ -104,39 +84,55 @@ const { bytes } = await emitDeck(parsed, { source: pptxBytes }) // → .pptx
 visible SVG, and `parseDeck` reads *that* — never `getComputedStyle`. It reports
 per slide which lane it took (`exact`, `reconciled`, `drifted`, `heuristic`) and
 throws rather than guessing when a document's integrity hashes do not match.
-`emitDeck` needs the source package because masters, layouts, theme and any
-carried slide's XML live there: the document carries the edits, the caller
-supplies the substance.
 
-What a rendered document may be edited in is declared, not implied — run text,
+What a rendered document may be edited in is **declared, not implied**: run text,
 `bold` / `italic` / `sizePt` / `color`, and node deletion. `project(ir)` is that
-surface and `freeze(ir)` is its complement; both are exported.
+surface and `freeze(ir)` is its complement; both are exported, so "what may I
+safely edit in this HTML?" is answerable without reading the renderer.
 
-The heuristic lane, for HTML this library did not render:
+For HTML this library did not render, there is a second, explicitly best-effort
+lane that infers a model from the rendered DOM:
 
 ```ts
-import { convertDeck, convertSlide } from 'dom2pptx'
+import { convertDeck, convertSlide } from 'pptx-html'
 
 await convertDeck(fullHtmlString, opts) // → ConvertResult
 await convertSlide(headHTML, slideHTML, opts) // → { model, warnings }
 ```
 
-See `src/index.ts` for `ConvertOptions` — including the injectable `resolveIcon`
-and `pptxFactory` seams, the `output` delivery mode, and the opt-in
-`vectorizeSvg`. The loop's model types come from `src/ir/render.ts`; the
-heuristic lane's separate, DOM-shaped model is exported under the `heuristic`
-namespace and is deliberately not the same type.
+## Status
 
-## Development
+All four legs of the loop are implemented and exported, and the round-trip oracle
+gates CI. What that guarantee currently covers:
 
-```bash
-pnpm install
-pnpm run build        # tsdown → ESM dist/
-pnpm run typecheck
-pnpm run lint
-pnpm run test         # builds, then runs unit tests
-```
+- **Input domain.** Decks written by `@shbernal/ts-pptx` — that is what the
+  generated corpus is made of. Decks authored in PowerPoint are a deliberate
+  second tier and are not yet gated.
+- **Environment.** The loop is host-agnostic and runs in Node and the browser
+  alike. The heuristic lane is **browser only** — it needs a real DOM (iframe,
+  `getComputedStyle`, `getBoundingClientRect`, canvas, fonts), and its tests run
+  in headless Chromium, not jsdom.
+- **Distribution.** Not published to npm during the prototype phase; consumers
+  link it locally. Node `>=24`.
 
-The writer dependency, `@shbernal/ts-pptx`, is consumed from public npm — no
-local link or sibling checkout is required. This package is not itself published
-during the prototype phase; consumers link it locally.
+Fidelity claims in these docs are held to what the oracle actually gates. Where
+something is not covered, it says so.
+
+## Scope
+
+- **In scope:** a documented subset of HTML/CSS aimed at slide layouts —
+  sectioned slides, common utility-class styling, iconify icons, gradients,
+  tables, lists. Extend it by adding fixtures.
+- **Out of scope:** rendering arbitrary web pages. This is not a browser.
+
+## Further reading
+
+- [docs/](./docs/index.md) — the design record: [Invariant R and the
+  oracle](./docs/round-trip.md), [architecture](./docs/architecture.md), and
+  [decisions that must not be undone](./docs/decisions.md).
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — install, build, the three test layers,
+  and what to run for which kind of change.
+
+## License
+
+[MIT](./LICENSE) © shbernal
