@@ -10,12 +10,15 @@
  */
 
 import { withBase } from 'vitepress'
-import { computed, onMounted, ref } from 'vue'
-import { describe } from '../playground/loop.ts'
+import { computed, onMounted, ref, shallowRef } from 'vue'
+import { download } from '../download.ts'
+import { describe, kb } from '../playground/loop.ts'
 import SlideCard from './SlideCard.vue'
 import { showcase, type ShowcaseRow, type ShowcaseSlide } from './showcase.ts'
 
-const rows = ref<ShowcaseRow[]>([])
+// Shallow because a row is written once and never mutated: deep reactivity would
+// buy nothing and would walk sixteen slides' worth of markup to buy it.
+const rows = shallowRef<ShowcaseRow[]>([])
 const failure = ref<string | null>(null)
 
 onMounted(async () => {
@@ -59,6 +62,25 @@ const warnings = computed(() => rows.value.flatMap((row) => row.warnings))
 				<div class="pxh-row-head">
 					<span class="pxh-row-title">{{ row.title }}</span>
 					<span class="pxh-row-blurb">{{ row.blurb }}</span>
+					<button
+						type="button"
+						class="pxh-row-get"
+						:aria-label="`Download ${row.title} as a .pptx file`"
+						@click="download(row.source, row.file)"
+					>
+						<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+							<path
+								d="M8 1.5v8m0 0L4.75 6.25M8 9.5l3.25-3.25M2 11.5v1.75a1.25 1.25 0 0 0 1.25 1.25h9.5A1.25 1.25 0 0 0 14 13.25V11.5"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+						Download .pptx
+						<span class="pxh-row-size">{{ kb(row.source.length) }}</span>
+					</button>
 				</div>
 				<div class="pxh-viewport">
 					<div class="pxh-track">
@@ -86,7 +108,8 @@ const warnings = computed(() => rows.value.flatMap((row) => row.warnings))
 			Sixteen slides, written by <code>@shbernal/ts-pptx</code> and drawn by <code>renderDeck</code> in this tab a
 			moment ago. Not screenshots — this site has none, and
 			<a :href="withBase('/docs/decisions')">that is a rule, not an oversight</a>.
-			The companies and figures are invented.
+			Each row's button hands you the <code>.pptx</code> its slides were drawn from — written in this tab, never
+			fetched. The companies and figures are invented.
 			<template v-if="warnings.length > 0">
 				<br />
 				<strong>{{ warnings.length }}</strong> render warning{{ warnings.length === 1 ? '' : 's' }}, shown rather
@@ -126,6 +149,45 @@ const warnings = computed(() => rows.value.flatMap((row) => row.warnings))
 .pxh-row-blurb {
 	font-size: 12.5px;
 	color: var(--vp-c-text-3);
+}
+
+/*
+ * Pushed to the far end of the head, so the two rows' buttons line up with each
+ * other and with the page's measure rather than trailing whatever length the
+ * blurb happens to be.
+ */
+.pxh-row-get {
+	margin-left: auto;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 11px;
+	border: 1px solid var(--vp-c-divider);
+	border-radius: 999px;
+	background: var(--vp-c-bg-soft);
+	color: var(--vp-c-text-2);
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.5;
+	white-space: nowrap;
+	cursor: pointer;
+	transition:
+		border-color 0.2s,
+		color 0.2s;
+}
+
+.pxh-row-get:hover {
+	border-color: var(--vp-c-brand-1);
+	color: var(--vp-c-brand-1);
+}
+
+.pxh-row-size {
+	color: var(--vp-c-text-3);
+	font-variant-numeric: tabular-nums;
+}
+
+.pxh-row-get:hover .pxh-row-size {
+	color: inherit;
 }
 
 /*

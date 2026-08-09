@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, shallowRef } from 'vue'
+import { download } from '../download.ts'
 import { type DeckSession, describe, idleStages, kb, openDeck, reread } from './loop.ts'
 import PipelineStrip from './PipelineStrip.vue'
 import { type Sample, sampleNamed, samples } from './samples.ts'
@@ -141,18 +142,6 @@ async function edit(mutate: (doc: Document) => void): Promise<void> {
 	} finally {
 		busy.value = false
 	}
-}
-
-function download(bytes: Uint8Array, name: string): void {
-	const blob = new Blob([bytes], {
-		type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-	})
-	const url = URL.createObjectURL(blob)
-	const anchor = document.createElement('a')
-	anchor.href = url
-	anchor.download = name
-	anchor.click()
-	URL.revokeObjectURL(url)
 }
 
 function onDrop(event: DragEvent): void {

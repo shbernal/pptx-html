@@ -1212,6 +1212,8 @@ export interface ShowcaseDeck {
 	title: string
 	/** One line under the row. */
 	blurb: string
+	/** What the row's download is called on disk. Stated, not derived from `title`. */
+	file: string
 	build: () => Promise<Uint8Array>
 }
 
@@ -1235,6 +1237,7 @@ export const SHOWCASE: readonly ShowcaseDeck[] = [
 		name: 'northwind',
 		title: 'Northwind Retail — Growth review',
 		blurb: 'Eight slides: waterfall, stacked share, a 2×2, a chevron roadmap and a ranked portfolio table.',
+		file: 'northwind-retail-growth-review.pptx',
 		build: async () => {
 			const pptx = newDeck('Northwind Retail — Growth review')
 			northwindTitle(pptx, INDIGO)
@@ -1252,6 +1255,7 @@ export const SHOWCASE: readonly ShowcaseDeck[] = [
 		name: 'meridian',
 		title: 'Meridian Health — Operating model',
 		blurb: 'Eight slides: concentric rings, a donut, an area trend, a pathway flow and a per-cell heatmap.',
+		file: 'meridian-health-operating-model.pptx',
 		build: async () => {
 			const pptx = newDeck('Meridian Health — Operating model')
 			meridianTitle(pptx, PLUM)

@@ -44,6 +44,18 @@ export interface ShowcaseRow {
 	stylesheet: string
 	/** What `renderDeck` could not draw faithfully. Reported, never swallowed. */
 	warnings: string[]
+	/**
+	 * The `.pptx` the row was drawn from — the same bytes `importDeck` was handed,
+	 * kept so the row can offer them for download.
+	 *
+	 * It is the writer's output and not a re-emit: a visitor opening this file in
+	 * PowerPoint is looking at the input to the pictures beside it, which is the
+	 * only version of that comparison worth offering. Round-tripping is the
+	 * playground's claim and needs the other two legs to mean anything.
+	 */
+	source: Uint8Array
+	/** What to call `source` on disk. */
+	file: string
 }
 
 /**
@@ -54,7 +66,8 @@ export interface ShowcaseRow {
  * in an asset source that is never consulted.
  */
 async function renderRow(deck: ShowcaseDeck): Promise<ShowcaseRow> {
-	const imported = await importDeck(await deck.build())
+	const source = await deck.build()
+	const imported = await importDeck(source)
 	const rendered = await renderDeck(imported.render, { assets: 'ref' })
 
 	const document = new DOMParser().parseFromString(rendered.html, 'text/html')
@@ -66,7 +79,16 @@ async function renderRow(deck: ShowcaseDeck): Promise<ShowcaseRow> {
 	}))
 
 	if (slides.length === 0) throw new Error(`${deck.name} rendered no slides`)
-	return { name: deck.name, title: deck.title, blurb: deck.blurb, slides, stylesheet, warnings: rendered.warnings }
+	return {
+		name: deck.name,
+		title: deck.title,
+		blurb: deck.blurb,
+		slides,
+		stylesheet,
+		warnings: rendered.warnings,
+		source,
+		file: deck.file,
+	}
 }
 
 /** Both rows, rendered in parallel — neither depends on the other. */
