@@ -1,0 +1,5 @@
+# Biome formats to LF and checks formatting in CI, so the checkout has to produce
+# LF regardless of the contributor's `core.autocrlf`. Without this, a first clone
+# on a Windows machine with the common `autocrlf=true` gets CRLF in every file and
+# `pnpm run check` fails before a line has been edited.
+* text=auto eol=lf
