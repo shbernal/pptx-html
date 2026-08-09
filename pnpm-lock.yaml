@@ -45,6 +45,9 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.2.0)(@vitest/browser-playwright@4.1.10)(vite@8.1.0(@types/node@26.2.0))
+      vue:
+        specifier: ^3.5.41
+        version: 3.5.41(typescript@7.0.2)
 
 packages:
 

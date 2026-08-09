@@ -1,26 +1,50 @@
 ---
 title: 'Playground'
-description: 'Run the round-trip loop in your own browser.'
+description: 'Run the round-trip loop in your own browser: import, render, edit, emit, download.'
 editLink: false
+aside: false
+pageClass: pxh-wide
 ---
 
 # Playground
 
-**Not built yet.** This page is a placeholder, and it says so rather than showing
-a mock-up of what it will be — the same rule the library applies to a slide it
-cannot convert.
+`importDeck → renderDeck → parseDeck → emitDeck`, running here, on this page, in
+your browser. Not a recording of a conversion and not a picture of a slide — the
+same four functions a consumer calls, on bytes that never leave the tab.
 
-What will be here: `importDeck → renderDeck → parseDeck → emitDeck` running in
-your browser, on a sample deck, with the rendered HTML editable through the
-surface the library declares and the resulting `.pptx` downloadable. Not a
-picture of a deck, and not a server round-trip — the actual loop, in the page.
+<ClientOnly>
+	<Playground />
+</ClientOnly>
 
-Until then, the loop is runnable in a checkout:
+## What you are looking at
 
-```bash
-pnpm install && pnpm run build && pnpm run example
-```
+The four boxes are the loop's four legs, named for the functions themselves. Each
+one reports what it produced and how long it took, and a leg that throws goes red
+while the ones after it say they did not run. There is no state in that strip that
+was not earned.
 
-[`examples/round-trip.mjs`](https://github.com/shbernal/pptx-html/blob/main/examples/round-trip.mjs)
-imports a deck, edits a run, writes the deck back out, and re-imports it to show
-the edit arrived.
+The **lane** under each slide is the return path's own account of how it read the
+document. `exact` means the model came back as it was rendered; `reconciled` means
+a sanctioned edit was folded in; `drifted` means something outside the editable
+surface changed and the island's value stood instead. It is reported per slide,
+because a deck where one slide was edited and eleven were not should not describe
+all twelve the same way.
+
+The panel beside the preview is the **editable surface** — run text, `bold`,
+`italic`, `sizePt`, `color`, and deleting a node. That list is not a subset chosen
+for the demo: it is `EDITABLE_SURFACE`, exported from the package, and there is
+deliberately no control for anything outside it. An input whose value was silently
+dropped on the way back would be the exact failure this project is built to
+refuse.
+
+## What it does not prove
+
+The round-trip oracle gates decks written by
+[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx) — the
+samples above are that corpus. A deck you author in PowerPoint and drop here runs
+the same code, but it is the project's **second tier** and is not gated by CI. If
+one comes back with warnings or on a weaker lane, that is the documented state of
+the work, and showing it is the point.
+
+[Invariant R and the round-trip oracle](/docs/round-trip) is the full statement of
+what is and is not guaranteed.

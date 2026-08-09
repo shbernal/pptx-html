@@ -1,0 +1,16 @@
+/*
+ * The playground is the one page whose content is not prose.
+ *
+ * VitePress's doc column is sized for a comfortable measure of text — right for
+ * every other page here, and too narrow for a slide preview sitting beside the
+ * panel that edits it. Widened by `pageClass: pxh-wide` in that page's
+ * frontmatter rather than for the whole site, so the docs keep their measure.
+ */
+
+/* `:not(.has-sidebar)` on every arm is for specificity, not for filtering — the
+   theme's own rules carry it, and without it these tie and lose. */
+.pxh-wide .VPDoc:not(.has-sidebar) .container,
+.pxh-wide .VPDoc:not(.has-sidebar) .content,
+.pxh-wide .VPDoc:not(.has-sidebar) .content-container {
+	max-width: 1200px;
+}
