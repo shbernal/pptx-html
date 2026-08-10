@@ -65,6 +65,8 @@
 		"format:check": "biome format",
 		"check": "biome check",
 		"check:fix": "biome check --write",
+		"lint:chars": "charcheck",
+		"lint:chars:fix": "charcheck --fix",
 		"example": "node examples/round-trip.mjs",
 		"prepack": "pnpm run build",
 		"prepublishOnly": "pnpm run typecheck && pnpm run check && pnpm run test:oracle"
@@ -77,6 +79,8 @@
 		"@types/node": "^26.2.0",
 		"@vitest/browser": "^4.1.10",
 		"@vitest/browser-playwright": "^4.1.10",
+		"@vue/compiler-sfc": "^3.5.41",
+		"charcheck": "^0.1.0",
 		"lefthook": "^2.1.10",
 		"playwright": "^1.62.1",
 		"tsdown": "^0.22.14",

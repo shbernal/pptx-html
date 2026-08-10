@@ -94,6 +94,8 @@ export function readDocsSource(): DocsSource {
 
 function lookup(pages: Map<string, DocPage>, slug: string): DocPage {
 	const page = pages.get(slug)
+	// Reaches whoever broke the build, never a reader of the site.
+	// charcheck-disable-next-line no-em-dash-in-site-build-strings
 	if (!page) throw new Error(`docs/${slug}.md was validated and then not found — this is a bug in docs-source.ts`)
 	return page
 }
@@ -106,6 +108,8 @@ function readPage(slug: string, slugs: string[]): DocPage {
 		if (!(key in CARRIED) && !DROPPED.has(key)) {
 			throw new Error(
 				`${file}: unknown frontmatter key "${key}". Decide in site/scripts/docs-source.ts whether the ` +
+					// Reaches whoever broke the build, never a reader of the site.
+					// charcheck-disable-next-line no-em-dash-in-site-build-strings
 					'site carries it or drops it — silently dropping it would publish a page missing something.'
 			)
 		}
@@ -228,6 +232,8 @@ function rewriteTarget(target: string, slugs: string[], where: string): string {
 	if (path === '../CONTRIBUTING.md') return `${blobUrl('CONTRIBUTING.md')}${hash}`
 
 	throw new Error(
+		// Reaches whoever broke the build, never a reader of the site.
+		// charcheck-disable-next-line no-em-dash-in-site-build-strings
 		`${where}: link "${target}" leaves docs/ and has no mapping. Add one in site/scripts/docs-source.ts — ` +
 			'a guess here becomes a broken or misleading link on the public site.'
 	)

@@ -54,3 +54,4 @@ allowBuilds:
 # a same-day bump installable rather than a note about one.
 minimumReleaseAgeExclude:
   - '@shbernal/ts-pptx'
+  - charcheck@0.1.0

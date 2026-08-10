@@ -24,6 +24,12 @@ importers:
       '@vitest/browser-playwright':
         specifier: ^4.1.10
         version: 4.1.10(playwright@1.62.1)(vite@8.1.0(@types/node@26.2.0))(vitest@4.1.10)
+      '@vue/compiler-sfc':
+        specifier: ^3.5.41
+        version: 3.5.41
+      charcheck:
+        specifier: ^0.1.0
+        version: 0.1.0(@vue/compiler-sfc@3.5.41)(typescript@7.0.2)
       lefthook:
         specifier: ^2.1.10
         version: 2.1.10
@@ -1236,6 +1242,19 @@ packages:
 
   character-entities-legacy@3.0.0:
     resolution: {integrity: sha512-RpPp0asT/6ufRm//AJVwpViZbGM/MkjQFxJccQRHmISF/22NBtsHqAWmL+/pmkPWoIUJdWyeVleTl1wydHATVQ==}
+
+  charcheck@0.1.0:
+    resolution: {integrity: sha512-asXFrS+LziUT8rezoGsvqPLGR8wuATj2sNz0wwAlj+vlvjisPmDo0UTN1o0+P7nS7zX5BSMO4OKiZzPG1A3bpw==}
+    engines: {node: '>=24'}
+    hasBin: true
+    peerDependencies:
+      '@vue/compiler-sfc': ^3.5.0
+      typescript: '>=5'
+    peerDependenciesMeta:
+      '@vue/compiler-sfc':
+        optional: true
+      typescript:
+        optional: true
 
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
@@ -2831,6 +2850,14 @@ snapshots:
   character-entities-html4@2.1.0: {}
 
   character-entities-legacy@3.0.0: {}
+
+  charcheck@0.1.0(@vue/compiler-sfc@3.5.41)(typescript@7.0.2):
+    dependencies:
+      picocolors: 1.1.1
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@vue/compiler-sfc': 3.5.41
+      typescript: 7.0.2
 
   comma-separated-tokens@2.0.3: {}
 
