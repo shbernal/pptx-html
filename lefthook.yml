@@ -1,5 +1,10 @@
 pre-commit:
-  parallel: true
+  # Sequential, not parallel. biome runs with `--write` and `stage_fixed: true`, so it
+  # rewrites files and re-stages them; charcheck reads the staged content out of the
+  # index. Run those two at once and charcheck is reading an index that biome is still
+  # writing, on the `.ts` files both of them target. The jobs cost about a second
+  # together, which is not worth a race.
+  piped: true
   jobs:
     # `biome check` is lint + format + import sorting in one pass. Per-directory
     # scope (src/ is linted but never formatted) lives in biome.jsonc, so the
@@ -8,3 +13,25 @@ pre-commit:
       glob: '*.{ts,mts,json,jsonc}'
       run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
+
+    # No `glob` and no `{staged_files}`: charcheck selects the staged files itself and
+    # filters them through each rule's own include globs. Passing a second file list
+    # means two lists that can disagree.
+    #
+    # No `--fix` either. A prose fix is a guess, and `stage_fixed` on a guess would
+    # commit a sentence nobody read. `pnpm run lint:chars:fix` is the deliberate form.
+    #
+    # Every file rule is `warn` today, so this reports and does not block. It becomes a
+    # gate the moment a rule flips to `error`, with no change here.
+    - name: charcheck
+      run: pnpm exec charcheck --staged
+
+commit-msg:
+  jobs:
+    # `{1}` is the message file git passes. Comment lines and anything below the
+    # scissors are ignored, and messages git wrote itself (merge, revert, fixup,
+    # squash) are skipped, so this only ever judges a sentence a human typed.
+    #
+    # Unlike pre-commit, this one blocks: `no-em-dash-in-commit-msg` is `error`.
+    - name: charcheck
+      run: pnpm exec charcheck --commit-msg {1}

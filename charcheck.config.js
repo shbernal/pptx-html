@@ -59,6 +59,22 @@ export default {
 		// Components: template text, allowlisted attributes and script literals. `<style>`
 		// blocks and template comments are exempt.
 		dashRule('no-em-dash-in-site-markup', ['site/.vitepress/**/*.vue'], 'markup'),
+
+		// The commit message, reached only when charcheck is given `--commit-msg`.
+		//
+		// `error` from the start, unlike every rule above, because this surface has no
+		// backlog to grandfather: each message is text nobody has written yet. The cost of
+		// a wrong one is a `git commit --amend`, not 129 rewordings.
+		//
+		// No `fix`. `--fix` is refused for a commit message on purpose, so declaring one
+		// would only advertise a repair that cannot run.
+		{
+			id: 'no-em-dash-in-commit-msg',
+			pattern: CLAUSE_DASH,
+			severity: 'error',
+			message: 'Reads as an em dash in the log. A colon, a comma, or reword.',
+			include: ['<commit-msg>'],
+		},
 	],
 
 	ignore: ['site/docs/**', 'site/.vitepress/cache/**', 'site/.vitepress/dist/**'],
