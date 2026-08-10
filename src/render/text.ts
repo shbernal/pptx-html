@@ -54,12 +54,41 @@ const ANCHOR: Record<TextBody['anchor'], string> = {
 	bottom: 'flex-end',
 }
 
-/** Points, tidied — this file's `px` is the frame's own point-scaled unit. */
-function px(points: number): number {
-	return Math.round(points * 1000) / 1000
+/** Three decimals, finer than any unit here resolves. */
+function tidy(value: number): number {
+	return Math.round(value * 1000) / 1000
 }
 
-function runStyle(run: TextRun): string {
+/** Points, tidied — this file's `px` is the frame's own point-scaled unit. */
+function px(points: number): number {
+	return tidy(points)
+}
+
+/**
+ * What one line of "single" spacing is worth, as a multiple of the font size.
+ *
+ * Needed only to reduce a line spacing the paragraph never stated: a percentage
+ * has a base to subtract from, an unstated spacing does not, and CSS has no way
+ * to say "`normal`, less a fifth". Both PowerPoint's single spacing and a
+ * browser's `line-height: normal` come from the font's own ascent, descent and
+ * line gap, which for the faces these decks use lands near 1.2 — Calibri reports
+ * 1.22. A stand-in, so the frames that use it say so.
+ */
+const SINGLE_LINE_HEIGHT = 1.2
+
+/**
+ * The size a run is painted at: what it states, or what it inherits, times the
+ * frame's baked shrink.
+ *
+ * `fontScale` is a number PowerPoint wrote into the file, not one measured here,
+ * so applying it is reading the deck rather than re-deriving its layout — the
+ * distinction the no-measurement rule turns on.
+ */
+function scaled(sizePt: number, fontScalePct: number | undefined): number {
+	return fontScalePct === undefined ? sizePt : (sizePt * fontScalePct) / 100
+}
+
+function runStyle(run: TextRun, fontScalePct: number | undefined): string {
 	const props = run.props
 	const resolved = run.resolved
 	const style: string[] = []
@@ -68,7 +97,7 @@ function runStyle(run: TextRun): string {
 	if (face !== undefined) style.push(`font-family:${JSON.stringify(face)},sans-serif`)
 
 	const size = props.sizePt ?? resolved.sizePt
-	if (size !== undefined) style.push(`font-size:${px(size)}px`)
+	if (size !== undefined) style.push(`font-size:${px(scaled(size, fontScalePct))}px`)
 
 	const bold = props.bold ?? resolved.bold
 	if (bold !== undefined) style.push(`font-weight:${bold ? 700 : 400}`)
@@ -108,14 +137,21 @@ function runStyle(run: TextRun): string {
  * what the surface exists to prevent.
  *
  * `data-pxh-props` carries the other four surface values — and it is the *stated*
- * ones, not the painted ones. The `style` beside it is `props.X ?? resolved.X`,
- * which cannot be read back: a placeholder title painted at the layout's 44pt
- * states no size at all, and taking 44 off the span would write the layout's
- * value into the slide. The attribute is omitted entirely when the run states
- * none of the four, so the common case costs nothing.
+ * ones, not the painted ones. The `style` beside it is `props.X ?? resolved.X`
+ * under the frame's shrink, which cannot be read back: a placeholder title
+ * painted at the layout's 44pt states no size at all, and taking 44 off the span
+ * would write the layout's value into the slide — taking 30.8 off it would write
+ * a number no part of the deck contains. The attribute is omitted entirely when
+ * the run states none of the four, so the common case costs nothing.
  */
-function renderRun(run: TextRun, nodeId: string, paragraph: number, index: number): string {
-	const style = runStyle(run)
+function renderRun(
+	run: TextRun,
+	nodeId: string,
+	paragraph: number,
+	index: number,
+	fontScalePct: number | undefined
+): string {
+	const style = runStyle(run, fontScalePct)
 	const address = `${nodeId}/${paragraph}/${index}`
 	const link = run.props.hyperlink
 	const stated = editableRunProps(run.props)
@@ -162,7 +198,17 @@ function renderBullet(bullet: Bullet, ordinal: number): string {
 	return `<img data-pxh-asset="${escapeAttr(bullet.asset.$asset)}"${attrs} alt=""/>`
 }
 
-function paragraphStyle(props: ParagraphProperties): string {
+/**
+ * One paragraph's box.
+ *
+ * `reductionPct` is the frame's baked `lnSpcReduction`, and ECMA-376 §21.1.2.1.3
+ * is unusually specific about it: it is *subtracted from* the spacing rather than
+ * scaling it, and it "applies only to paragraphs with percentage line spacing".
+ * So a paragraph spaced in points is left alone — the one such paragraph in the
+ * measured corpus would otherwise tighten by a fifth for no reason the file
+ * states.
+ */
+function paragraphStyle(props: ParagraphProperties, reductionPct: number): string {
 	const style = ['margin:0']
 	if (props.align !== undefined) style.push(`text-align:${props.align === 'justify' ? 'justify' : props.align}`)
 	// `@lvl` is an outline depth, and the list style it indexes into is not in the
@@ -175,9 +221,14 @@ function paragraphStyle(props: ParagraphProperties): string {
 	if (props.lineSpacing !== undefined) {
 		style.push(
 			props.lineSpacing.type === 'percent'
-				? `line-height:${props.lineSpacing.percent}%`
+				? `line-height:${tidy(Math.max(0, props.lineSpacing.percent - reductionPct))}%`
 				: `line-height:${px(props.lineSpacing.valuePt)}px`
 		)
+	} else if (reductionPct > 0) {
+		// The paragraph inherits its spacing, so there is no stated base to subtract
+		// from and CSS cannot express one. Unitless, so it recomputes against each
+		// run's own size instead of freezing to the paragraph's.
+		style.push(`line-height:${tidy((SINGLE_LINE_HEIGHT * (100 - reductionPct)) / 100)}`)
 	}
 	return style.join(';')
 }
@@ -209,23 +260,36 @@ function ordinalsOf(paragraphs: readonly Paragraph[]): number[] {
  * The text frame's HTML, for placing inside a `<foreignObject>` sized to the
  * shape's box.
  *
- * Autofit is read but not applied. `shrink` (`normAutofit`) states a font scale
- * PowerPoint computed by measuring, and re-deriving it here would make the
- * rendered size depend on the machine that rendered it; the box is the box, and
- * text that overflows it overflows visibly rather than being silently rescaled.
+ * ## A baked shrink is applied; an unbaked one is not
+ *
+ * A `normAutofit` frame may carry the `fontScale` and `lnSpcReduction`
+ * PowerPoint arrived at, and where it does they are honoured. That is not a
+ * measurement — it is two numbers the file states, no different from reading a
+ * font size. What this renderer still will not do is *compute* a scale for a
+ * frame that bakes none, because that needs line breaking, which would make the
+ * picture depend on the machine that drew it.
+ *
+ * The two cases are not close. Across the measured corpus 39 frames autofit by
+ * shrinking; 30 bake a scale, down to 40%, and painting those at nominal size
+ * drew text two and a half times too large — the single largest local error the
+ * preview had. The other 7 bake nothing, and PowerPoint draws *those* at full
+ * size too until the next edit, so leaving them alone is agreement rather than
+ * omission.
  */
 export function renderTextBody(text: TextBody, nodeId: string): string {
 	const ordinals = ordinalsOf(text.paragraphs)
+	const scale = text.autofitFontScalePct
+	const reduction = text.autofitLineSpaceReductionPct ?? 0
 	const body = text.paragraphs
 		.map((paragraph, index) => {
 			const bullet = paragraph.props.bullet
 			const glyph = bullet === undefined ? '' : renderBullet(bullet, ordinals[index] ?? 0)
-			const runs = paragraph.runs.map((run, runIndex) => renderRun(run, nodeId, index, runIndex)).join('')
+			const runs = paragraph.runs.map((run, runIndex) => renderRun(run, nodeId, index, runIndex, scale)).join('')
 			// A paragraph with no runs is a blank line in the source and has to stay
 			// one: an empty `<p>` collapses to nothing without something to give it
 			// height.
 			const content = runs === '' ? '<br/>' : runs
-			return `<p style="${escapeAttr(paragraphStyle(paragraph.props))}">${glyph}${content}</p>`
+			return `<p style="${escapeAttr(paragraphStyle(paragraph.props, reduction))}">${glyph}${content}</p>`
 		})
 		.join('')
 
@@ -245,8 +309,13 @@ export function renderTextBody(text: TextBody, nodeId: string): string {
 	if (text.vertical === 'vert') frame.push('writing-mode:vertical-rl')
 	if (text.vertical === 'vert270') frame.push('writing-mode:vertical-rl', 'transform:rotate(180deg)')
 
-	const approx =
-		text.vertical === 'eaVert' || text.vertical === 'wordArtVert' ? ' data-pxh-approx="text:vertical"' : ''
+	const declared: string[] = []
+	if (text.vertical === 'eaVert' || text.vertical === 'wordArtVert') declared.push('text:vertical')
+	// The scale is exact and says nothing; the reduction only says something when it
+	// had no stated spacing to subtract from and fell back to `SINGLE_LINE_HEIGHT`.
+	if (reduction > 0 && text.paragraphs.some((paragraph) => paragraph.props.lineSpacing === undefined))
+		declared.push('text:linespace')
+	const approx = declared.length === 0 ? '' : ` data-pxh-approx="${declared.join(' ')}"`
 
 	return (
 		`<div xmlns="http://www.w3.org/1999/xhtml" class="pxh-text"${approx} style="${escapeAttr(frame.join(';'))}">` +

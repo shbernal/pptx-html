@@ -305,6 +305,53 @@ export const CORPUS: CorpusDeck[] = [
 	}),
 
 	deck(
+		'autofit-shrink',
+		'primitive',
+		'a frame that bakes the scale PowerPoint shrank it by, beside one that does not',
+		(pptx) => {
+			const slide = pptx.addSlide()
+			// The object form of `fit` bakes both attributes; the bare string writes
+			// `<a:normAutofit/>` and no numbers. Both are `autofit: 'shrink'` in the
+			// model and they have to paint differently — the first at 70% of 28pt, the
+			// second at 28pt, which is also what PowerPoint shows until the frame is
+			// edited.
+			slide.addText(
+				[{ text: 'Baked to seventy percent' }, { text: '\nand a second line', options: { breakLine: true } }],
+				{
+					x: 0.5,
+					y: 0.5,
+					w: 4,
+					h: 1.2,
+					fontSize: 28,
+					fit: { type: 'shrink', fontScale: 70, lnSpcReduction: 20 },
+					objectName: 'baked',
+				}
+			)
+			// The reduction has a stated percentage to subtract from here, and none in
+			// the frame above. Those are the two arms, and only the second is a guess.
+			slide.addText([{ text: 'Spaced, then reduced' }], {
+				x: 0.5,
+				y: 2,
+				w: 4,
+				h: 1.2,
+				fontSize: 28,
+				lineSpacingMultiple: 1.5,
+				fit: { type: 'shrink', fontScale: 62.5, lnSpcReduction: 10 },
+				objectName: 'spaced',
+			})
+			slide.addText([{ text: 'Shrink, unmeasured' }], {
+				x: 5,
+				y: 0.5,
+				w: 4,
+				h: 1.2,
+				fontSize: 28,
+				fit: 'shrink',
+				objectName: 'unbaked',
+			})
+		}
+	),
+
+	deck(
 		'master-background',
 		'primitive',
 		'a slide whose whole chain states no background — the surface has to be white',

@@ -97,6 +97,13 @@ export function textBodyOf(frame: TextFrame, scope: ImportScope): TextBody {
 	return {
 		paragraphs: frame.paragraphs.map((paragraph) => paragraphOf(paragraph, scope)),
 		autofit: AUTOFIT[frame.autofit ?? 'none'],
+		// Kept as `null`-vs-number rather than folded into a default: a frame that
+		// bakes no scale is a frame PowerPoint has not measured yet, which is a
+		// different deck from one it measured and got 100 for.
+		...(frame.autofitFontScale === null ? {} : { autofitFontScalePct: frame.autofitFontScale }),
+		...(frame.autofitLineSpaceReduction === null
+			? {}
+			: { autofitLineSpaceReductionPct: frame.autofitLineSpaceReduction }),
 		anchor: (anchor !== null ? ANCHOR[anchor] : undefined) ?? 'top',
 		// `@wrap` is `square` (wrap) or `none`; unset means wrap.
 		wrap: body?.wrap !== 'none',

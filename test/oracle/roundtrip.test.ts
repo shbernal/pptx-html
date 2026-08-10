@@ -52,6 +52,33 @@ describe('lanes', () => {
 		})
 	}
 
+	it('loses a frame’s baked shrink, undeclared, and cannot see that it did', async () => {
+		// A real loss that every lane above reports as clean, pinned here so it is at
+		// least written down. The writer emits
+		// `<a:normAutofit fontScale="70000" lnSpcReduction="20000"/>`; `readModelToIr`
+		// reduces the whole thing to `fit: 'shrink'`, so the numbers are gone before
+		// emit starts and the re-emitted frame bakes nothing. `diffDeckIr` compares two
+		// `DeckIr`s that are *both* missing the field, which is why it says nothing —
+		// the failure mode a lane test structurally cannot catch, unlike the mutations
+		// below. Filed as https://github.com/shbernal/ts-pptx/issues/13.
+		//
+		// The preview is unaffected: `RenderIr` reads the attributes straight off the
+		// read model and paints them, which is why `TextBody.autofitFontScalePct` is
+		// documented as read-only paint data rather than as part of the contract.
+		const entry = CORPUS.find((candidate) => candidate.name === 'autofit-shrink')
+		if (!entry) throw new Error('corpus lost its autofit-shrink deck')
+		const result = await roundTrip(await corpusBytes(entry), scriptLoop)
+
+		const fitOf = (view: (typeof result)['input']): unknown[] =>
+			view.ir.slides.flatMap((slide) => slide.calls.map((call) => (call.args[1] as { fit?: unknown })?.fit))
+		expect(fitOf(result.input)).toStrictEqual(['shrink', 'shrink', 'shrink'])
+		expect(fitOf(result.output)).toStrictEqual(['shrink', 'shrink', 'shrink'])
+		// Flattened before either side of the diff could hold it, and nothing declared it.
+		expect(JSON.stringify(result.input.canonical)).not.toContain('fontScale')
+		expect(result.notes.filter((note) => /autofit|fontScale|lnSpc/i.test(note.construct))).toEqual([])
+		expect(result.report.undeclared).toEqual([])
+	})
+
 	it('the carry lane declares its gallery cost rather than hiding it', async () => {
 		// The lane's note must actually be doing work: strip it and the same
 		// run has to fail. A note that changes nothing is decoration.

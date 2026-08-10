@@ -123,6 +123,40 @@ describe('what the picture admits to', () => {
 		expect(html.toLowerCase()).not.toContain('d8dce6')
 	})
 
+	it('paints a baked shrink and leaves an unbaked one at full size', async () => {
+		// The distinction the renderer used to collapse. `fontScale` and
+		// `lnSpcReduction` are numbers the file states, so honouring them is reading
+		// the deck; computing one for a frame that bakes none would be measuring, and
+		// PowerPoint draws those at full size until the next edit anyway.
+		const { ir, bytes } = await importCorpus('autofit-shrink')
+		const { html } = await renderDeck(ir, { bytes })
+		const frames = new Map(
+			ir.slides[0]?.nodes.filter((node) => node.kind === 'shape').map((node) => [node.name, node]) ?? []
+		)
+		const styleOf = (name: string): string => {
+			const id = frames.get(name)?.id
+			const match = new RegExp(`data-pxh-run="${id}/0/0"[^>]*style="([^"]*)"`).exec(html)
+			if (match?.[1] === undefined) throw new Error(`no first run for ${name}`)
+			return match[1]
+		}
+
+		// All three frames are `shrink`; only two of them state what by.
+		expect([...frames.keys()].map((name) => frames.get(name)?.text?.autofit)).toStrictEqual([
+			'shrink',
+			'shrink',
+			'shrink',
+		])
+		expect(styleOf('baked')).toContain('font-size:19.6px') // 28pt × 70%
+		expect(styleOf('spaced')).toContain('font-size:17.5px') // 28pt × 62.5%
+		expect(styleOf('unbaked')).toContain('font-size:28px')
+
+		// A stated percentage has the reduction subtracted from it, per ECMA-376
+		// §21.1.2.1.3; an unstated one has no base, so it falls back and says so.
+		expect(html).toContain('line-height:140%')
+		expect(html).toContain('line-height:0.96')
+		expect(html).toContain('data-pxh-approx="text:linespace"')
+	})
+
 	it('renders a chart as a labelled placeholder and never as a lookalike', async () => {
 		const { ir, bytes } = await importCorpus('chart')
 		const { html } = await renderDeck(ir, { bytes })

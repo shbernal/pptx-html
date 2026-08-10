@@ -498,6 +498,26 @@ export interface TextBody {
 	paragraphs: Paragraph[]
 	/** Write-side spelling of `AutofitMode`: `none` / `normAutofit` / `spAutoFit`. */
 	autofit: 'none' | 'shrink' | 'resize'
+	/**
+	 * `a:normAutofit/@fontScale` as a percent (62.5 = 62.5%), when the frame bakes
+	 * one. Absent is not 100: a bare `<a:normAutofit/>` states no scale at all, and
+	 * PowerPoint computes one on the next edit. Writing 100 into the model would
+	 * turn "not yet computed" into "computed, and it came out 100".
+	 *
+	 * Read-only paint data. Every other field here reaches a written deck through
+	 * the `DeckIr` the emit path folds edits into; these two do not, because
+	 * nothing in the editable surface can change them and re-deriving one would
+	 * mean measuring text. They exist so the preview paints the size PowerPoint is
+	 * painting, and they ride the island unchanged.
+	 */
+	autofitFontScalePct?: number
+	/**
+	 * `a:normAutofit/@lnSpcReduction` as a percent, when the frame bakes one.
+	 * Subtracted from the line spacing rather than multiplied into it, and by
+	 * ECMA-376 §21.1.2.1.3 it reaches only paragraphs whose spacing is a
+	 * percentage. Same read-only standing as {@link autofitFontScalePct}.
+	 */
+	autofitLineSpaceReductionPct?: number
 	anchor: 'top' | 'middle' | 'bottom'
 	wrap: boolean
 	/** `@lIns`/`@rIns`/`@tIns`/`@bIns`, points, defaults already resolved. */

@@ -227,6 +227,23 @@ The rendered document has **two channels**, and only one of them is trusted.
   sub-pixel rounding) and has no representation for placeholder inheritance,
   colour transforms, autofit mode or geometry adjust values.
 
+### A few `RenderIr` fields are paint data and can never reach a deck
+
+Most of the model exists so the emit path can rebuild the deck. A small, marked
+minority exists only so the picture is right, and the two are worth telling
+apart when reading the IR.
+
+`TextBody.autofitFontScalePct` and `autofitLineSpaceReductionPct` are the current
+example. They come off the read model, they decide the size text is painted at,
+and they cannot travel any further: emit folds edits into a `DeckIr`, and
+`readModelToIr` reduces a baked `<a:normAutofit fontScale="…"/>` to `fit:
+'shrink'` before this project sees it, so the numbers are gone from the contract
+model upstream of anything local
+([ts-pptx#13](https://github.com/shbernal/ts-pptx/issues/13)). Reading them for
+the preview is still right — a frame PowerPoint shrank to 40% otherwise renders
+two and a half times too large — but nothing may treat such a field as part of
+the round-trip guarantee, and each one says so in its own doc comment.
+
 ### Two hashes, because one would collapse two different events
 
 - `modelHash` is over the island block's text **exactly as embedded**, escapes and
