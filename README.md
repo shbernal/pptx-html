@@ -48,7 +48,7 @@ whole design is arranged around:
 Equality is normalized, not byte-for-byte: zip entry order, timestamps,
 relationship ids and element ids all vary legally, and both sides are
 canonicalized before diffing. This is not an aspiration in a design doc — a
-generated corpus of 17 decks runs the full loop on every CI build, and the
+generated corpus of 26 decks runs the full loop on every CI build, and the
 per-construct fidelity ledger is snapshotted so it cannot move silently. That
 ledger is [published](https://shbernal.github.io/pptx-html/docs/fidelity),
 generated from the oracle's own reporter, with every row linking to the deck
@@ -81,9 +81,8 @@ pnpm add pptx-html
 ```
 
 The writer, [`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx),
-comes with it. Installing from a clone of this repository is different: development
-here pins the writer to a git commit and builds it from source →
-[CONTRIBUTING](./CONTRIBUTING.md#setup).
+comes with it as an ordinary dependency (`^3.2.0`) — nothing is built from source,
+and a clone installs the same way → [CONTRIBUTING](./CONTRIBUTING.md#setup).
 
 ## What it looks like
 
@@ -105,9 +104,10 @@ throws rather than guessing when a document's integrity hashes do not match.
 
 What a rendered document may be edited in is **declared, not implied**: run text,
 `bold` / `italic` / `underline` / `strike` / `sizePt` / `color`, a paragraph's
-`align` / `bullet` / `marginLeftPt` / `indentPt`, and node deletion. `project(ir)` is that
-surface and `freeze(ir)` is its complement; both are exported, so "what may I
-safely edit in this HTML?" is answerable without reading the renderer.
+`align` / `bullet` / `marginLeftPt` / `indentPt`, and node deletion.
+`project(ir)` is that surface and `freeze(ir)` is its complement; both are
+exported, so "what may I safely edit in this HTML?" is answerable without reading
+the renderer.
 
 For HTML this library did not render, there is a second, explicitly best-effort
 lane that infers a model from the rendered DOM:

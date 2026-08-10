@@ -33,10 +33,10 @@ all twelve the same way.
 The panel beside the preview is the **editable surface** — run text, `bold`,
 `italic`, `underline`, `strike`, `sizePt`, `color`, a paragraph's `align`,
 `bullet`, `marginLeftPt` and `indentPt`, and deleting a node. That list is not a
-subset chosen for the demo: it is
-`EDITABLE_SURFACE`, exported from the package, and there is deliberately no
-control for anything outside it. An input whose value was silently dropped on the
-way back would be the exact failure this project is built to refuse.
+subset chosen for the demo: it is `EDITABLE_SURFACE`, exported from the package,
+and there is deliberately no control for anything outside it. An input whose
+value was silently dropped on the way back would be the exact failure this
+project is built to refuse.
 
 `underline`, `strike`, `align` and `bullet` are drop-downs rather than checkboxes,
 and the extra option is the point: **inherited** clears the property, while

@@ -126,10 +126,13 @@ Two things it cannot know, because they are this repo's:
   both worth filing; `unsupported` is the output tier's own limit and is not.
 
 There is deliberately no local post-write repair layer, so an issue upstream *is*
-the remedy. The half-cycle after the fix is now measured in commits rather than
-releases: when the fix is pushed, `gh issue list --repo shbernal/ts-pptx --state
-all`, bump the pin to that sha, delete the workarounds their comments point at,
-and close each issue with the test that now passes rather than with "done".
+the remedy. The half-cycle after the fix is a release rather than a commit, now
+that the dependency is a published range: watch for one with `gh release list
+--repo shbernal/ts-pptx`, bump the range, delete the workarounds their comments
+point at, and close each issue with the test that now passes rather than with
+"done". A `github:` install is for *testing* an unreleased fix, not for shipping
+against one — this package is published, and a git URL in `dependencies` travels
+to every consumer.
 
 Anything discovered while building the custGeom/SVG-path vectorizer — a missing
 custGeom case, a measure gap — goes upstream, not patched locally.

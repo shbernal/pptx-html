@@ -199,10 +199,13 @@ Do not vendor large spec text into the repo.
 ## Fix upstream when possible
 
 Prefer fixing generic OOXML / emitter problems upstream in `@shbernal/ts-pptx` —
-it helps every consumer — over patching them here. The pin is a sha, so a fix
-arrives the day it is pushed rather than the day it is released: bump to the
-commit that carries it. A stopgap here covers the window before the fix exists at
-all, and stays thin and clearly marked for however long that is.
+it helps every consumer — over patching them here. The dependency is a published
+range now rather than a sha, so a fix arrives on the release that carries it and
+a stopgap covers the window between the two. That window is longer than it was
+during the sha era, which is an argument for keeping the stopgap thin and clearly
+marked, not for skipping the upstream fix: a `github:` install is available for
+*testing* one before it ships (see [Setup](#setup)), and is not a state to stay in
+now that `pptx-html` is published.
 
 **File the issue in the same unit of work that found the gap**, on
 `shbernal/ts-pptx`, before the commit — not batched into a later sweep. A gap that
@@ -222,6 +225,49 @@ nobody can date.
 `ts-pptx-upstream`, the skill the package ships, is the normative reference for
 writing the report itself. See [AGENTS.md](./AGENTS.md#upstream) for what belongs
 upstream and what stays here.
+
+## Releasing
+
+Publishing is **manual and deliberate**. There is no release workflow in
+`.github/`, and the omission is the current answer rather than a gap nobody
+noticed: CI gates every push already, and a tag-triggered publish would make the
+irreversible half of a release — the version on the registry — a side effect of
+pushing a tag.
+
+`prepack` builds and `prepublishOnly` runs typecheck, biome and the oracle, so
+the package cannot go out unbuilt or with a red gate. Neither of those runs the
+browser layer or the site, which is why the first step is by hand:
+
+```bash
+pnpm run test          # build + all three vitest projects
+pnpm run site:build    # dead-link checking; the acceptance test for the docs mirror
+```
+
+Then, in order:
+
+1. **Bump `version` in `package.json`.** Pre-1.0 the loop's four legs and the
+   editable surface are the stable surface and the heuristic lane's model is not,
+   so a break in the latter is a minor rather than the major it will be after 1.0.
+2. **Move `[Unreleased]` into a dated section in `CHANGELOG.md`** and update both
+   link references at the bottom of the file. Write it for someone deciding
+   whether to upgrade, not as a commit log.
+3. **Read `dist/index.d.ts`.** The one check nothing automates — see the note
+   above about `export type *`.
+4. **Inspect the tarball**: `npm pack --dry-run`. `files` is `dist` plus the
+   changelog, and npm adds `README.md`, `LICENSE` and `package.json` on its own;
+   anything else appearing is a bug in `files`.
+5. **Commit, tag, push.** `git tag v<version> && git push --follow-tags`. The tag
+   has to exist before the changelog's `[x.y.z]` link resolves.
+6. **`pnpm publish`.** It refuses a dirty tree or a non-default branch by default;
+   let it. The package is unscoped and public, so no `--access` flag is needed.
+7. **Cut the GitHub release** against the tag, with the changelog section as its
+   body.
+
+If publishing ever moves into CI, the thing to reach for is npm's **trusted
+publishing** (OIDC from GitHub Actions) rather than a long-lived `NPM_TOKEN` in
+the repo secrets — it needs no stored credential and stamps the package with
+provenance. That is a decision about the release, not a refactor, so it is not
+made here in passing.
 
 ## Commits
 

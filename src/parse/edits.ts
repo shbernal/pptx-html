@@ -148,7 +148,7 @@ const UNDERLINE_OPTION: Record<NonNullable<RunProperties['underline']>, string> 
 
 /**
  * `RunProperties.strike`, likewise — all three of them the option's own declared
- * values, since ts-pptx 3.1.0+b16fb74b widened the union to carry `noStrike`.
+ * values, since ts-pptx 3.2.0 widened the union to carry `noStrike`.
  *
  * The `none` arm is the one that has to be argued for, and the argument is the
  * same one the whole surface rests on. `TextPropsOptions.strike` also accepts

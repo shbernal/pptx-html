@@ -92,7 +92,7 @@ from the same corpus the round-trip oracle gates on.
 
 ## What the guarantee covers, and what it does not
 
-A generated corpus of 17 decks runs the full loop on every CI build, and the
+A generated corpus of 26 decks runs the full loop on every CI build, and the
 per-construct fidelity ledger is snapshotted so it cannot move silently. Claims
 here are held to what that gate actually covers; where something is not covered,
 it says so.

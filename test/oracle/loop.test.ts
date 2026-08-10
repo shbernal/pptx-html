@@ -96,7 +96,7 @@ describe('an edit made through the surface', () => {
 	})
 
 	it('carries underline and strike as the OOXML tokens, and reads them back', async () => {
-		// The two properties the surface gained last, and the pair most able to fail
+		// The last two properties the *run* tier gained, and the pair most able to fail
 		// quietly: `RunProperties` spells them `none`/`single`/`double` and the deck
 		// spells them `sng`/`dbl` and `sngStrike`/`dblStrike`, so an untranslated
 		// value would be written verbatim, dropped by the writer as unrecognised, and

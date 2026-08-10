@@ -22,11 +22,11 @@
  *
  * ## Drawn with what the renderer actually draws
  *
- * `src/render/geometry.ts` resolves nine presets exactly and boxes the rest —
+ * `src/render/geometry.ts` resolves twelve presets exactly and boxes the rest —
  * marked as a fallback, on purpose, because a wrong outline is worse than an
- * obvious one. So every graphic below is built from those nine (`rect`,
- * `roundRect`, `ellipse`, `triangle`, `diamond`, `parallelogram`, `line`) or from
- * freeform `custGeom` paths, where the geometry is stated rather than named. The
+ * obvious one. So every graphic below is built from those twelve — here, `rect`,
+ * `roundRect`, `ellipse` and `line` — or from freeform `custGeom` paths, where the
+ * geometry is stated rather than named. The
  * charts are drawn as shapes for the same reason: `addChart` is a `hard`-tier
  * construct that takes the carried lane, and a carried chart draws as a
  * placeholder rather than a chart.
