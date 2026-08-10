@@ -81,7 +81,9 @@ pnpm add pptx-html
 ```
 
 The writer, [`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx),
-comes with it.
+comes with it. Installing from a clone of this repository is different: development
+here pins the writer to a git commit and builds it from source →
+[CONTRIBUTING](./CONTRIBUTING.md#setup).
 
 ## What it looks like
 

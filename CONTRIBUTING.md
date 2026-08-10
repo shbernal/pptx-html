@@ -11,8 +11,35 @@ Requires Node `>=24` and pnpm.
 pnpm install
 ```
 
-The writer dependency, `@shbernal/ts-pptx`, is consumed from public npm — no local
-link or sibling checkout is required.
+The writer dependency, `@shbernal/ts-pptx`, is pinned to a **git sha** rather than
+a released version: `github:shbernal/ts-pptx#<sha>`. No local link or sibling
+checkout is required either way — pnpm fetches the tarball GitHub serves for that
+commit. Upstream gitignores its `dist/`, so that tarball carries no build output
+and packing it runs the writer's `prepack`: the writer is built from source during
+install, once per sha per machine (~40s), and linked from the store every time
+after. That build is also why `'@shbernal/ts-pptx': true` sits in `allowBuilds` —
+pnpm 11 gates git-dependency preparation behind the same allowlist as postinstall
+scripts, and there an unanswered or denied entry does not skip a script, it fails
+the install with `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`.
+
+To move to a newer upstream commit — which must be pushed to GitHub first, since
+`github:` resolves nothing local:
+
+```bash
+pnpm add "github:shbernal/ts-pptx#<sha>"
+npx skills add ./node_modules/@shbernal/ts-pptx -s '*' -a claude-code -a codex -a universal -y
+pnpm run test:oracle
+```
+
+The skill reinstall is part of the bump, not a separate chore: the skill ships
+inside the package, so it moves with the pin ([AGENTS.md](./AGENTS.md)). And the
+version number stops identifying the build — `pres.version` reports whatever the
+manifest said at that commit, the same number across many shas — so the sha in
+`package.json` is the only thing that names it.
+
+The pin goes back to a version range before this package is published. A git URL
+in `dependencies` travels to consumers and would make every installer of
+`pptx-html` build the writer from source; `prepublishOnly` does not check for it.
 
 `lefthook`'s postinstall is denied on purpose in `pnpm-workspace.yaml`, and there
 is deliberately no `prepare: lefthook install` script. That postinstall syncs git
@@ -167,9 +194,10 @@ Do not vendor large spec text into the repo.
 ## Fix upstream when possible
 
 Prefer fixing generic OOXML / emitter problems upstream in `@shbernal/ts-pptx` —
-it helps every consumer — over patching them here. When a fix belongs upstream but
-is not yet released, keep any stopgap here thin and clearly marked, and drop it
-once a release carries the fix.
+it helps every consumer — over patching them here. The pin is a sha, so a fix
+arrives the day it is pushed rather than the day it is released: bump to the
+commit that carries it. A stopgap here covers the window before the fix exists at
+all, and stays thin and clearly marked for however long that is.
 
 **File the issue in the same unit of work that found the gap**, on
 `shbernal/ts-pptx`, before the commit — not batched into a later sweep. A gap that
@@ -182,9 +210,9 @@ workaround.
 Every stopgap therefore carries its **issue URL** and the condition under which it
 is deleted. There is no live one to copy right now — 3.1.0 retired the last of
 them — so `test/oracle/script-lane.ts` and `site/.vitepress/theme/home/decks.ts`
-show the shape at its other end: what the comment turns into once the release
-lands, which is a sentence about why the deleted stopgap existed rather than a
-deletion nobody can date.
+show the shape at its other end: what the comment turns into once the fix lands,
+which is a sentence about why the deleted stopgap existed rather than a deletion
+nobody can date.
 
 `ts-pptx-upstream`, the skill the package ships, is the normative reference for
 writing the report itself. See [AGENTS.md](./AGENTS.md#upstream) for what belongs

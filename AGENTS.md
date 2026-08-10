@@ -25,6 +25,11 @@ and the routing between them.
   workspace; run its commands from the repository root.
 - Use `pnpm`. Node `>=24`. Keep source in `src/`, tests in `test/`. Treat `dist/`
   as generated build output.
+- **`@shbernal/ts-pptx` is pinned to a git sha, not a released version.** It is
+  built from source during install, which is what the `allowBuilds` entry in
+  `pnpm-workspace.yaml` is for, and the pin returns to a version range before this
+  package is published. Bumping it is three commands, not one →
+  [CONTRIBUTING](./CONTRIBUTING.md#setup).
 - **Skills live in `.agents/skills/`**, runtime agnostic, with each runtime's own
   directory (`.claude/skills/`, `.gitignore`d) linking into it — so every runtime
   loads the same files and there is one copy to edit.
@@ -111,9 +116,10 @@ Two things it cannot know, because they are this repo's:
   both worth filing; `unsupported` is the output tier's own limit and is not.
 
 There is deliberately no local post-write repair layer, so an issue upstream *is*
-the remedy. When a release lands, `gh issue list --repo shbernal/ts-pptx --state
-all`, bump the pin, delete the workarounds their comments point at, and close each
-issue with the test that now passes rather than with "done".
+the remedy. The half-cycle after the fix is now measured in commits rather than
+releases: when the fix is pushed, `gh issue list --repo shbernal/ts-pptx --state
+all`, bump the pin to that sha, delete the workarounds their comments point at,
+and close each issue with the test that now passes rather than with "done".
 
 Anything discovered while building the custGeom/SVG-path vectorizer — a missing
 custGeom case, a measure gap — goes upstream, not patched locally.
