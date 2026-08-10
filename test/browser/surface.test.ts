@@ -161,6 +161,43 @@ describe('an edited document', () => {
 		expect(JSON.stringify(reconcile(SAMPLE_IR, reading).ir)).not.toContain('"dist"')
 	})
 
+	it('reads a bullet back off the `<p>`, glyph and all', async () => {
+		// The second paragraph property, and the one whose value is an object rather
+		// than a token — so this is also the test that the attribute survives a
+		// round trip through `JSON.stringify` and the browser's own attribute handling
+		// with its structure intact rather than flattened to a string.
+		const dom = await documentOf(SAMPLE_IR)
+		const para = dom.querySelector('[data-pxh-para]')
+		if (para === null) throw new Error('the rendered document has no addressable paragraphs')
+		para.setAttribute('data-pxh-paraprops', JSON.stringify({ bullet: { kind: 'character', char: '▸' } }))
+
+		const reading = readSurface(dom, SAMPLE_IR)
+		expect(reading.anomalies).toEqual([])
+
+		const address = para.getAttribute('data-pxh-para')
+		const read = reading.projection.slides
+			.flatMap((slide) => slide.nodes)
+			.flatMap((node) => node.paragraphs)
+			.find((paragraph) => `${paragraph.node}/${paragraph.paragraph}` === address)
+		expect(read?.props).toStrictEqual({ bullet: { kind: 'character', char: '▸' } })
+		expect(reconcile(SAMPLE_IR, reading).slides[0]?.lane).toBe('reconciled')
+	})
+
+	it('refuses a bullet that is not one of the four kinds, and keeps the model’s', async () => {
+		// The gate here is wider than `align`'s — all four kinds are accepted, because
+		// a numbered or picture bullet is exactly what a real deck holds and refusing
+		// one would report an unedited slide as drifted. What it still refuses is a
+		// value that is not a `Bullet` at all, which no renderer of this package wrote.
+		const dom = await documentOf(SAMPLE_IR)
+		const para = dom.querySelector('[data-pxh-para]')
+		if (para === null) throw new Error('the rendered document has no addressable paragraphs')
+		para.setAttribute('data-pxh-paraprops', JSON.stringify({ bullet: { kind: 'emoji', char: '🔥' } }))
+
+		const reading = readSurface(dom, SAMPLE_IR)
+		expect(reading.anomalies.join('\n')).toContain('which is not none, character, number or picture')
+		expect(JSON.stringify(reconcile(SAMPLE_IR, reading).ir)).not.toContain('"emoji"')
+	})
+
 	it('does not address a chrome paragraph, so the template’s own text is not read as drift', async () => {
 		// Chrome is drawn and nothing more. Its `<p>` carries no `data-pxh-para`, which
 		// is what keeps the sweep for unmodeled paragraphs quiet — without it every

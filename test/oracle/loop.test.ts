@@ -213,6 +213,130 @@ describe('an edit made through the surface', () => {
 		expect(back.text?.paragraphs[1]?.props.align).toBeUndefined()
 	})
 
+	it('clears a bullet to *inherited*, which is not the same deck as clearing it to none', async () => {
+		// The load-bearing test of the paragraph tier's second property, and the one
+		// ts-pptx#15 had to be fixed for. Absence is how this model spells inherited,
+		// so clearing a bullet means deleting the key — but deleting the *option* means
+		// `false`, which writes an explicit `<a:buNone/>` and overrides the master.
+		// The two paint identically, so nothing but this assertion separates them:
+		// `'inherit'` on the way out, and no bullet at all on the way back in.
+		const { source, html } = await rendered('paragraph-bullet')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text) throw new Error('the paragraph-bullet deck changed shape')
+		const paragraphs = shape.text.paragraphs
+		expect(paragraphs).toHaveLength(4)
+		expect(paragraphs.map((paragraph) => paragraph.props.bullet?.kind)).toStrictEqual([
+			undefined,
+			'none',
+			'character',
+			undefined,
+		])
+
+		// Clear the glyph the third paragraph states. It must come back inheriting,
+		// like the first, rather than explicitly bulletless, like the second.
+		const target = paragraphs[2]
+		if (!target) throw new Error('the paragraph-bullet deck lost its glyph paragraph')
+		delete target.props.bullet
+
+		const emitted = await emitDeck(parsed, { source })
+		const ir = readModelToIr(await Presentation.load(emitted.bytes))
+		const runs = ir.slides[0]?.calls[0]?.args[0] as { options?: Record<string, unknown> }[]
+		expect(runs[2]?.options?.bullet).toBe('inherit')
+
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs).toHaveLength(4)
+		expect(back.text?.paragraphs.map((paragraph) => paragraph.props.bullet?.kind)).toStrictEqual([
+			undefined,
+			'none',
+			undefined,
+			undefined,
+		])
+	})
+
+	it('states a glyph on a two-run paragraph without splitting it in two', async () => {
+		// The placement test, and the mirror image of the alignment one above it. A
+		// paragraph property has to be written onto the runs `groupRunsIntoLines` will
+		// read it from, and for `bullet` that is the *opening run alone*: a run that
+		// states a glyph starts a new paragraph on its own, so the every-run placement
+		// `align` needs would turn this two-run paragraph into two one-run paragraphs.
+		// The run count does not move when it does, which is why the assertion is on
+		// the paragraph count.
+		//
+		// It doubles as the code-point test. `Bullet` carries the character and the
+		// option takes hex, so a value passed through untranslated would be written
+		// verbatim, dropped by the writer as unrecognised, and leave a document that
+		// looks edited beside a deck that is not.
+		const { source, html } = await rendered('paragraph-bullet')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text) throw new Error('the paragraph-bullet deck changed shape')
+		const target = shape.text.paragraphs[3]
+		if (!target) throw new Error('the paragraph-bullet deck lost its two-run paragraph')
+		expect(target.runs).toHaveLength(2)
+		target.props.bullet = { kind: 'character', char: '◆' }
+
+		const emitted = await emitDeck(parsed, { source })
+		const ir = readModelToIr(await Presentation.load(emitted.bytes))
+		const runs = ir.slides[0]?.calls[0]?.args[0] as { options?: Record<string, unknown> }[]
+		expect(runs.at(-2)?.options?.bullet).toStrictEqual({ characterCode: '25C6' })
+		expect(runs.at(-1)?.options).not.toHaveProperty('bullet')
+
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs).toHaveLength(4)
+		expect(back.text?.paragraphs[3]?.props.bullet).toMatchObject({ kind: 'character', char: '◆' })
+		expect(back.text?.paragraphs[3]?.runs).toHaveLength(2)
+	})
+
+	it('suppresses an inherited bullet, which is the edit with something to show for it', async () => {
+		// *Inherited* to *explicitly none*, the direction that changes the picture: the
+		// first paragraph of this deck takes the master's glyph and has to stop, which
+		// takes an `a:buNone` overriding the list style rather than the silence that
+		// lets it through.
+		const { source, html } = await rendered('paragraph-bullet')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]) throw new Error('fixture changed')
+		expect(shape.text.paragraphs[0].props.bullet).toBeUndefined()
+		shape.text.paragraphs[0].props.bullet = { kind: 'none' }
+
+		const emitted = await emitDeck(parsed, { source })
+		const ir = readModelToIr(await Presentation.load(emitted.bytes))
+		const runs = ir.slides[0]?.calls[0]?.args[0] as { options?: Record<string, unknown> }[]
+		expect(runs[0]?.options?.bullet).toBe(false)
+
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs[0]?.props.bullet).toStrictEqual({ kind: 'none' })
+	})
+
+	it('refuses a bullet the write API cannot author, and says so instead of rounding it', async () => {
+		// The per-value bar, exercised from the one direction that can reach it: only
+		// the delta is written, so a numbered bullet nobody touched is never
+		// re-authored — but a caller editing the model directly can set one. The
+		// contract is that the deck keeps what it had and the caller is told, which is
+		// the same refusal the surface makes everywhere else, at value granularity.
+		const { source, html } = await rendered('paragraph-bullet')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[2]) throw new Error('fixture changed')
+		shape.text.paragraphs[2].props.bullet = { kind: 'number', scheme: 'ea1ChsPeriod', startAt: 3 }
+
+		const emitted = await emitDeck(parsed, { source })
+		expect(emitted.warnings.join('\n')).toContain('"ea1ChsPeriod" numbered bullet')
+
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		// The glyph the deck stated is still there — refused, not approximated.
+		expect(back.text?.paragraphs[2]?.props.bullet).toMatchObject({ kind: 'character', char: '►' })
+	})
+
 	it('drops a deleted node and leaves its siblings', async () => {
 		// `bullet` has two shapes on one slide, so a deletion that took the wrong one
 		// — or took both — is visible rather than indistinguishable from success.

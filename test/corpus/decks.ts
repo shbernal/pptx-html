@@ -430,8 +430,8 @@ export const CORPUS: CorpusDeck[] = [
 		'primitive',
 		'the four alignments a paragraph can state, one paragraph that states none, and a two-run paragraph',
 		(pptx) => {
-			// `align` is the paragraph half of the editable surface, and the only one:
-			// see `EDITABLE_PARA_PROPS` for why `bullet` is not beside it.
+			// `align` is one half of the paragraph tier of the editable surface;
+			// `paragraph-bullet` below is the other.
 			//
 			// The last paragraph is the one worth having. `groupRunsIntoLines` starts a
 			// new paragraph wherever two adjacent runs disagree about their alignment,
@@ -448,6 +448,43 @@ export const CORPUS: CorpusDeck[] = [
 					{ text: 'one paragraph', options: { align: 'center', bold: true } },
 				],
 				{ x: 0.5, y: 0.5, w: 6, h: 3, fontSize: 16, objectName: 'aligned' }
+			)
+		}
+	),
+
+	deck(
+		'paragraph-bullet',
+		'primitive',
+		'the three things a paragraph can say about its bullet, including saying nothing',
+		(pptx) => {
+			// The other half of the paragraph tier, and the deck that needs a master to
+			// mean anything: *inherited* and *explicitly none* differ only in whether
+			// the list style still reaches the paragraph, so a frame with nothing above
+			// it to inherit from would paint all three of these the same and pass while
+			// losing the distinction entirely.
+			//
+			// `bullet: 'inherit'` writes no `a:pPr` at all. It is what ts-pptx#15 added:
+			// before it, both the first and second paragraphs here emitted
+			// `<a:pPr indent="0" marL="0"><a:buNone/></a:pPr>` and this deck could not
+			// have been authored.
+			pptx.defineSlideMaster({
+				title: 'CORPUS_BULLETED_MASTER',
+				objects: [
+					{ placeholder: { options: { name: 'body', type: 'body', x: 0.5, y: 0.8, w: 9, h: 3 }, text: 'Body' } },
+				],
+			})
+			pptx.addSlide({ masterTitle: 'CORPUS_BULLETED_MASTER' }).addText(
+				[
+					{ text: 'inherits the master’s bullet', options: { bullet: 'inherit', breakLine: true } },
+					{ text: 'explicitly has none', options: { bullet: false, breakLine: true } },
+					{ text: 'states its own glyph', options: { bullet: { characterCode: '25BA' }, breakLine: true } },
+					// Two runs sharing one paragraph, for the same reason `paragraph-align`
+					// has a pair: a paragraph property written to one run of a paragraph
+					// splits it, and the run count does not move when it does.
+					{ text: 'two runs, ', options: { bullet: 'inherit' } },
+					{ text: 'one bullet', options: { bullet: 'inherit', bold: true } },
+				],
+				{ placeholder: 'body', objectName: 'bulleted' }
 			)
 		}
 	),

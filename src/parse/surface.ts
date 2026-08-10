@@ -170,7 +170,43 @@ function paraValueComplaint(key: EditableParaProp, value: unknown): string | nul
 			return typeof value === 'string' && ALIGN_VALUES.has(value)
 				? null
 				: `is ${JSON.stringify(value)} and must be one of left, center, right, justify`
+		case 'bullet':
+			return bulletComplaint(value)
 	}
+}
+
+/**
+ * A bullet is a well-formed {@link Bullet}, and that is the whole of the test.
+ *
+ * All four kinds are accepted, which is a wider gate than `align`'s and is the
+ * right one for a different reason. `align` refuses `dist` because import never
+ * puts `dist` in the model, so a document stating one has been tampered with. A
+ * numbered or picture bullet is the opposite: it is exactly what a real deck holds
+ * and what the renderer just wrote into this attribute, so refusing it here would
+ * report an *unedited* slide as drifted.
+ *
+ * Only three of those states can be authored *back* — see `PARA_INHERITED_OF` and
+ * `paraOptionValue` in `parse/edits.ts` — and the gap is safe because nothing is
+ * written unless it changed. This function's job is to keep a malformed value out
+ * of the model, not to decide what may be set.
+ */
+function bulletComplaint(value: unknown): string | null {
+	if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+		return `is ${typeof value} and must be a Bullet object`
+	}
+	const kind = (value as { kind?: unknown }).kind
+	if (kind === 'none') return null
+	if (kind === 'character') {
+		return typeof (value as { char?: unknown }).char === 'string' ? null : 'is a character bullet stating no char'
+	}
+	if (kind === 'number') {
+		return typeof (value as { scheme?: unknown }).scheme === 'string' ? null : 'is a numbered bullet stating no scheme'
+	}
+	if (kind === 'picture') {
+		const asset = (value as { asset?: { $asset?: unknown } }).asset
+		return typeof asset?.$asset === 'string' ? null : 'is a picture bullet stating no asset'
+	}
+	return `has kind ${JSON.stringify(kind)}, which is not none, character, number or picture`
 }
 
 /** The three values `underline` and `strike` each model, and the only three either may be. */

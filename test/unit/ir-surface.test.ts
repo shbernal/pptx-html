@@ -20,14 +20,13 @@ describe('the surface is one list, not two opinions', () => {
 		expect(props).toEqual([...EDITABLE_PARA_PROPS])
 	})
 
-	it('keeps `bullet` out, because the write API cannot state the third of its three values', () => {
-		// Not a stylistic omission and not an oversight — `ParagraphProperties.bullet`
-		// models *inherited* as absence, and an omitted `bullet` option emits an
-		// explicit `a:buNone` rather than nothing (ts-pptx#15). A control with an
-		// "inherited" position would silently write the explicit off, and the two
-		// paint identically, so nothing downstream would show the lie.
-		expect(EDITABLE_SURFACE.some((rule) => rule.path.endsWith('.bullet'))).toBe(false)
-		expect(EDITABLE_PARA_PROPS).not.toContain('bullet')
+	it('keeps `level` out, because nothing in the paint model can say what it indexes into', () => {
+		// The paragraph property most likely to be added by analogy and the one that
+		// must not be: `@lvl` is an index into a list style the paint model does not
+		// carry, so a control for it would be offering to change a number whose meaning
+		// lives somewhere this package never reads.
+		expect(EDITABLE_SURFACE.some((rule) => rule.path.endsWith('.level'))).toBe(false)
+		expect(EDITABLE_PARA_PROPS).not.toContain('level')
 	})
 
 	it('permits run text and node deletion, and nothing structural', () => {
@@ -91,17 +90,32 @@ describe('project', () => {
 		expect(JSON.parse(JSON.stringify(projection))).toStrictEqual(projection)
 	})
 
-	it('carries a paragraph’s alignment, and only what the paragraph states', () => {
+	it('carries a paragraph’s alignment and bullet, and only what the paragraph states', () => {
 		const bullets = projection.slides[0]?.nodes.find((node) => node.id === 's1.sp3')
-		// Three paragraphs: one stating `left`, one stating no alignment at all, and a
-		// blank line stating `right`. `level` and `bullet` sit beside `align` on the
-		// same object and are not in surface, so a projection that copied the props
-		// wholesale would fail on the first of these.
+		// Three paragraphs: one stating both, one stating a bullet and no alignment,
+		// and a blank line stating an alignment and no bullet. `level`, the margins and
+		// the indents sit beside them on the same object and are not in surface, so a
+		// projection that copied the props wholesale would fail on the first of these.
 		expect(bullets?.paragraphs.map((paragraph) => paragraph.props)).toStrictEqual([
-			{ align: 'left' },
-			{},
+			{ align: 'left', bullet: { kind: 'character', char: '•', font: 'Arial' } },
+			{ bullet: { kind: 'number', scheme: 'arabicPeriod', startAt: 1 } },
 			{ align: 'right' },
 		])
+	})
+
+	it('carries the bullets the write API cannot author back, because carrying is not offering', () => {
+		// The two above are a glyph with its own font and a numbering scheme, and
+		// neither is settable — `parse/edits.ts` refuses both rather than approximating.
+		// They are projected anyway, and must be: the projection is what the renderer
+		// writes onto the `<p>` and what comes back, so a bullet left out of it would
+		// read as *cleared* on the return path and be written as `'inherit'`, silently
+		// stripping a glyph from every deck that has one.
+		const bullets = projection.slides[0]?.nodes.find((node) => node.id === 's1.sp3')
+		expect(bullets?.paragraphs[1]?.props.bullet).toStrictEqual({
+			kind: 'number',
+			scheme: 'arabicPeriod',
+			startAt: 1,
+		})
 	})
 
 	it('projects a paragraph that holds no runs', () => {
@@ -175,16 +189,17 @@ describe('freeze is the complement of project', () => {
 		expect(freeze(edited)).toStrictEqual(freeze(SAMPLE_IR))
 	})
 
-	it('is unchanged when a paragraph’s alignment moves, and changes when its level does', () => {
-		// The paragraph tier's version of the pair above, and the same trap: `align`
-		// and `level` are neighbours on one object, and only the first is in surface.
-		// A `freeze` that stripped `props` wholesale would pass the first half here
-		// and let an out-of-surface indent change go unnoticed.
+	it('is unchanged when a paragraph’s alignment or bullet moves, and changes when its level does', () => {
+		// The paragraph tier's version of the pair above, and the same trap: `align`,
+		// `bullet` and `level` are neighbours on one object, and only the first two are
+		// in surface. A `freeze` that stripped `props` wholesale would pass the first
+		// half here and let an out-of-surface indent change go unnoticed.
 		const edited = clone(SAMPLE_IR)
 		const bullets = edited.slides[0]?.nodes.find((node) => node.id === 's1.sp3') as ShapeNode
 		const paragraph = bullets.text?.paragraphs[0]
 		if (!paragraph) throw new Error('fixture lost its bulleted paragraph')
 		paragraph.props.align = 'justify'
+		paragraph.props.bullet = { kind: 'none' }
 		expect(freeze(edited)).toStrictEqual(freeze(SAMPLE_IR))
 
 		const drifted = clone(SAMPLE_IR)

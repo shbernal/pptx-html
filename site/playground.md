@@ -31,25 +31,33 @@ because a deck where one slide was edited and eleven were not should not describ
 all twelve the same way.
 
 The panel beside the preview is the **editable surface** — run text, `bold`,
-`italic`, `underline`, `strike`, `sizePt`, `color`, a paragraph's `align`, and
-deleting a node. That list is not a subset chosen for the demo: it is
+`italic`, `underline`, `strike`, `sizePt`, `color`, a paragraph's `align` and
+`bullet`, and deleting a node. That list is not a subset chosen for the demo: it is
 `EDITABLE_SURFACE`, exported from the package, and there is deliberately no
 control for anything outside it. An input whose value was silently dropped on the
 way back would be the exact failure this project is built to refuse.
 
-`underline`, `strike` and `align` are drop-downs rather than checkboxes, and the
-extra option is the point: **inherited** clears the property, while **none**
-states outright that the run is not underlined. A run that would otherwise take an
-underline from its placeholder needs the second, and a checkbox has no way to say
-it.
+`underline`, `strike`, `align` and `bullet` are drop-downs rather than checkboxes,
+and the extra option is the point: **inherited** clears the property, while
+**none** states outright that the run is not underlined. A run that would
+otherwise take an underline from its placeholder needs the second, and a checkbox
+has no way to say it.
 
-The conspicuous gap in the paragraph controls is `bullet`, and it is the same
-rule doing its job. The write API can say *this paragraph has a bullet* and *this
-paragraph has none*, but not *this paragraph says nothing about its bullet* — an
-omitted option writes the explicit "none" — so an **inherited** position would
-quietly produce the wrong one of the three. The two look identical on screen,
-which is exactly why the control is missing rather than approximate. The ask is
-[ts-pptx#15](https://github.com/shbernal/ts-pptx/issues/15).
+`bullet` is the drop-down that took an upstream change to exist. Until
+[ts-pptx#15](https://github.com/shbernal/ts-pptx/issues/15), the write API could
+say *this paragraph has a bullet* and *this paragraph has none* but not *this
+paragraph says nothing about its bullet* — the omitted option wrote the explicit
+"none" — so an **inherited** position would have produced the wrong one of the
+three, and the two look identical on screen. Rather than ship a control that lies
+in a way nothing on the page could show, there was no control at all until the
+option gained an `inherit` spelling.
+
+Its fourth position, *as the deck states it*, is disabled and is the same rule
+still doing its job. A paragraph can hold a numbered bullet, a picture bullet or a
+glyph with its own colour, and the write API cannot author every one of those
+back — so the panel says the deck states one and declines to replace it, instead
+of showing "none" beside a visible bullet or rounding a numbering scheme to a dot.
+Nothing is lost by leaving it alone: an untouched bullet is never rewritten.
 
 ## What it does not prove
 

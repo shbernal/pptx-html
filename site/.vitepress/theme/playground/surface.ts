@@ -3,11 +3,15 @@
  *
  * The panel this drives is `EDITABLE_SURFACE` with controls attached: run text,
  * `bold` / `italic` / `underline` / `strike` / `sizePt` / `color`, the paragraph's
- * `align`, and node deletion. Nothing else gets a control, because an input whose
- * value is silently dropped at emit is exactly the failure this project is
- * arranged against, reproduced in its own demo. That is also why there is no
- * bullet control: see `EDITABLE_PARA_PROPS` for the state the write API cannot
- * say, and ts-pptx#15 for the ask.
+ * `align` and `bullet`, and node deletion. Nothing else gets a control, because an
+ * input whose value is silently dropped at emit is exactly the failure this
+ * project is arranged against, reproduced in its own demo.
+ *
+ * That rule is why the bullet control has a position it will not let you *choose*.
+ * A paragraph can hold a glyph the write API cannot author back — a numbering
+ * scheme, a picture, a glyph with its own colour — and the honest thing to show is
+ * that the deck states one and this panel is not offering to replace it, rather
+ * than a control that reads as "no bullet" or one that quietly rounds it to a dot.
  *
  * The pairing *was* hand-wired, and that was a divergence risk the surface file
  * exists to prevent: `EDITABLE_RUN_PROPS` said which properties are in surface,
@@ -25,7 +29,15 @@
  * return path works by never using it.
  */
 
-import type { Color, EditableParaProp, EditableRunProp, ParagraphProperties, RenderIr, RunProperties } from 'pptx-html'
+import type {
+	Bullet,
+	Color,
+	EditableParaProp,
+	EditableRunProp,
+	ParagraphProperties,
+	RenderIr,
+	RunProperties,
+} from 'pptx-html'
 import { project } from 'pptx-html'
 
 /**
@@ -34,7 +46,7 @@ import { project } from 'pptx-html'
  * values plus *inherited*, which is what an absent key means — and `align` is a
  * fourth of the same family, four named values plus the same absence.
  */
-export type ControlKind = 'toggle' | 'decoration' | 'number' | 'color' | 'align'
+export type ControlKind = 'toggle' | 'decoration' | 'number' | 'color' | 'align' | 'bullet'
 
 /**
  * Every property in the surface, with the control that drives it.
@@ -65,6 +77,7 @@ export const CONTROLS: readonly { prop: EditableRunProp; kind: ControlKind }[] =
  */
 export const PARA_CONTROL_OF: Record<EditableParaProp, ControlKind> = {
 	align: 'align',
+	bullet: 'bullet',
 }
 
 export const PARA_CONTROLS: readonly { prop: EditableParaProp; kind: ControlKind }[] = (
@@ -83,6 +96,45 @@ export const ALIGN_CHOICES: readonly { value: string; label: string }[] = [
 	{ value: 'right', label: 'right' },
 	{ value: 'justify', label: 'justify' },
 ]
+
+/**
+ * The bullet control's positions: the three states the write API can author, plus
+ * one for a glyph it cannot.
+ *
+ * `STATED` is rendered `disabled` and is selected only when the paragraph already
+ * holds such a bullet. It is the panel's way of saying *the deck states one and
+ * this control will not touch it* — the alternative would be showing "none" for a
+ * paragraph that visibly has a bullet, or offering a dot that would replace a
+ * numbering scheme with a lie.
+ */
+export const BULLET_STATED = 'as-stated'
+
+export const BULLET_CHOICES: readonly { value: string; label: string }[] = [
+	{ value: '', label: 'inherited' },
+	{ value: 'none', label: 'none' },
+	{ value: 'bullet', label: '• bullet' },
+	{ value: BULLET_STATED, label: 'as the deck states it' },
+]
+
+/** Which position a paragraph's bullet sits at. */
+export function bulletChoiceOf(bullet: Bullet | undefined): string {
+	if (bullet === undefined) return ''
+	if (bullet.kind === 'none') return 'none'
+	const plain =
+		bullet.kind === 'character' &&
+		bullet.char === '•' &&
+		bullet.font === undefined &&
+		bullet.color === undefined &&
+		bullet.sizePct === undefined
+	return plain ? 'bullet' : BULLET_STATED
+}
+
+/** And what that position means as a value. `undefined` clears the key, as everywhere else. */
+export function bulletValueOf(choice: string): Bullet | undefined {
+	if (choice === 'none') return { kind: 'none' }
+	if (choice === 'bullet') return { kind: 'character', char: '•' }
+	return undefined
+}
 
 /**
  * The three values `underline` and `strike` model, plus the absence that means
@@ -176,8 +228,9 @@ export function setProp(doc: Document, address: string, prop: EditableRunProp, v
 /**
  * The same, one tier up: the `<p>` carries `data-pxh-paraprops` and nothing else
  * about it differs. Setting it on the paragraph rather than on each of its runs is
- * not a convenience — a paragraph property stated on only some of a paragraph's
- * runs is what the write path reads as *two paragraphs*.
+ * not a convenience — which runs of a paragraph a property has to land on to mean
+ * what it says is a write-contract question, it differs per property, and it is
+ * `parse/edits.ts`'s to answer. The document states the fact once.
  */
 export function setParaProp(doc: Document, address: string, prop: EditableParaProp, value: unknown): void {
 	const element = paragraph(doc, address)

@@ -20,7 +20,7 @@
  * ## v1 surface
  *
  * The smallest set that is useful: run text, the character properties that map
- * 1:1 onto a write-API option, the one *paragraph* property that does, and
+ * 1:1 onto a write-API option, the two *paragraph* properties that do, and
  * deleting a node. Everything else — moving a box, changing geometry, restyling
  * a table, reordering or inserting slides — is out. Slide reordering is out for
  * a second reason as well: the writer has `removeSlide(index)` but no
@@ -64,24 +64,32 @@ export type EditableRunProp = (typeof EDITABLE_RUN_PROPS)[number]
  * omits `a:pPr/@algn` entirely when the option is absent — so *inherited*, *left*
  * and *centre* are three states the option can say and the file can hold.
  *
- * ## Why `bullet` is not here
+ * ## `bullet`, and the state it was waiting for
  *
- * It fails the bar on exactly one of its three states, which is the state that
- * matters. {@link ParagraphProperties.bullet} models *inherited* as absence,
- * `{kind:'none'}` as the explicit `a:buNone`, and a glyph as itself — but the
- * write API has no spelling for the first: an omitted `bullet` and `bullet: false`
- * emit byte-identical `<a:pPr indent="0" marL="0"><a:buNone/></a:pPr>`. Upstream
- * knows and declares it (`text.bullet.inherited`, `dropped`/`unread`), and it is
- * filed as ts-pptx#15 — https://github.com/shbernal/ts-pptx/issues/15.
+ * `bullet` was out of surface until ts-pptx#15 shipped, and why is worth keeping,
+ * because it is the general form of the bar: **the 1:1 test is per *value*, not
+ * per property.** {@link ParagraphProperties.bullet} models *inherited* as
+ * absence, `{kind:'none'}` as the explicit `a:buNone`, and a glyph as itself. The
+ * write API could spell the second and the third and not the first — an omitted
+ * `bullet` and `bullet: false` emitted byte-identical
+ * `<a:pPr indent="0" marL="0"><a:buNone/></a:pPr>` — so a control offering
+ * *inherited* would have written the explicit off, and nothing would have looked
+ * wrong: a suppressed bullet and an inherited-none paint the same, so the lie
+ * would have surfaced only later, when someone edited the master and the slide
+ * stopped following it. `bullet: 'inherit'` states nothing at all, and the three
+ * states are three spellings.
  *
- * A control offering *inherited* would therefore write the explicit off instead,
- * and nothing would look wrong: a suppressed bullet and an inherited-none paint
- * the same, so the lie would only surface later, when someone edited the master
- * and the slide stopped following it. The surface promises that an edit made
- * through it is honoured; a third position that silently produces the second is
- * the one failure it cannot afford. Add it when the option can say "inherit".
+ * ## What may be set is narrower than what is carried
+ *
+ * The projection carries whatever the paragraph holds, including the two glyphs
+ * the write API cannot author back — a numbering scheme outside its sixteen, a
+ * picture bullet, a glyph with its own theme colour. That asymmetry is safe
+ * because **only the delta is ever written**: a bullet nobody touched comes back
+ * through the projection unchanged and is therefore never re-authored, and the
+ * `DeckIr` keeps the spelling `readModelToIr` gave it. `parse/edits.ts` draws the
+ * line, and warns rather than approximating when a caller crosses it.
  */
-export const EDITABLE_PARA_PROPS = ['align'] as const
+export const EDITABLE_PARA_PROPS = ['align', 'bullet'] as const
 
 export type EditableParaProp = (typeof EDITABLE_PARA_PROPS)[number]
 

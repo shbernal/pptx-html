@@ -265,34 +265,60 @@ asserting the loss until the fix landed in `b16fb74b` — which the test then
 caught, and now asserts survival instead. The contract model carries the tokens,
 so the lanes can see a regression here on their own.
 
-### The paragraph tier, and the one property in it
+### The paragraph tier, and the bar it sharpened
 
-`align` is the whole of it, and `bullet` is the instructive absence. Both live on
-`ParagraphProperties`, both look equally editable, and only one passes the 1:1
-test. `align`'s four values are the write option's own, and omitting the option
-writes no `a:pPr/@algn` — so *inherited*, *left* and *centre* are three states the
-option can say. `bullet` models the same three-way distinction and the write API
-can express two of them: an omitted `bullet` and `bullet: false` both emit an
-explicit `<a:buNone/>`, so there is no way to author a paragraph that states
-nothing about its bullet. Upstream declares the loss
-(`text.bullet.inherited`), and the ask is
+`align` and `bullet` are the whole of it, and the second is why the bar is stated
+the way it is: **the 1:1 test is per _value_, not per property.** The two run
+properties added before it passed at the property level and the question never
+came up, because their value sets happened to be total.
+
+`align` clears the bar outright. Its four values are the write option's own, and
+omitting the option writes no `a:pPr/@algn`, so *inherited*, *left* and *centre*
+are three states the option can say. `bullet` models the same three-way
+distinction and, for a while, the write API could express only two of them: an
+omitted `bullet` and `bullet: false` both emitted an explicit `<a:buNone/>` — plus
+`indent="0" marL="0"`, flattening an inherited hanging indent in the same stroke —
+so there was no way to author a paragraph that states *nothing* about its bullet.
+
+That is not a property to add anyway and document the caveat. A control with an
+"inherited" position that silently wrote the explicit off would be the worst kind
+of wrong: a suppressed bullet and an inherited-none paint identically, so nothing
+would look broken until someone edited the master and the slide stopped following
+it. So the property waited, with the reason recorded where a reader would ask for
+it, and the ask went upstream as
 [ts-pptx#15](https://github.com/shbernal/ts-pptx/issues/15) — the same shape as
-ts-pptx#10, which added a spelling for an inherited *fill*.
+ts-pptx#10, which added a spelling for an inherited *fill*. `bullet: 'inherit'`
+landed in `aedf5753`, and the property is in surface as of that pin.
 
-A control with an "inherited" position that silently wrote the explicit off would
-be the worst kind of wrong: a suppressed bullet and an inherited-none paint
-identically, so nothing would look broken until someone edited the master and the
-slide stopped following it. So the property waits.
+What may be **set** is still narrower than what is **carried**. A numbering scheme
+outside the option's sixteen, a picture bullet, a glyph with its own theme colour:
+all are projected, none is authorable back. That asymmetry is safe because only
+the delta is ever written — a bullet nobody touched is not a delta, and the
+`DeckIr` keeps the spelling `readModelToIr` gave it. A caller who does set one is
+told, in a warning, and the deck keeps what it had. Refusing them in the *reader*
+instead would have been the tempting mistake: it would report an unedited slide
+with a numbered list as drifted.
 
-The tier also changed where a value is *written*. Paragraph properties ride on
-runs in the write contract — `readModelToIr` replicates each paragraph's options
-onto every one of its runs — and the writer groups that flat list back into
-paragraphs, **starting a new one wherever two adjacent runs disagree about
-`align`**. Setting the value on the first run of a three-run paragraph therefore
-does not restyle that paragraph; it splits it in two, and the run count is
-unchanged, so a count-based guard cannot see it. `parse/edits.ts` writes a
-paragraph property onto every run of the paragraph for that reason, and
-`test/oracle/loop.test.ts` asserts the paragraph count rather than the value alone.
+#### Where a paragraph property is written
+
+Paragraph properties do not exist in the write contract. They ride on runs, and
+the writer groups that flat list back into paragraphs by reading them — so a value
+has to land on the runs the grouper will read it from, and **that placement is per
+property, in opposite directions**:
+
+| property | written to | because |
+|---|---|---|
+| `align` | every run of the paragraph | two adjacent runs that disagree start a new paragraph |
+| `bullet` | the opening run only | a run stating a glyph starts a new paragraph by itself |
+
+Use `align`'s placement for `bullet` and setting one glyph on a three-run
+paragraph returns three one-run paragraphs; use `bullet`'s for `align` and the
+paragraph splits at the first run that still disagrees. Both are also the shape
+`readModelToIr` produces, so the contract left behind is the one a fresh read
+would have written. Neither failure moves the run count, which is what the guard
+in `parse/edits.ts` checks — so `test/oracle/loop.test.ts` asserts the *paragraph*
+count after the round trip, and the corpus decks each keep a paragraph with two
+runs in it for exactly that assertion to have something to fail on.
 
 It is a data structure, not prose, because two consumers read it: the renderer
 makes those regions editable, and the return path decides what counts as drift.

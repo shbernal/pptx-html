@@ -70,8 +70,12 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  * `4` → `5` is the same kind of move one tier up: the surface gained a
  * *paragraph* projection, so `project` returns nodes with a `paragraphs` array
  * that a v4 document's reader never wrote. Same consequence, same remedy.
+ * `5` → `6` is `3` → `4` again, on the tier `5` opened: `EDITABLE_PARA_PROPS`
+ * gained `bullet` once the write API could spell an inherited one, so both hashes
+ * move — `project` states a bullet a v5 document's `<p>` does not carry, and
+ * `freeze` now strips one it used to keep.
  */
-export const IR_VERSION = 5
+export const IR_VERSION = 6
 
 /** English Metric Units per inch. The one conversion constant in the model. */
 export const EMU_PER_INCH = 914_400

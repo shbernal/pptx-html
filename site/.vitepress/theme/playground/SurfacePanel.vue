@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import type { Color, EditableParaProp, EditableRunProp } from 'pptx-html'
-import { ALIGN_CHOICES, CONTROLS, DECORATION_CHOICES, PARA_CONTROLS, type RunRow, type SlideRow, srgb } from './surface.ts'
+import {
+	ALIGN_CHOICES,
+	BULLET_CHOICES,
+	BULLET_STATED,
+	bulletChoiceOf,
+	bulletValueOf,
+	CONTROLS,
+	DECORATION_CHOICES,
+	PARA_CONTROLS,
+	type RunRow,
+	type SlideRow,
+	srgb,
+} from './surface.ts'
 
 defineProps<{ slides: SlideRow[] }>()
 
@@ -47,6 +59,15 @@ function onAlign(address: string, prop: EditableParaProp, value: string) {
 	emit('paraProp', address, prop, value === '' ? undefined : value)
 }
 
+/**
+ * The bullet select's positions are not its values: `''` clears the key, `none`
+ * is the explicit `a:buNone`, and `bullet` is a glyph. The fourth position is
+ * `disabled`, so a change event can never carry it.
+ */
+function onBullet(address: string, value: string) {
+	emit('paraProp', address, 'bullet', bulletValueOf(value))
+}
+
 function onColor(address: string, value: string) {
 	emit('prop', address, 'color', srgb(value))
 }
@@ -74,11 +95,27 @@ function onColor(address: string, value: string) {
 						<label v-for="control in PARA_CONTROLS" :key="control.prop">
 							{{ control.prop }}
 							<select
+								v-if="control.kind === 'align'"
 								class="pxh-select"
-								:value="para.props[control.prop] ?? ''"
+								:value="para.props.align ?? ''"
 								@change="onAlign(para.address, control.prop, ($event.target as HTMLSelectElement).value)"
 							>
 								<option v-for="choice in ALIGN_CHOICES" :key="choice.value" :value="choice.value">
+									{{ choice.label }}
+								</option>
+							</select>
+							<select
+								v-else
+								class="pxh-select"
+								:value="bulletChoiceOf(para.props.bullet)"
+								@change="onBullet(para.address, ($event.target as HTMLSelectElement).value)"
+							>
+								<option
+									v-for="choice in BULLET_CHOICES"
+									:key="choice.value"
+									:value="choice.value"
+									:disabled="choice.value === BULLET_STATED"
+								>
 									{{ choice.label }}
 								</option>
 							</select>
@@ -86,7 +123,7 @@ function onColor(address: string, value: string) {
 					</div>
 
 					<p v-if="para.runs.length === 0" class="pxh-empty">
-						A blank line. It states no text to edit, and its alignment is editable like any other paragraph's.
+						A blank line. It states no text to edit, and its paragraph properties are editable like any other's.
 					</p>
 
 					<div v-for="run in para.runs" :key="run.address" class="pxh-run">

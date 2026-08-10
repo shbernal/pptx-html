@@ -36,7 +36,16 @@
  */
 
 import type { CallIr, DeckIr, IrValue } from '@shbernal/ts-pptx/script'
-import type { Color, NodeId, ParagraphProperties, RenderIr, RenderNode, RunProperties, TextBody } from '../ir/render'
+import type {
+	Bullet,
+	Color,
+	NodeId,
+	ParagraphProperties,
+	RenderIr,
+	RenderNode,
+	RunProperties,
+	TextBody,
+} from '../ir/render'
 import { EDITABLE_PARA_PROPS, EDITABLE_RUN_PROPS, type EditableParaProp, type EditableRunProp } from '../ir/surface'
 
 /** The write-API option each surface property is spelled as. */
@@ -49,13 +58,64 @@ const OPTION_OF: Record<EditableRunProp, string> = {
 	color: 'color',
 }
 
-/**
- * The same, for the paragraph tier. `align`'s four values are the option's own
- * spelling, so unlike `underline` and `strike` there is no token table beneath
- * this one.
- */
+/** The same, for the paragraph tier. */
 const PARA_OPTION_OF: Record<EditableParaProp, string> = {
 	align: 'align',
+	bullet: 'bullet',
+}
+
+/**
+ * How each paragraph property says **nothing** — the value to write when an edit
+ * returns one to inherited.
+ *
+ * This table exists because the two answers differ, and the difference is the
+ * whole of ts-pptx#15. Omitting `align` omits `a:pPr/@algn`, so *absent* and
+ * *inherited* are the same act and the option is simply deleted. Omitting
+ * `bullet` does not omit anything: it means `false`, which writes an explicit
+ * `<a:buNone/>` plus `indent="0" marL="0"` and *overrides* the list style —
+ * silently, since a suppressed bullet and an inherited-none paint identically.
+ * `'inherit'` is the spelling for saying nothing, and it is what `readModelToIr`
+ * itself emits for such a paragraph, so an edit that clears a bullet leaves the
+ * contract in the shape a fresh read would have produced.
+ *
+ * Deleting the option here would be the one failure the surface cannot afford: an
+ * edit made through it, accepted, and quietly turned into its opposite.
+ */
+const PARA_INHERITED_OF: Record<EditableParaProp, unknown> = {
+	align: undefined,
+	bullet: 'inherit',
+}
+
+/**
+ * Which runs of a paragraph a property is written to — and the two answers are
+ * opposite, which is why this is a table and not a rule.
+ *
+ * The write API has no paragraph tier: properties ride on runs, and
+ * `groupRunsIntoLines` decides where one paragraph ends and the next begins by
+ * looking at them. It uses two different signals, and each property has to be
+ * placed for the signal that reads it:
+ *
+ * - **`align` on every run.** Two adjacent runs that disagree about their
+ *   alignment start a new paragraph, so setting it on the first run of a three-run
+ *   paragraph does not restyle that paragraph, it *splits* it.
+ * - **`bullet` on the first run only.** A run that states a *glyph* starts a new
+ *   paragraph on its own, disagreement or not. So the placement that is right for
+ *   `align` is exactly wrong here: writing one glyph to all three runs produces
+ *   three one-run paragraphs. `false` and `'inherit'` are inert either way, but
+ *   the first run is the only placement correct for all three states.
+ *
+ * Both are also the shape `readModelToIr` produces — it replicates a paragraph's
+ * alignment onto every run and states its bullet once — so the contract this
+ * leaves behind is the one a fresh read of the same deck would have written.
+ *
+ * Neither mistake shows up in a run count, which is what the guard in
+ * {@link patchRuns} checks. What catches them is asserting the *paragraph* count
+ * after the round trip, which is what the corpus decks with two runs in one
+ * paragraph exist for.
+ */
+const PARA_PLACEMENT_OF: Record<EditableParaProp, 'every-run' | 'first-run'> = {
+	align: 'every-run',
+	bullet: 'first-run',
 }
 
 /**
@@ -206,8 +266,11 @@ function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null
 			for (const key of EDITABLE_PARA_PROPS) {
 				const wasSet = paragraph.props[key]
 				const isSet = paragraphNow.props[key]
-				if (wasSet === isSet) continue
-				paraEdit.props[key] = isSet === undefined ? undefined : paraOptionValue(key, isSet)
+				// Structurally, like the run loop below. `bullet` is an object, and both
+				// sides arrive through a clone or a JSON parse, so `===` would report a
+				// bullet nobody touched as edited on every round trip.
+				if (JSON.stringify(wasSet ?? null) === JSON.stringify(isSet ?? null)) continue
+				paraEdit.props[key] = isSet === undefined ? PARA_INHERITED_OF[key] : paraOptionValue(key, isSet)
 			}
 			if (Object.keys(paraEdit.props).length > 0) edits.paragraphs.set(`${owner}/${paragraphIndex}`, paraEdit)
 		}
@@ -260,16 +323,70 @@ function optionValue(key: EditableRunProp, value: RunProperties[EditableRunProp]
 }
 
 /**
- * A paragraph value in the write API's spelling — which for `align` is the same
- * four strings, because {@link ParagraphProperties.align} was defined as the
- * option's own domain rather than as OOXML's (`l`/`ctr`/`r`/`just` are the
+ * A marker for a value the write API has no spelling for.
+ *
+ * A symbol key rather than a sentinel string or `null`, because both of those are
+ * things a real option could be — and the one thing this must never do is get
+ * written to the deck as if it were a value. {@link applyEdits} reports it and
+ * {@link patchRuns} skips it, so the paragraph keeps whatever `readModelToIr`
+ * gave it.
+ */
+const UNSPELLABLE = Symbol('no write-API spelling')
+
+function unspellable(why: string): Record<symbol, string> {
+	return { [UNSPELLABLE]: why }
+}
+
+function whyUnspellable(value: unknown): string | null {
+	if (typeof value !== 'object' || value === null || !(UNSPELLABLE in value)) return null
+	return (value as Record<symbol, string>)[UNSPELLABLE] as string
+}
+
+/**
+ * A paragraph value in the write API's spelling.
+ *
+ * `align` passes straight through: {@link ParagraphProperties.align} was defined
+ * as the option's own domain rather than as OOXML's (`l`/`ctr`/`r`/`just` are the
  * *attribute's* spelling, and the importer translates them on the way in).
  *
- * A function rather than a pass-through so the next paragraph property added has
- * somewhere to put its table, the way `underline` and `strike` needed one.
+ * `bullet` is where the surface's per-value bar becomes visible in code. Three of
+ * {@link Bullet}'s states are the three the option can author, and they are the
+ * three {@link PARA_INHERITED_OF} completes:
+ *
+ * | model | option | file |
+ * |---|---|---|
+ * | absent | `'inherit'` | no `a:pPr` at all, so the list style still reaches it |
+ * | `{kind:'none'}` | `false` | `<a:pPr indent="0" marL="0"><a:buNone/></a:pPr>` |
+ * | `{kind:'character', char}` | `{characterCode}` | `<a:buChar/>` at that code point |
+ *
+ * The rest are refused rather than approximated, and each for a reason the surface
+ * already gives elsewhere. A numbering scheme is a free `a:buAutoNum/@type` string
+ * in this model and `numberType` declares sixteen of `ST_TextAutonumberScheme`'s
+ * forty, so a paragraph could hold one the option cannot name. A picture bullet
+ * addresses an `AssetRef` this package never re-embeds — upstream's own text
+ * mapper says the same with its `text.bullet.picture` note. A glyph with its own
+ * font, size or colour would have to flatten a `scheme` colour to the hex it
+ * happens to resolve to, which is the theme-baking the paint model exists to
+ * avoid, since `bullet.color` takes a hex and nothing else.
+ *
+ * None of those is reachable without a caller deliberately writing one, because
+ * only the delta is applied and a bullet nobody moved is not a delta.
  */
-function paraOptionValue(_key: EditableParaProp, value: ParagraphProperties[EditableParaProp]): unknown {
-	return value
+function paraOptionValue(key: EditableParaProp, value: NonNullable<ParagraphProperties[EditableParaProp]>): unknown {
+	if (key === 'align') return value
+
+	const bullet = value as Bullet
+	if (bullet.kind === 'none') return false
+	if (bullet.kind === 'number') {
+		return unspellable(`a ${JSON.stringify(bullet.scheme)} numbered bullet`)
+	}
+	if (bullet.kind === 'picture') return unspellable('a picture bullet')
+	if (bullet.font !== undefined || bullet.color !== undefined || bullet.sizePct !== undefined) {
+		return unspellable('a bullet glyph carrying its own font, size or colour')
+	}
+	const points = [...bullet.char]
+	if (points.length !== 1) return unspellable(`the ${points.length}-character glyph ${JSON.stringify(bullet.char)}`)
+	return { characterCode: (bullet.char.codePointAt(0) as number).toString(16).toUpperCase().padStart(4, '0') }
 }
 
 // ---------------------------------------------------------------------------
@@ -292,6 +409,20 @@ export function applyEdits(deck: DeckIr, structure: RenderIr, edits: EditSet): A
 
 	const next = structuredClone(deck) as DeckIr
 	const warnings: string[] = []
+
+	// Reported once per paragraph, before the walk, rather than inside `patchRuns`
+	// — a paragraph property is written to every one of its runs, so warning where
+	// it is written would say the same thing three times for a three-run paragraph.
+	for (const [address, edit] of edits.paragraphs) {
+		for (const [key, value] of Object.entries(edit.props)) {
+			const why = whyUnspellable(value)
+			if (why !== null) {
+				warnings.push(
+					`paragraph ${address}: ${key} was set to ${why}, which the write API cannot author; the deck's own ${key} was left in place`
+				)
+			}
+		}
+	}
 
 	for (const slide of next.slides) {
 		const nodes = structure.slides.find((entry) => entry.number === slide.number)?.nodes
@@ -408,19 +539,12 @@ function patchGroup(nodes: readonly RenderNode[], children: IrValue[], edits: Ed
  * join is document order, and it is guarded by a count: if the two disagree about
  * how many runs a frame has, no edit is placed at all.
  *
- * ## A paragraph property goes on every run of the paragraph
+ * ## Which runs a paragraph property lands on
  *
- * Not on the first, even though the first is the only one the writer reads it
- * from. `groupRunsIntoLines` starts a **new paragraph** wherever two adjacent runs
- * disagree about `align`, so setting it on one run of a three-run paragraph does
- * not restyle that paragraph — it splits it into two, and the frame comes back
- * with a paragraph the model does not have. The run count is unchanged, so the
- * guard above would not catch it either.
- *
- * Writing to all of them is also what upstream's own reader does — `readModelToIr`
- * replicates each paragraph's options onto every one of its runs — so this keeps
- * the contract in the shape it produces rather than in a shape that merely happens
- * to work.
+ * Not one answer: {@link PARA_PLACEMENT_OF} holds it per property, because
+ * `align` has to go on every run of its paragraph and `bullet` on the first alone,
+ * and each placement splits the paragraph if used for the other. Both failures
+ * leave the run count untouched, so the guard above cannot see either.
  */
 function patchRuns(
 	owner: NodeId,
@@ -474,8 +598,14 @@ function patchRuns(
 			if (value === undefined) delete options[option]
 			else options[option] = value
 		}
+		const opensParagraph = paragraphOf[index] !== paragraphOf[index - 1]
 		for (const [key, value] of Object.entries(paraProps)) {
-			const option = PARA_OPTION_OF[key as EditableParaProp]
+			const prop = key as EditableParaProp
+			// Already reported by `applyEdits`; leaving the option untouched is what
+			// keeps the deck's own value rather than a rounded-off version of it.
+			if (whyUnspellable(value) !== null) continue
+			if (PARA_PLACEMENT_OF[prop] === 'first-run' && !opensParagraph) continue
+			const option = PARA_OPTION_OF[prop]
 			if (value === undefined) delete options[option]
 			else options[option] = value
 		}
