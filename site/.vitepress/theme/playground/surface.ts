@@ -2,9 +2,18 @@
  * The editable surface, made operable.
  *
  * The panel this drives is `EDITABLE_SURFACE` with controls attached: run text,
- * `bold` / `italic` / `sizePt` / `color`, and node deletion. Nothing else gets a
- * control, because an input whose value is silently dropped at emit is exactly
- * the failure this project is arranged against, reproduced in its own demo.
+ * `bold` / `italic` / `underline` / `strike` / `sizePt` / `color`, and node
+ * deletion. Nothing else gets a control, because an input whose value is silently
+ * dropped at emit is exactly the failure this project is arranged against,
+ * reproduced in its own demo.
+ *
+ * The pairing *was* hand-wired, and that was a divergence risk the surface file
+ * exists to prevent: `EDITABLE_RUN_PROPS` said which properties are in surface,
+ * nothing generated a control from it, and a property added there would have
+ * gained no control — a quiet failure, a missing input rather than a broken
+ * build. {@link CONTROL_OF} closes it. It is a `Record<EditableRunProp, …>`, so
+ * a property added to the surface and not given a control kind here is a *type*
+ * error, and the panel renders from its entries rather than from a second list.
  *
  * **Every edit is written into the live document, never into the model.** The
  * renderer already marks each run `contenteditable` and addresses it with
@@ -14,17 +23,55 @@
  * return path works by never using it.
  */
 
-import type { Color, EditableRunProp, RenderIr } from 'pptx-html'
+import type { Color, EditableRunProp, RenderIr, RunProperties } from 'pptx-html'
 import { project } from 'pptx-html'
+
+/**
+ * How each surface property is operated. Four kinds, not six: `underline` and
+ * `strike` are the same control because they are the same shape — three named
+ * values plus *inherited*, which is what an absent key means.
+ */
+export type ControlKind = 'toggle' | 'decoration' | 'number' | 'color'
+
+/**
+ * Every property in the surface, with the control that drives it.
+ *
+ * The `Record<EditableRunProp, …>` is the whole point: this file cannot compile
+ * while the surface names a property it does not. The panel iterates these
+ * entries, so the list is also the render order.
+ */
+export const CONTROL_OF: Record<EditableRunProp, ControlKind> = {
+	bold: 'toggle',
+	italic: 'toggle',
+	underline: 'decoration',
+	strike: 'decoration',
+	sizePt: 'number',
+	color: 'color',
+}
+
+/** The panel's control list, in surface order, with the key each one writes. */
+export const CONTROLS: readonly { prop: EditableRunProp; kind: ControlKind }[] = (
+	Object.keys(CONTROL_OF) as EditableRunProp[]
+).map((prop) => ({ prop, kind: CONTROL_OF[prop] }))
+
+/**
+ * The three values `underline` and `strike` model, plus the absence that means
+ * *inherited*. The empty string is the `<option>` value for that absence, since
+ * a `<select>` has no way to hold `undefined`.
+ */
+export const DECORATION_CHOICES: readonly { value: string; label: string }[] = [
+	{ value: '', label: 'inherited' },
+	{ value: 'none', label: 'none' },
+	{ value: 'single', label: 'single' },
+	{ value: 'double', label: 'double' },
+]
 
 export interface RunRow {
 	/** `node/paragraph/run` — the address the renderer wrote and the parser reads. */
 	address: string
 	text: string
-	bold: boolean
-	italic: boolean
-	sizePt: number | null
-	color: Color | null
+	/** Exactly what the run *states*, which is what the projection carries. */
+	props: Pick<RunProperties, EditableRunProp>
 }
 
 export interface NodeRow {
@@ -48,10 +95,7 @@ export function surfaceOf(ir: RenderIr): SlideRow[] {
 			runs: node.runs.map((run) => ({
 				address: `${run.node}/${run.paragraph}/${run.run}`,
 				text: run.text,
-				bold: run.props.bold ?? false,
-				italic: run.props.italic ?? false,
-				sizePt: run.props.sizePt ?? null,
-				color: run.props.color ?? null,
+				props: run.props,
 			})),
 		})),
 	}))
@@ -62,7 +106,7 @@ export function setText(doc: Document, address: string, text: string): void {
 }
 
 /**
- * Set or clear one of the four stated properties.
+ * Set or clear one of the stated properties.
  *
  * `undefined` removes the key rather than writing `undefined`: absence means
  * *inherited*, and the two are different facts about the run. The reader refuses

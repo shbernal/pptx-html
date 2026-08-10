@@ -59,8 +59,16 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  * `1` was the legacy DOM-shaped IR in `./model`.
  * `2` added nothing a reader can migrate to `3`: {@link RenderSlide.chrome} is a
  * required array, and a v2 document has no key to read it from.
+ * `3` → `4` is **not** a shape change, and it is the reason this comment cannot
+ * stop at "shape". `EDITABLE_RUN_PROPS` gained `underline` and `strike`, so
+ * `project` returns a different object for the same island bytes and
+ * `Integrity.surfaceHash` no longer agrees with what a v3 renderer stated. Left
+ * unbumped, a document rendered by the older build would fail the `surfaceHash`
+ * check and be reported as *tampered with* — a false accusation about a document
+ * whose only fault is being older than this build's idea of what may be edited.
+ * The version check runs first and says "re-render it", which is the true answer.
  */
-export const IR_VERSION = 3
+export const IR_VERSION = 4
 
 /** English Metric Units per inch. The one conversion constant in the model. */
 export const EMU_PER_INCH = 914_400
@@ -380,7 +388,7 @@ export interface RunProperties {
 	bold?: boolean
 	italic?: boolean
 	/**
-	 * `a:rPr/@u`. `ST_TextUnderlineType` has seventeen members; the three modeled
+	 * `a:rPr/@u`. `ST_TextUnderlineType` has eighteen members; the three modeled
 	 * here are the ones the write API can express. Anything else must be imported
 	 * as a {@link FidelityNote}, not rounded to `single`.
 	 */

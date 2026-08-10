@@ -62,7 +62,7 @@ const AUTOFIT: Record<AutofitMode, TextBody['autofit']> = {
 
 const VERTICAL = new Set<string>(['vert', 'vert270', 'eaVert', 'wordArtVert'])
 
-/** `ST_TextUnderlineType` has seventeen members; the write API expresses three. */
+/** `ST_TextUnderlineType` has eighteen members; the write API expresses three. */
 const UNDERLINE: Record<string, NonNullable<RunProperties['underline']>> = {
 	none: 'none',
 	sng: 'single',

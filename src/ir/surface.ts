@@ -19,8 +19,8 @@
  *
  * ## v1 surface
  *
- * The smallest set that is useful: run text, the four character properties that
- * map 1:1 onto a write-API option, and deleting a node. Everything else —
+ * The smallest set that is useful: run text, the character properties that map
+ * 1:1 onto a write-API option, and deleting a node. Everything else —
  * moving a box, changing geometry, restyling a table, reordering or inserting
  * slides — is out. Slide reordering is out for a second reason as well: the
  * writer has `removeSlide(index)` but no `insertSlide`/`moveSlide`, so emit
@@ -32,14 +32,26 @@ import type { NodeId, NodeKind, RenderIr, RenderNode, RunProperties } from './re
 /**
  * The character properties inside the surface, and the single place they are
  * named. {@link project} copies exactly these keys and {@link freeze} strips
- * exactly these keys, so adding one here is the whole change.
+ * exactly these keys, so adding one here is *nearly* the whole change — the
+ * renderer, the reader and the edit mapper all derive from this list, but
+ * `parse/edits.ts` still has to name the write-API spelling of each value and
+ * `parse/surface.ts` still has to name each value's shape. Both are tested
+ * against this list rather than against a second copy of it.
  *
  * They are the properties with a 1:1 write-API option. Anything needing
  * interpretation to get back into the deck — a font face that may not exist on
  * the target machine, a highlight, a baseline shift — is out of surface on
  * purpose: the return path must never have to guess.
+ *
+ * `underline` and `strike` qualify because {@link RunProperties} already models
+ * each as the three-value subset the writer can express, and every other
+ * `ST_TextUnderlineType` / `ST_TextStrikeType` token is imported as a fidelity
+ * note rather than rounded into one of the three. Both include the *explicit*
+ * off — `u="none"`, `strike="noStrike"` — which is a different fact from saying
+ * nothing, and the reason `parse/edits.ts` maps them by table rather than
+ * passing the value through.
  */
-export const EDITABLE_RUN_PROPS = ['bold', 'italic', 'sizePt', 'color'] as const
+export const EDITABLE_RUN_PROPS = ['bold', 'italic', 'underline', 'strike', 'sizePt', 'color'] as const
 
 export type EditableRunProp = (typeof EDITABLE_RUN_PROPS)[number]
 

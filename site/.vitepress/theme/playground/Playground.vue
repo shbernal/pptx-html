@@ -5,7 +5,7 @@ import { type DeckSession, describe, idleStages, kb, openDeck, reread } from './
 import PipelineStrip from './PipelineStrip.vue'
 import { type Sample, sampleNamed, samples } from './samples.ts'
 import SurfacePanel from './SurfacePanel.vue'
-import { deleteNode, setProp, setText, type SlideRow, srgb, surfaceOf } from './surface.ts'
+import { deleteNode, setProp, setText, type SlideRow, surfaceOf } from './surface.ts'
 
 /** Straight from `reconcile.ts`, because paraphrasing a guarantee weakens it. */
 const LANES: Record<string, string> = {
@@ -230,10 +230,7 @@ function onDrop(event: DragEvent): void {
 					<SurfacePanel
 						:slides="rows"
 						@text="(address, value) => edit((doc) => setText(doc, address, value))"
-						@bold="(address, value) => edit((doc) => setProp(doc, address, 'bold', value ? true : undefined))"
-						@italic="(address, value) => edit((doc) => setProp(doc, address, 'italic', value ? true : undefined))"
-						@size="(address, value) => edit((doc) => setProp(doc, address, 'sizePt', value ?? undefined))"
-						@color="(address, value) => edit((doc) => setProp(doc, address, 'color', value === null ? undefined : srgb(value)))"
+						@prop="(address, prop, value) => edit((doc) => setProp(doc, address, prop, value))"
 						@remove="(id) => edit((doc) => deleteNode(doc, id))"
 					/>
 				</div>

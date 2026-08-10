@@ -232,10 +232,37 @@ follows call order.
 ## The editable surface
 
 `src/ir/surface.ts` defines exactly what a human may change in the rendered HTML
-and have honoured on the way back: **run text, `bold`/`italic`/`sizePt`/`color`,
-and deleting a node.** Everything else — moving a box, changing geometry,
-restyling a table, reordering or inserting slides — is **detected as drift**,
-never interpreted.
+and have honoured on the way back: **run text,
+`bold`/`italic`/`underline`/`strike`/`sizePt`/`color`, and deleting a node.**
+Everything else — moving a box, changing geometry, restyling a table, reordering
+or inserting slides — is **detected as drift**, never interpreted.
+
+The test a property has to pass is a 1:1 write-API option, not usefulness.
+`underline` and `strike` pass because `RunProperties` already models each as the
+three-value subset the writer expresses, and every other
+`ST_TextUnderlineType`/`ST_TextStrikeType` token is imported as a fidelity note
+rather than rounded into one of the three. `fontFace` fails: a face that may not
+exist on the target machine needs interpretation to get back into the deck.
+
+Each of the three values matters, including the one that draws nothing. A run
+that inherits an underline from its list style and states `u="none"` is *not*
+underlined, so "explicitly off" and "says nothing" are different facts and the
+surface keeps them apart — absence is how this model spells inherited, at every
+level. In the panel that is a drop-down with four options rather than a
+checkbox, because a checkbox has no way to say the difference.
+
+Keeping them apart cost an upstream fix.
+[ts-pptx#14](https://github.com/shbernal/ts-pptx/issues/14): `readModelToIr`
+mapped `u="none"` and `strike="noStrike"` to `undefined`, so a deck that
+*already* stated the explicit off lost it on the read leg — and declared no note
+for it, which meant `diffDeckIr` compared two contract models both missing the
+field and reported clean. Edits made *through* the surface were never affected,
+because `parse/edits.ts` writes the option onto the `CallIr` directly; it was the
+untouched run that lost it. The oracle could not see this by construction, for
+the same reason it could not see ts-pptx#13, so it was pinned by a test
+asserting the loss until the fix landed in `b16fb74b` — which the test then
+caught, and now asserts survival instead. The contract model carries the tokens,
+so the lanes can see a regression here on their own.
 
 It is a data structure, not prose, because two consumers read it: the renderer
 makes those regions editable, and the return path decides what counts as drift.

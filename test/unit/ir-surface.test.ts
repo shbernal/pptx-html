@@ -44,13 +44,15 @@ describe('project', () => {
 	})
 
 	it('carries only the sanctioned properties', () => {
-		// The title's second run is underlined. `underline` is deliberately out of
-		// surface — `ST_TextUnderlineType` has seventeen members and the write API
-		// expresses three — so it must not appear in the editable view.
+		// The title's second run is underlined and states a character spacing. The
+		// first is in surface — `RunProperties.underline` models the three values the
+		// write API expresses and nothing else — and `spacingPt` is not, so the
+		// editable view must show one and not the other.
 		const styled = projection.slides[0]?.nodes.find((node) => node.id === 's1.sp2')?.runs[1]
 		expect(styled?.props).toStrictEqual({
 			sizePt: 40,
 			italic: true,
+			underline: 'single',
 			// A theme reference reaches the editable view intact rather than
 			// flattened to the hex it happened to resolve to, so an edit that does
 			// not touch the colour cannot silently break the theme binding.
@@ -106,16 +108,31 @@ describe('freeze is the complement of project', () => {
 	})
 
 	it('changes when an out-of-surface character property moves', () => {
-		// `underline` is a run property like `bold`, and the only thing separating
+		// `spacingPt` is a run property like `bold`, and the only thing separating
 		// them is this list. If `freeze` stripped by shape rather than by name,
 		// this would pass silently and emit would accept an edit it cannot apply.
 		const drifted = clone(SAMPLE_IR)
 		const title = drifted.slides[0]?.nodes[0] as ShapeNode
 		const run = title.text?.paragraphs[0]?.runs[1]
 		if (!run) throw new Error('fixture lost its styled run')
-		run.props.underline = 'double'
+		run.props.spacingPt = 3
 
 		expect(freeze(drifted)).not.toStrictEqual(freeze(SAMPLE_IR))
+	})
+
+	it('is unchanged when an underline moves, now that underline is in surface', () => {
+		// The mirror of the case above, and the reason both are here: the two
+		// properties sit side by side on the same run and differ only in being named
+		// in `EDITABLE_RUN_PROPS`. A `freeze` that stripped by shape — "every string
+		// on a run" — would pass the test above and fail this one.
+		const edited = clone(SAMPLE_IR)
+		const title = edited.slides[0]?.nodes[0] as ShapeNode
+		const run = title.text?.paragraphs[0]?.runs[1]
+		if (!run) throw new Error('fixture lost its styled run')
+		run.props.underline = 'double'
+		run.props.strike = 'single'
+
+		expect(freeze(edited)).toStrictEqual(freeze(SAMPLE_IR))
 	})
 
 	it('strips text inside table cells and groups too', () => {

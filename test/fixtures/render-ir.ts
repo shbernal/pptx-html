@@ -106,7 +106,10 @@ const TITLE: ShapeNode = {
 					},
 					{
 						text: 'review',
-						props: { sizePt: 40, italic: true, color: ACCENT, underline: 'single' },
+						// `underline` is in the editable surface and `spacingPt` is not, so
+						// this one run is what keeps `project`'s narrowing falsifiable: it
+						// has to carry the first and drop the second.
+						props: { sizePt: 40, italic: true, color: ACCENT, underline: 'single', spacingPt: 1.5 },
 						resolved: { sizePt: 40, color: { kind: 'srgb', hex: '2E5A8A' } },
 					},
 				],

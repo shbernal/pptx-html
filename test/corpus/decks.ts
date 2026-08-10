@@ -352,6 +352,35 @@ export const CORPUS: CorpusDeck[] = [
 	),
 
 	deck(
+		'text-decoration',
+		'primitive',
+		'underline and strike in all six states, including the explicit “off” that means something',
+		(pptx) => {
+			// The two properties the editable surface exposes beside `bold` and `italic`.
+			// Each models three values, and the third — `none` / `noStrike` — is the one
+			// worth authoring: it is invisible on this slide and not the same fact as
+			// stating nothing, because a run that inherits an underline from its
+			// placeholder and states `u="none"` is not underlined.
+			//
+			// `strike: 'noStrike'` was a cast until ts-pptx 3.1.0+b16fb74b: the option
+			// was typed `boolean | 'sngStrike' | 'dblStrike'`, so the explicit off had
+			// no declared spelling even though the serializer wrote it correctly. The
+			// union carries it now, so the literal below is the plain one.
+			pptx.addSlide().addText(
+				[
+					{ text: 'single underline', options: { underline: { style: 'sng' }, breakLine: true } },
+					{ text: 'double underline', options: { underline: { style: 'dbl' }, breakLine: true } },
+					{ text: 'explicitly not underlined', options: { underline: { style: 'none' }, breakLine: true } },
+					{ text: 'single strike', options: { strike: 'sngStrike', breakLine: true } },
+					{ text: 'double strike', options: { strike: 'dblStrike', breakLine: true } },
+					{ text: 'explicitly not struck', options: { strike: 'noStrike' } },
+				],
+				{ x: 0.5, y: 0.5, w: 6, h: 3, fontSize: 18, objectName: 'decorated' }
+			)
+		}
+	),
+
+	deck(
 		'master-background',
 		'primitive',
 		'a slide whose whole chain states no background — the surface has to be white',

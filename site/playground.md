@@ -31,11 +31,17 @@ because a deck where one slide was edited and eleven were not should not describ
 all twelve the same way.
 
 The panel beside the preview is the **editable surface** — run text, `bold`,
-`italic`, `sizePt`, `color`, and deleting a node. That list is not a subset chosen
-for the demo: it is `EDITABLE_SURFACE`, exported from the package, and there is
-deliberately no control for anything outside it. An input whose value was silently
-dropped on the way back would be the exact failure this project is built to
-refuse.
+`italic`, `underline`, `strike`, `sizePt`, `color`, and deleting a node. That list
+is not a subset chosen for the demo: it is `EDITABLE_SURFACE`, exported from the
+package, and there is deliberately no control for anything outside it. An input
+whose value was silently dropped on the way back would be the exact failure this
+project is built to refuse.
+
+`underline` and `strike` are drop-downs rather than checkboxes, and the extra
+option is the point: **inherited** clears the property, while **none** states
+outright that the run is not underlined. A run that would otherwise take an
+underline from its placeholder needs the second, and a checkbox has no way to say
+it.
 
 ## What it does not prove
 

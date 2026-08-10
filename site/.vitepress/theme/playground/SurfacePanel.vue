@@ -1,31 +1,43 @@
 <script setup lang="ts">
-import type { Color } from 'pptx-html'
-import type { SlideRow } from './surface.ts'
+import type { Color, EditableRunProp } from 'pptx-html'
+import { CONTROLS, DECORATION_CHOICES, type RunRow, type SlideRow, srgb } from './surface.ts'
 
 defineProps<{ slides: SlideRow[] }>()
 
+/**
+ * One event for every property, carrying the key rather than encoding it in the
+ * event name. `undefined` is *clear the key*, which is how this model spells
+ * inherited — so the panel can express the difference between "not struck
+ * through" and "says nothing about being struck through".
+ */
 const emit = defineEmits<{
 	text: [address: string, value: string]
-	bold: [address: string, value: boolean]
-	italic: [address: string, value: boolean]
-	size: [address: string, value: number | null]
-	color: [address: string, value: string | null]
+	prop: [address: string, prop: EditableRunProp, value: unknown]
 	remove: [id: string]
 }>()
 
 /** The hex to put in the colour input. A scheme colour shows what it resolved to. */
-function swatch(color: Color | null): string {
-	if (color === null) return '#000000'
+function swatch(color: Color | undefined): string {
+	if (color === undefined) return '#000000'
 	return `#${color.kind === 'srgb' ? color.hex : color.effectiveHex}`
 }
 
-function isScheme(color: Color | null): boolean {
-	return color !== null && color.kind === 'scheme'
+function isScheme(run: RunRow): boolean {
+	return run.props.color?.kind === 'scheme'
 }
 
 function onSize(address: string, value: string) {
 	const parsed = Number.parseFloat(value)
-	emit('size', address, value.trim() === '' || Number.isNaN(parsed) ? null : parsed)
+	emit('prop', address, 'sizePt', value.trim() === '' || Number.isNaN(parsed) ? undefined : parsed)
+}
+
+/** The empty option is *inherited*; every other value is one the run states outright. */
+function onDecoration(address: string, prop: EditableRunProp, value: string) {
+	emit('prop', address, prop, value === '' ? undefined : value)
+}
+
+function onColor(address: string, value: string) {
+	emit('prop', address, 'color', srgb(value))
 }
 </script>
 
@@ -54,39 +66,55 @@ function onSize(address: string, value: string) {
 						@change="emit('text', run.address, ($event.target as HTMLInputElement).value)"
 					/>
 					<div class="pxh-props">
-						<label>
-							<input type="checkbox" :checked="run.bold" @change="emit('bold', run.address, ($event.target as HTMLInputElement).checked)" />
-							bold
-						</label>
-						<label>
-							<input type="checkbox" :checked="run.italic" @change="emit('italic', run.address, ($event.target as HTMLInputElement).checked)" />
-							italic
-						</label>
-						<label>
-							sizePt
-							<input
-								class="pxh-size"
-								type="number"
-								min="1"
-								step="1"
-								:value="run.sizePt ?? ''"
-								placeholder="inherited"
-								@change="onSize(run.address, ($event.target as HTMLInputElement).value)"
-							/>
-						</label>
-						<label>
-							color
-							<input
-								type="color"
-								:value="swatch(run.color)"
-								@change="emit('color', run.address, ($event.target as HTMLInputElement).value)"
-							/>
-						</label>
-						<button v-if="run.color" type="button" class="pxh-clear" @click="emit('color', run.address, null)">
+						<template v-for="control in CONTROLS" :key="control.prop">
+							<label v-if="control.kind === 'toggle'">
+								<input
+									type="checkbox"
+									:checked="run.props[control.prop] === true"
+									@change="
+										emit('prop', run.address, control.prop, ($event.target as HTMLInputElement).checked ? true : undefined)
+									"
+								/>
+								{{ control.prop }}
+							</label>
+							<label v-else-if="control.kind === 'decoration'">
+								{{ control.prop }}
+								<select
+									class="pxh-select"
+									:value="run.props[control.prop] ?? ''"
+									@change="onDecoration(run.address, control.prop, ($event.target as HTMLSelectElement).value)"
+								>
+									<option v-for="choice in DECORATION_CHOICES" :key="choice.value" :value="choice.value">
+										{{ choice.label }}
+									</option>
+								</select>
+							</label>
+							<label v-else-if="control.kind === 'number'">
+								{{ control.prop }}
+								<input
+									class="pxh-size"
+									type="number"
+									min="1"
+									step="1"
+									:value="run.props.sizePt ?? ''"
+									placeholder="inherited"
+									@change="onSize(run.address, ($event.target as HTMLInputElement).value)"
+								/>
+							</label>
+							<label v-else>
+								{{ control.prop }}
+								<input
+									type="color"
+									:value="swatch(run.props.color)"
+									@change="onColor(run.address, ($event.target as HTMLInputElement).value)"
+								/>
+							</label>
+						</template>
+						<button v-if="run.props.color" type="button" class="pxh-clear" @click="emit('prop', run.address, 'color', undefined)">
 							clear
 						</button>
 					</div>
-					<p v-if="isScheme(run.color)" class="pxh-scheme">
+					<p v-if="isScheme(run)" class="pxh-scheme">
 						This run states a <strong>scheme</strong> colour — a reference that re-resolves against the theme.
 						Setting a value here replaces the reference with a fixed one. That is a legal edit; it is just not
 						the same fact.
@@ -191,6 +219,14 @@ function onSize(address: string, value: string) {
 
 .pxh-size {
 	width: 74px;
+	border: 1px solid var(--vp-c-divider);
+	border-radius: 6px;
+	padding: 1px 5px;
+	background: var(--vp-c-bg);
+	color: var(--vp-c-text-1);
+}
+
+.pxh-select {
 	border: 1px solid var(--vp-c-divider);
 	border-radius: 6px;
 	padding: 1px 5px;

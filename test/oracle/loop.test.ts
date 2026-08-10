@@ -95,6 +95,60 @@ describe('an edit made through the surface', () => {
 		expect(runs[0]?.options?.fontSize).toBe(40)
 	})
 
+	it('carries underline and strike as the OOXML tokens, and reads them back', async () => {
+		// The two properties the surface gained last, and the pair most able to fail
+		// quietly: `RunProperties` spells them `none`/`single`/`double` and the deck
+		// spells them `sng`/`dbl` and `sngStrike`/`dblStrike`, so an untranslated
+		// value would be written verbatim, dropped by the writer as unrecognised, and
+		// leave a document that looks edited and a deck that is not.
+		//
+		// Asserted twice over: on the emitted deck's own run options, and on a fresh
+		// import of the emitted bytes — the second is what proves the loop closed
+		// rather than that the right string was handed to the writer.
+		const { source, html } = await rendered('text-box')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text) throw new Error('fixture changed')
+		const [first, second] = shape.text.paragraphs[0]?.runs ?? []
+		if (!first || !second) throw new Error('the text-box deck lost a run')
+		first.props.underline = 'single'
+		second.props.strike = 'double'
+
+		const emitted = await emitDeck(parsed, { source })
+		const ir = readModelToIr(await Presentation.load(emitted.bytes))
+		const runs = ir.slides[0]?.calls[0]?.args[0] as { options?: Record<string, unknown> }[]
+		expect(runs[0]?.options?.underline).toStrictEqual({ style: 'sng' })
+		expect(runs[1]?.options?.strike).toBe('dblStrike')
+
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs[0]?.runs[0]?.props.underline).toBe('single')
+		expect(back.text?.paragraphs[0]?.runs[1]?.props.strike).toBe('double')
+	})
+
+	it('writes an explicit "not underlined", which is a different fact from saying nothing', async () => {
+		// `none` is the value with no visible consequence and the most to lose: a run
+		// that inherits `u="sng"` from its placeholder and states `u="none"` is not
+		// underlined, and dropping the statement silently underlines it. So the
+		// assertion is on the *presence* of the token, which a "nothing changed"
+		// shortcut anywhere in the edit path would erase.
+		const { source, html } = await rendered('text-box')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]?.runs[0]) throw new Error('fixture changed')
+		shape.text.paragraphs[0].runs[0].props.underline = 'none'
+		shape.text.paragraphs[0].runs[0].props.strike = 'none'
+
+		const emitted = await emitDeck(parsed, { source })
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		const run = back.text?.paragraphs[0]?.runs[0]
+		expect(run?.props.underline).toBe('none')
+		expect(run?.props.strike).toBe('none')
+	})
+
 	it('drops a deleted node and leaves its siblings', async () => {
 		// `bullet` has two shapes on one slide, so a deletion that took the wrong one
 		// — or took both — is visible rather than indistinguishable from success.

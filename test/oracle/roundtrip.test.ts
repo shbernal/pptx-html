@@ -90,6 +90,53 @@ describe('lanes', () => {
 		expect(result.report.undeclared).toEqual([])
 	})
 
+	it('carries an explicit “not underlined” through the loop, distinct from saying nothing', async () => {
+		// This test used to assert the *loss*, in the same inverted shape as the
+		// autofit case above and for the same reason. `readModelToIr` mapped
+		// `u="none"` and `strike="noStrike"` to `undefined`, so the token never
+		// reached `DeckIr` and the re-emitted deck stated nothing — not the same fact,
+		// since a run inheriting an underline from its list style and stating
+		// `u="none"` is not underlined while the re-emitted one is. Filed as
+		// https://github.com/shbernal/ts-pptx/issues/14 and pinned inverted so that a
+		// fix would fail here rather than pass unnoticed. It did, so the assertion is
+		// now the ordinary one.
+		//
+		// Still its own test rather than folded into the lanes, and the reason is
+		// worth keeping: at the time it was written `canonicalDeckIr` omitted the
+		// field too, so `diffDeckIr` compared two models *both* missing it and
+		// `assertRoundTrip` passed on this deck. Reading the tokens off both views is
+		// what made the coverage real then, and is what keeps it real now.
+		const entry = CORPUS.find((candidate) => candidate.name === 'text-decoration')
+		if (!entry) throw new Error('corpus lost its text-decoration deck')
+		const result = await roundTrip(await corpusBytes(entry), scriptLoop)
+
+		const decorationsOf = (view: (typeof result)['input']): unknown[] =>
+			view.ir.slides.flatMap((slide) =>
+				slide.calls.flatMap((call) =>
+					(call.args[0] as { options?: { underline?: unknown; strike?: unknown } }[]).map(
+						(run) => run.options?.underline ?? run.options?.strike ?? null
+					)
+				)
+			)
+
+		// All six states, in the deck's own order. The two `none`s are the ones that
+		// were dropped; a run that genuinely states nothing would be `null` here, so
+		// this array is also what distinguishes off from silent.
+		const expected = [{ style: 'sng' }, { style: 'dbl' }, { style: 'none' }, 'sngStrike', 'dblStrike', 'noStrike']
+		expect(decorationsOf(result.input)).toStrictEqual(expected)
+		expect(decorationsOf(result.output)).toStrictEqual(expected)
+
+		// And the half that was silent: the canonical model now carries the tokens, so
+		// a future regression is a difference the lanes can see rather than one they
+		// structurally cannot. Without this the values could drift and the diff agree.
+		expect(JSON.stringify(result.input.canonical)).toContain('noStrike')
+		// Nothing is lost on this path any more, so nothing declares a note for it
+		// either — a note here now would be a stale declaration rather than a cover.
+		expect(result.input.ir.fidelity.filter((note) => /underline|strike/i.test(note.construct))).toEqual([])
+		expect(result.notes.filter((note) => /underline|strike/i.test(note.construct))).toEqual([])
+		expect(result.report.undeclared).toEqual([])
+	})
+
 	it('the carry lane declares its gallery cost rather than hiding it', async () => {
 		// The lane's note must actually be doing work: strip it and the same
 		// run has to fail. A note that changes nothing is decoration.

@@ -84,6 +84,46 @@ describe('an edited document', () => {
 		expect(read?.props).toStrictEqual({ bold: true })
 	})
 
+	it('reads underline and strike back and reconciles the slide rather than drifting it', async () => {
+		// The lane is the assertion, not the value: these two arrived in the surface
+		// after `bold` and `sizePt`, and a reader that did not know them would file
+		// each as "carries a key that is not in the editable surface" — reporting a
+		// sanctioned edit as drift, which is the failure mode that makes the signal
+		// worthless by crying wolf.
+		const dom = await documentOf(SAMPLE_IR)
+		const span = dom.querySelector('[data-pxh-run]')
+		if (span === null) throw new Error('the rendered document has no editable runs')
+		span.setAttribute('data-pxh-props', JSON.stringify({ underline: 'double', strike: 'none' }))
+
+		const reading = readSurface(dom, SAMPLE_IR)
+		expect(reading.anomalies).toEqual([])
+
+		const address = span.getAttribute('data-pxh-run')
+		const read = reading.projection.slides
+			.flatMap((slide) => slide.nodes)
+			.flatMap((node) => node.runs)
+			.find((run) => `${run.node}/${run.paragraph}/${run.run}` === address)
+		expect(read?.props).toStrictEqual({ underline: 'double', strike: 'none' })
+
+		const result = reconcile(SAMPLE_IR, reading)
+		expect(result.slides[0]?.lane).toBe('reconciled')
+	})
+
+	it('refuses a decoration value outside the three the write API expresses', async () => {
+		// `ST_TextUnderlineType` has eighteen members and `RunProperties` models
+		// three, because three is what comes back. Accepting `wavyHeavy` here would
+		// put a value into the model that emit has nowhere to send — lost at the far
+		// end instead of refused at this one.
+		const dom = await documentOf(SAMPLE_IR)
+		const span = dom.querySelector('[data-pxh-run]')
+		if (span === null) throw new Error('the rendered document has no editable runs')
+		span.setAttribute('data-pxh-props', JSON.stringify({ underline: 'wavyHeavy' }))
+
+		const reading = readSurface(dom, SAMPLE_IR)
+		expect(reading.anomalies.join('\n')).toContain('must be one of none, single, double')
+		expect(JSON.stringify(reconcile(SAMPLE_IR, reading).ir)).not.toContain('wavyHeavy')
+	})
+
 	it('reports a removed node as a deletion and a removed run as drift', async () => {
 		// Two structurally similar edits with opposite meanings. Deleting a node is in
 		// surface and is honoured; deleting a *run* is not, so the model's text stands

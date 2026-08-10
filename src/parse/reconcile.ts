@@ -152,7 +152,7 @@ function applyText(owner: NodeId, text: TextBody | null, read: ReadonlyMap<strin
 }
 
 /**
- * Set the four editable properties to exactly what came back.
+ * Set the editable properties to exactly what came back.
  *
  * Absent has to mean *deleted*, not *unchanged*: absence is how this model spells
  * "inherited", so a run whose explicit bold was cleared in the document must lose

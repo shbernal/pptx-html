@@ -43,8 +43,43 @@ import { EDITABLE_RUN_PROPS, type EditableRunProp } from '../ir/surface'
 const OPTION_OF: Record<EditableRunProp, string> = {
 	bold: 'bold',
 	italic: 'italic',
+	underline: 'underline',
+	strike: 'strike',
 	sizePt: 'fontSize',
 	color: 'color',
+}
+
+/**
+ * `RunProperties.underline` in the write API's spelling. `TextPropsOptions.underline`
+ * is an object so it can carry `a:uFill` beside the style; the style alone is
+ * what this surface offers, and the three tokens are exactly the three modeled.
+ */
+const UNDERLINE_OPTION: Record<NonNullable<RunProperties['underline']>, string> = {
+	none: 'none',
+	single: 'sng',
+	double: 'dbl',
+}
+
+/**
+ * `RunProperties.strike`, likewise — all three of them the option's own declared
+ * values, since ts-pptx 3.1.0+b16fb74b widened the union to carry `noStrike`.
+ *
+ * The `none` arm is the one that has to be argued for, and the argument is the
+ * same one the whole surface rests on. `TextPropsOptions.strike` also accepts
+ * `false`, and `false` *omits* `a:rPr/@strike` — which states nothing and leaves
+ * the run whatever it inherits. `noStrike` states off. Mapping `none` to `false`
+ * would turn "this run is deliberately not struck through" into "this run says
+ * nothing", the flattening the surface exists to refuse.
+ *
+ * Nothing on this path would fail to compile if the token stopped reaching the
+ * attribute — a `CallIr` argument is an `IrValue`, so the option's type is not
+ * checked here at all. The `text-decoration` corpus deck and the oracle's
+ * `explicit "not underlined"` test are what hold it.
+ */
+const STRIKE_OPTION: Record<NonNullable<RunProperties['strike']>, string> = {
+	none: 'noStrike',
+	single: 'sngStrike',
+	double: 'dblStrike',
 }
 
 /** One run's new state, addressed as the surface addresses it. */
@@ -164,17 +199,29 @@ function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null
 /**
  * A surface value in the write API's spelling.
  *
- * Colour is the only one that is not a pass-through: the write API takes a bare
- * hex string or a theme-slot name, which is exactly the two arms of {@link Color}
- * and nothing else. A colour carrying transforms keeps its *slot*, not its
- * resolved hex — writing the resolved value would bake the source theme into the
- * deck and stop the shape tracking it, which is the flattening the paint model
- * exists to avoid.
+ * `bold`, `italic` and `sizePt` pass straight through; the other three do not,
+ * and each for its own reason.
+ *
+ * Colour takes a bare hex string or a theme-slot name, which is exactly the two
+ * arms of {@link Color} and nothing else. A colour carrying transforms keeps its
+ * *slot*, not its resolved hex — writing the resolved value would bake the source
+ * theme into the deck and stop the shape tracking it, which is the flattening the
+ * paint model exists to avoid.
+ *
+ * `underline` and `strike` are the OOXML tokens rather than this model's names:
+ * the IR spells the three values as `none`/`single`/`double` because that reads,
+ * and the deck spells them `none`/`sng`/`dbl` and `noStrike`/`sngStrike`/`dblStrike`.
+ * The translation is a table lookup with no third case, which is what keeps it a
+ * spelling change rather than an interpretation.
  */
 function optionValue(key: EditableRunProp, value: RunProperties[EditableRunProp]): unknown {
-	if (key !== 'color') return value
-	const color = value as Color
-	return color.kind === 'srgb' ? color.hex : color.slot
+	if (key === 'color') {
+		const color = value as Color
+		return color.kind === 'srgb' ? color.hex : color.slot
+	}
+	if (key === 'underline') return { style: UNDERLINE_OPTION[value as NonNullable<RunProperties['underline']>] }
+	if (key === 'strike') return STRIKE_OPTION[value as NonNullable<RunProperties['strike']>]
+	return value
 }
 
 // ---------------------------------------------------------------------------

@@ -23,7 +23,7 @@
  * The plan's drifted lane is "the DOM differs outside the surface". Detected in
  * full: a run element removed, a run address that is not in the model, a
  * duplicate address, and a `data-pxh-props` that is not a well-formed set of the
- * four editable properties. **Not** detected: a moved box, a recoloured path, a
+ * editable properties. **Not** detected: a moved box, a recoloured path, a
  * rewritten transform.
  *
  * That gap is deliberate and it is safe, for a reason worth stating rather than
@@ -38,6 +38,7 @@
 import type { NodeId, RenderIr, RunProperties } from '../ir/render'
 import {
 	EDITABLE_RUN_PROPS,
+	type EditableRunProp,
 	editableRunProps,
 	type ProjectedRun,
 	project,
@@ -57,7 +58,7 @@ export interface SurfaceReading {
 }
 
 /** `data-pxh-props`, validated. Anything unexpected is refused rather than coerced. */
-function readProps(raw: string | null, address: string, anomalies: string[]): Pick<RunProperties, 'bold' | 'italic' | 'sizePt' | 'color'> {
+function readProps(raw: string | null, address: string, anomalies: string[]): Pick<RunProperties, EditableRunProp> {
 	if (raw === null) return {}
 	let parsed: unknown
 	try {
@@ -82,7 +83,7 @@ function readProps(raw: string | null, address: string, anomalies: string[]): Pi
 	for (const key of EDITABLE_RUN_PROPS) {
 		const value = entries[key]
 		if (value === undefined) continue
-		const complaint = key === 'color' ? colorComplaint(value) : scalarComplaint(key, value)
+		const complaint = valueComplaint(key, value)
 		if (complaint !== null) {
 			anomalies.push(`run ${address}: data-pxh-props.${key} ${complaint}`)
 			continue
@@ -95,9 +96,35 @@ function readProps(raw: string | null, address: string, anomalies: string[]): Pi
 	return editableRunProps(picked as RunProperties)
 }
 
-function scalarComplaint(key: 'bold' | 'italic' | 'sizePt', value: unknown): string | null {
-	const wanted = key === 'sizePt' ? 'number' : 'boolean'
-	return typeof value === wanted ? null : `is ${typeof value} and must be ${wanted}`
+/** The three values `underline` and `strike` each model, and the only three either may be. */
+const DECORATION_VALUES = new Set(['none', 'single', 'double'])
+
+/**
+ * What is wrong with one stated property, or `null` if nothing is.
+ *
+ * Keyed off {@link EDITABLE_RUN_PROPS} so a property added there without a case
+ * here is a type error rather than a value waved through unchecked — the whole
+ * point of this function is that no surface value reaches the model unexamined.
+ */
+function valueComplaint(key: EditableRunProp, value: unknown): string | null {
+	switch (key) {
+		case 'color':
+			return colorComplaint(value)
+		case 'sizePt':
+			return typeof value === 'number' ? null : `is ${typeof value} and must be number`
+		case 'bold':
+		case 'italic':
+			return typeof value === 'boolean' ? null : `is ${typeof value} and must be boolean`
+		case 'underline':
+		case 'strike':
+			// The enum is narrow on purpose: `RunProperties` models three of
+			// `ST_TextUnderlineType`'s eighteen members because those are the three the
+			// write API expresses, so accepting a fourth here would put a value into the
+			// model that emit has nowhere to send.
+			return typeof value === 'string' && DECORATION_VALUES.has(value)
+				? null
+				: `is ${JSON.stringify(value)} and must be one of none, single, double`
+	}
 }
 
 /**
