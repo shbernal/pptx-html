@@ -165,12 +165,14 @@ export function fillOf(source: FillSource, scope: ImportScope): Fill {
 	const solid = colorOf(source.fillSchemeColor, source.resolvedFill)
 	if (solid !== undefined) return { kind: 'solid', color: solid }
 
-	// Nothing of its own. A shape or cell with no fill child takes its interior from
-	// `p:style/a:fillRef`, its placeholder or the table style, and that is a third
-	// state rather than a missing one: painting it as transparent loses the theme
-	// colour, painting it as a colour bakes a copy that stops moving when the style
-	// changes. The explicit `a:noFill` that used to land here for cells took the
-	// `none` arm as of ts-pptx 3.1.0.
+	// Nothing of its own, and nothing upstream could resolve for it either — a fill
+	// reachable through `p:style/a:fillRef` arrives in `resolvedFill` and returns on
+	// the line above. What is left takes its interior from a placeholder or the table
+	// style, neither of which this model follows, and that is a third state rather
+	// than a missing one: `none` would emit an explicit `a:noFill` the input never
+	// stated, and a colour would bake a copy that stops moving when the style changes.
+	// The explicit `a:noFill` that used to land here for cells took the `none` arm as
+	// of ts-pptx 3.1.0.
 	return { kind: 'inherit' }
 }
 
@@ -305,11 +307,14 @@ export function strokeOf(source: StrokeSource, scope: ImportScope): Stroke {
 	const tail = lineEndOf(source.lineEnds?.tail, scope)
 	noteLineAlign(source.lineAlign, scope)
 
-	// Nothing modeled stated at all: the line comes from the theme's `a:lnRef`, which
-	// the read model does not resolve. Reporting `none` here would erase every themed
-	// outline in the deck. `@algn` is deliberately not part of this test — it produced
-	// a note and nothing else, so a line stating only `@algn` still states nothing this
-	// model carries.
+	// Nothing modeled stated at all. Not "an outline we failed to resolve": `colorOf`
+	// above already consumed `resolvedLine`, which upstream resolves through
+	// `p:style/a:lnRef`, so a themed outline has returned by now. Reaching here means
+	// the shape states no `a:ln` and carries no style reference either. `inherit`
+	// records that absence; reporting `none` would emit an explicit `a:noFill` on the
+	// way out and hand back a deck that says something the input did not. `@algn` is
+	// deliberately not part of this test — it produced a note and nothing else, so a
+	// line stating only `@algn` still states nothing this model carries.
 	if (
 		color === undefined &&
 		gradient === null &&

@@ -3,24 +3,28 @@
  *
  * ## What `inherit` is drawn as, and why the two answers differ
  *
- * `inherit` means the deck states no paint of its own and takes one from
- * `p:style/a:fillRef` or `a:lnRef` — a reference into the theme's style matrix
- * that the read model does not resolve. There is no correct value to paint, so
- * this is a decision rather than a lookup, and fills and lines get opposite
- * answers because their common cases are opposite:
+ * `inherit` means **nothing this model can see states a paint at all**. It is
+ * not a theme reference left unfollowed: the read model *does* resolve
+ * `p:style/a:fillRef` and `a:lnRef`, through `resolvedFill` and `resolvedLine`,
+ * and every shape they answer for has already arrived here as `solid`. What
+ * reaches these two arms is the remainder — shapes carrying no style reference
+ * for upstream to follow — so there is no value to look up and painting is a
+ * decision rather than a lookup.
  *
- * - **An inherited fill is painted** ({@link INHERITED_FILL}, a flat neutral).
- *   Drawing it as transparent would erase every themed shape in the deck, which
- *   is the one outcome that makes the preview actively misleading — a shape that
- *   is *there* would look like a shape that is *not*. Every element painted this
- *   way carries `data-pxh-approx`, so the guess is auditable in the DOM instead
- *   of passing for something the deck said.
- * - **An inherited line is not painted.** The shapes that state no line are
- *   overwhelmingly the ones whose style reference is `a:lnRef idx="0"` — no line
- *   at all — text boxes above all. A hairline on every text box would *add*
- *   outlines the deck does not have, which is the same class of error in the
- *   other direction, and a missing outline distorts a slide far less than a
- *   missing shape.
+ * - **An inherited line is not painted.** A shape that states no outline *and*
+ *   has no `a:lnRef` to fall back through is one PowerPoint draws no outline
+ *   for, so `none` here is not a guess in the way the fill below is. A hairline
+ *   on every text box would add outlines the deck does not have.
+ * - **An inherited fill is painted** ({@link INHERITED_FILL}, a flat neutral),
+ *   and that choice is older than the measurement above and is not supported by
+ *   it. It was made to stop transparency from erasing themed shapes — but themed
+ *   shapes resolve to `solid` and never reach this arm. Across a 47-deck
+ *   PowerPoint corpus every shape that did reach it was a placeholder (title,
+ *   body, slide number, footer, date), none of which PowerPoint fills, so the
+ *   neutral lays a grey rectangle behind exactly the text a reader is meant to
+ *   read. Every element painted this way carries `data-pxh-approx`, so the guess
+ *   is at least auditable in the DOM rather than passing for something the deck
+ *   said.
  *
  * Neither choice touches the round trip: `Fill.inherit` and `Stroke.inherit`
  * travel through the island as themselves, and only the picture approximates.
