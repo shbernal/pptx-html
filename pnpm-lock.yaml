@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@shbernal/ts-pptx':
-        specifier: github:shbernal/ts-pptx#aab5f2b39492741b91bd1fe23f27f54ee3dc0965
-        version: https://codeload.github.com/shbernal/ts-pptx/tar.gz/aab5f2b39492741b91bd1fe23f27f54ee3dc0965
+        specifier: github:shbernal/ts-pptx#afb93085499e929fdc7942dae43df77df1cb2a87
+        version: https://codeload.github.com/shbernal/ts-pptx/tar.gz/afb93085499e929fdc7942dae43df77df1cb2a87
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.7
@@ -735,8 +735,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@shbernal/ts-pptx@https://codeload.github.com/shbernal/ts-pptx/tar.gz/aab5f2b39492741b91bd1fe23f27f54ee3dc0965':
-    resolution: {gitHosted: true, integrity: sha512-0rO/ucxCSnU6EVJpQtXPNIdEU6Twg/DhwLxemknyuCjU9lhBA/LyvonnO0qVRbQ+k01AUxwtluGdlUgc4RVvBw==, tarball: https://codeload.github.com/shbernal/ts-pptx/tar.gz/aab5f2b39492741b91bd1fe23f27f54ee3dc0965}
+  '@shbernal/ts-pptx@https://codeload.github.com/shbernal/ts-pptx/tar.gz/afb93085499e929fdc7942dae43df77df1cb2a87':
+    resolution: {gitHosted: true, integrity: sha512-bDvA+57K5hGiTD+bXi4PNo/axexkmle9yFbs5VmC1Fq0BLcydjVMQbEdnsak658/3xDQAAlUC6Eql9FiQCm5Aw==, tarball: https://codeload.github.com/shbernal/ts-pptx/tar.gz/afb93085499e929fdc7942dae43df77df1cb2a87}
     version: 3.1.0
     engines: {node: '>=24'}
     peerDependencies:
@@ -2400,7 +2400,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.4':
     optional: true
 
-  '@shbernal/ts-pptx@https://codeload.github.com/shbernal/ts-pptx/tar.gz/aab5f2b39492741b91bd1fe23f27f54ee3dc0965':
+  '@shbernal/ts-pptx@https://codeload.github.com/shbernal/ts-pptx/tar.gz/afb93085499e929fdc7942dae43df77df1cb2a87':
     dependencies:
       '@xmldom/xmldom': 0.9.10
       fflate: 0.8.3

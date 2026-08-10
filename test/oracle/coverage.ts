@@ -14,7 +14,7 @@
  */
 
 import type { Cause, DeckIr, Disposition, FidelityNote } from '@shbernal/ts-pptx/script'
-import { knownNoteConstructs } from '@shbernal/ts-pptx/script'
+import { isKnownNoteConstruct } from '@shbernal/ts-pptx/script'
 
 const DISPOSITIONS: Disposition[] = ['dropped', 'flattened', 'approximated']
 const CAUSES: Cause[] = ['unread', 'unwritable', 'unsupported']
@@ -55,12 +55,18 @@ export function coverageRow(deck: string, tier: string, ir: DeckIr): CoverageRow
  *
  * A note whose construct the matcher table does not know can never declare
  * anything: it sits in `unmatchedNotes` forever while the difference it was
- * meant to excuse is reported as a defect. Cross-checking against
- * `knownNoteConstructs()` is what stops that from hiding.
+ * meant to excuse is reported as a defect. Cross-checking against upstream's own
+ * table is what stops that from hiding.
+ *
+ * `isKnownNoteConstruct` rather than membership of `knownNoteConstructs()`: a
+ * note recorded against a layout's shape carries the `layout.` prefix and is
+ * deliberately absent from that list, so a set lookup calls every one of them
+ * unmatchable. The predicate is the half of the pair that resolves the prefix.
  */
 export function unmatchableConstructs(notes: FidelityNote[]): string[] {
-	const known = new Set(knownNoteConstructs())
-	return [...new Set(notes.map((note) => note.construct))].filter((construct) => !known.has(construct)).sort()
+	return [...new Set(notes.map((note) => note.construct))]
+		.filter((construct) => !isKnownNoteConstruct(construct))
+		.sort()
 }
 
 function pad(value: string, width: number): string {

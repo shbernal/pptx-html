@@ -207,6 +207,14 @@ and the layout's own flag governs the master's. Both tiers' **placeholders** are
 excluded regardless: a layout placeholder is a prompt for the slide's content, and
 the slide's own shape already carries the geometry it inherited from it.
 
+Upstream also reads these shapes, for a different output, and the two do not
+overlap. `printStandaloneScript` re-authors a layout's furniture into
+`defineSlideMaster({ objects })`, because a standalone script has no template to
+bind to and would otherwise emit a deck wearing the wrong suit. This project
+prints the **template-anchored** tier, where the layout part is already in the
+package — so chrome here is read to be *drawn* and nothing else, and that tier
+suppresses the `layout.`-prefixed notes upstream files about the rebuild.
+
 ## Two ways to carry a slide, and they are not interchangeable
 
 `importSlide(source: Presentation, index)` needs the **live source package** and
@@ -270,14 +278,21 @@ apart when reading the IR.
 
 `TextBody.autofitFontScalePct` and `autofitLineSpaceReductionPct` are the current
 example. They come off the read model, they decide the size text is painted at,
-and they cannot travel any further: emit folds edits into a `DeckIr`, and
-`readModelToIr` reduces a baked `<a:normAutofit fontScale="…"/>` to `fit:
-'shrink'` before this project sees it, so the numbers are gone from the contract
-model upstream of anything local
-([ts-pptx#13](https://github.com/shbernal/ts-pptx/issues/13)). Reading them for
-the preview is still right — a frame PowerPoint shrank to 40% otherwise renders
-two and a half times too large — but nothing may treat such a field as part of
-the round-trip guarantee, and each one says so in its own doc comment.
+and they do not travel onward from here: emit folds edits into a `DeckIr` and
+never reads `RenderIr`, nothing in the editable surface can change them, and
+re-deriving one would mean measuring text.
+
+They are worth reading as the category's cleanest case *because* the reason
+narrowed. It used to be that the numbers were gone from the contract model
+altogether — `readModelToIr` flattened a baked `<a:normAutofit fontScale="…"/>`
+to `fit: 'shrink'`, so a deck came back painting text it had shrunk to 40% at
+full size. That was [ts-pptx#13](https://github.com/shbernal/ts-pptx/issues/13),
+and it is fixed: the `DeckIr` carries `fit: { type: 'shrink', fontScale,
+lnSpcReduction }` now, and the round trip preserves it. So these fields are no
+longer the only copy of anything — the deck keeps its own, by its own route. What
+makes them paint data is the architecture, not a gap, and that is the durable
+form of the category. Nothing may treat such a field as part of the round-trip
+guarantee, and each one says so in its own doc comment.
 
 `RenderSlide.chrome` is the other, and it is paint data for a different reason:
 not because the contract model dropped it, but because the contract model never

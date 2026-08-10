@@ -52,30 +52,41 @@ describe('lanes', () => {
 		})
 	}
 
-	it('loses a frame’s baked shrink, undeclared, and cannot see that it did', async () => {
-		// A real loss that every lane above reports as clean, pinned here so it is at
-		// least written down. The writer emits
-		// `<a:normAutofit fontScale="70000" lnSpcReduction="20000"/>`; `readModelToIr`
-		// reduces the whole thing to `fit: 'shrink'`, so the numbers are gone before
-		// emit starts and the re-emitted frame bakes nothing. `diffDeckIr` compares two
-		// `DeckIr`s that are *both* missing the field, which is why it says nothing —
-		// the failure mode a lane test structurally cannot catch, unlike the mutations
-		// below. Filed as https://github.com/shbernal/ts-pptx/issues/13.
+	it('carries a frame’s baked shrink through the loop, and keeps an unbaked one distinct', async () => {
+		// This test used to assert the *loss*: `readModelToIr` reduced every
+		// `normAutofit` to `fit: 'shrink'`, so a frame the writer emitted as
+		// `<a:normAutofit fontScale="70000" lnSpcReduction="20000"/>` came back bare,
+		// and `diffDeckIr` compared two `DeckIr`s both missing the field and called it
+		// clean. Filed as https://github.com/shbernal/ts-pptx/issues/13 and pinned
+		// inverted — asserting the loss rather than its absence — precisely so that
+		// upstream fixing it would fail here rather than pass unnoticed. It did, so
+		// the assertion is now the ordinary one.
 		//
-		// The preview is unaffected: `RenderIr` reads the attributes straight off the
-		// read model and paints them, which is why `TextBody.autofitFontScalePct` is
-		// documented as read-only paint data rather than as part of the contract.
+		// Kept as its own test rather than folded into the lanes above, because the
+		// lanes could not see this and still could not: they assert that `diffDeckIr`
+		// found nothing, which is only as strong as what the canonical model carries.
+		// Reading the numbers off both views is what makes the coverage real.
 		const entry = CORPUS.find((candidate) => candidate.name === 'autofit-shrink')
 		if (!entry) throw new Error('corpus lost its autofit-shrink deck')
 		const result = await roundTrip(await corpusBytes(entry), scriptLoop)
 
 		const fitOf = (view: (typeof result)['input']): unknown[] =>
 			view.ir.slides.flatMap((slide) => slide.calls.map((call) => (call.args[1] as { fit?: unknown })?.fit))
-		expect(fitOf(result.input)).toStrictEqual(['shrink', 'shrink', 'shrink'])
-		expect(fitOf(result.output)).toStrictEqual(['shrink', 'shrink', 'shrink'])
-		// Flattened before either side of the diff could hold it, and nothing declared it.
-		expect(JSON.stringify(result.input.canonical)).not.toContain('fontScale')
-		expect(result.notes.filter((note) => /autofit|fontScale|lnSpc/i.test(note.construct))).toEqual([])
+		// The object form and the string form are two states, not one value at two
+		// precisions: ECMA-376 §21.1.2.1.3 defaults each attribute only when it is
+		// *omitted*, and PowerPoint recomputes an unbaked scale on the next edit while
+		// drawing a baked one exactly as written. Collapsing `unbaked` into
+		// `{ fontScale: 100 }` would be the same bug in the other direction.
+		const expected = [
+			{ type: 'shrink', fontScale: 70, lnSpcReduction: 20 },
+			{ type: 'shrink', fontScale: 62.5, lnSpcReduction: 10 },
+			'shrink',
+		]
+		expect(fitOf(result.input)).toStrictEqual(expected)
+		expect(fitOf(result.output)).toStrictEqual(expected)
+		// And the canonical model carries them, which is the half that was silent:
+		// without it the numbers could differ across the loop and the diff would agree.
+		expect(JSON.stringify(result.input.canonical)).toContain('fontScale')
 		expect(result.report.undeclared).toEqual([])
 	})
 

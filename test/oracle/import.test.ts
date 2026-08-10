@@ -8,6 +8,7 @@
  * oracle project owns. No DOM is involved.
  */
 
+import { LAYOUT_NOTE_PREFIX } from '@shbernal/ts-pptx/script'
 import { describe, expect, it } from 'vitest'
 import { importDeck } from '../../src/import/deck'
 import type { RenderIr, RenderNode, ShapeNode } from '../../src/ir/render'
@@ -330,21 +331,32 @@ describe('the template’s furniture arrives as chrome, not as nodes', () => {
 		for (const node of flatten(slide.chrome)) expect(slideIds.has(node.id)).toBe(false)
 	})
 
-	it('files no fidelity note of its own for what it found on a layout', async () => {
+	it('files no fidelity note of its own, and lets no layout note reach the slide', async () => {
 		// Chrome is not emitted — the layout part travels in the template package and
 		// the emitted deck binds to it — so a note filed while *walking* it would
 		// declare a loss the round trip never takes, addressed to a shape that is not
-		// on the slide. Upstream's notes are untouched, and upstream already has the
-		// one that covers this ground: `master.decoration`, filed once for the tier
-		// rather than once per shape the importer happened to visit.
+		// on the slide. `forChrome` replaces the notes array, which is what enforces it.
 		const entry = CORPUS.find((candidate) => candidate.name === 'layout-chrome')
 		if (!entry) throw new Error('the corpus lost its layout-chrome deck')
 		const { deck, render } = await importDeck(await corpusBytes(entry))
 
 		const chromeNames = new Set(flatten(render.slides[0]?.chrome ?? []).map((node) => node.name))
 		expect(chromeNames).toEqual(new Set(['Shape 0', 'Text 1']))
+
+		// The second half, which upstream's layout rebuild turned from theoretical into
+		// live. It no longer declares a layout's furniture lost — it re-authors it into
+		// `defineSlideMaster({ objects })` — so `master.decoration` is gone from this
+		// deck and what remains is `layout.text.indent`, a genuine loss on the wordmark,
+		// under the `layout.` prefix upstream added to mark whose tier it is about.
+		//
+		// That note names a shape by a name that *is* a chrome name, and it must still
+		// not land on the slide: a layout note carries no slide number, so the slide
+		// filter excludes it. Without that, the preview would show "Text 1 lost its
+		// indent" beneath a slide whose own content is intact, about a shape the reader
+		// cannot select and an edit the return path never makes.
+		const layoutNotes = deck.fidelity.filter((note) => note.construct.startsWith(LAYOUT_NOTE_PREFIX))
+		expect(layoutNotes.map((note) => note.shapeName)).toContain('Text 1')
 		for (const note of render.slides[0]?.fidelity ?? []) expect(chromeNames.has(note.shapeName ?? '')).toBe(false)
-		expect(deck.fidelity.map((note) => note.construct)).toContain('master.decoration')
 	})
 
 	it('leaves chrome empty for a deck whose layout carries only placeholders', async () => {
