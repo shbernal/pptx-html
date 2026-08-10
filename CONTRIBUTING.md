@@ -11,35 +11,40 @@ Requires Node `>=24` and pnpm.
 pnpm install
 ```
 
-The writer dependency, `@shbernal/ts-pptx`, is pinned to a **git sha** rather than
-a released version: `github:shbernal/ts-pptx#<sha>`. No local link or sibling
-checkout is required either way — pnpm fetches the tarball GitHub serves for that
-commit. Upstream gitignores its `dist/`, so that tarball carries no build output
-and packing it runs the writer's `prepack`: the writer is built from source during
-install, once per sha per machine (~40s), and linked from the store every time
-after. That build is also why `'@shbernal/ts-pptx': true` sits in `allowBuilds` —
-pnpm 11 gates git-dependency preparation behind the same allowlist as postinstall
-scripts, and there an unanswered or denied entry does not skip a script, it fails
-the install with `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`.
+The writer dependency, `@shbernal/ts-pptx`, is a **released version from npm**
+(`^3.2.0`). It was pinned to a git sha for as long as the fixes this repo depends
+on were unreleased; that is over, and the range is what a published `pptx-html`
+has to carry anyway — a git URL in `dependencies` travels to consumers and would
+make every installer build the writer from source, which `prepublishOnly` does not
+check for.
 
-To move to a newer upstream commit — which must be pushed to GitHub first, since
-`github:` resolves nothing local:
+To move to a newer release:
 
 ```bash
-pnpm add "github:shbernal/ts-pptx#<sha>"
+pnpm add "@shbernal/ts-pptx@^<version>"
 npx skills add ./node_modules/@shbernal/ts-pptx -s '*' -a claude-code -a codex -a universal -y
 pnpm run test:oracle
 ```
 
 The skill reinstall is part of the bump, not a separate chore: the skill ships
-inside the package, so it moves with the pin ([AGENTS.md](./AGENTS.md)). And the
-version number stops identifying the build — `pres.version` reports whatever the
-manifest said at that commit, the same number across many shas — so the sha in
-`package.json` is the only thing that names it.
+inside the package, so it moves with the version ([AGENTS.md](./AGENTS.md)).
 
-The pin goes back to a version range before this package is published. A git URL
-in `dependencies` travels to consumers and would make every installer of
-`pptx-html` build the writer from source; `prepublishOnly` does not check for it.
+Two things the sha era left behind in `pnpm-workspace.yaml`, both still live:
+
+- `'@shbernal/ts-pptx': false` in `allowBuilds`. The entry is no longer about
+  building the writer — the published tarball ships `dist/` — but the manifest
+  still declares `prepare`, which pnpm counts as a build script and asks about for
+  a registry dependency too. Deleting the line makes pnpm write `set this to true
+  or false` back into the file; `false` is correct because that `prepare` is
+  upstream's own dev wiring and does nothing for a consumer.
+- `minimumReleaseAgeExclude`. Inert while the pin was a sha, because the gate reads
+  a registry publish date and a git tarball has none. It is now the thing that
+  keeps a same-day bump installable.
+
+If a fix is needed before it is released, `npm i github:shbernal/ts-pptx#<sha>`
+works as of 3.2.0 — the install builds from source and pulls upstream's
+`devDependencies`, so it is for trying an unreleased fix, not for staying on.
+Going back to a sha means restoring `allowBuilds` to `true`.
 
 `lefthook`'s postinstall is denied on purpose in `pnpm-workspace.yaml`, and there
 is deliberately no `prepare: lefthook install` script. That postinstall syncs git

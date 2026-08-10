@@ -343,20 +343,32 @@ describe('the template’s furniture arrives as chrome, not as nodes', () => {
 		const chromeNames = new Set(flatten(render.slides[0]?.chrome ?? []).map((node) => node.name))
 		expect(chromeNames).toEqual(new Set(['Shape 0', 'Text 1']))
 
-		// The second half, which upstream's layout rebuild turned from theoretical into
-		// live. It no longer declares a layout's furniture lost — it re-authors it into
-		// `defineSlideMaster({ objects })` — so `master.decoration` is gone from this
-		// deck and what remains is `layout.text.indent`, a genuine loss on the wordmark,
-		// under the `layout.` prefix upstream added to mark whose tier it is about.
+		// The second half. A note about a layout must not land on the slide: it would
+		// show the reader "Text 1 lost its indent" beneath a slide whose own content is
+		// intact, about a shape they cannot select and an edit the return path never
+		// makes. The mechanism is that such a note carries **no slide number**, so the
+		// `slideNumber === number` filter that builds a slide's notes drops it.
 		//
-		// That note names a shape by a name that *is* a chrome name, and it must still
-		// not land on the slide: a layout note carries no slide number, so the slide
-		// filter excludes it. Without that, the preview would show "Text 1 lost its
-		// indent" beneath a slide whose own content is intact, about a shape the reader
-		// cannot select and an edit the return path never makes.
-		const layoutNotes = deck.fidelity.filter((note) => note.construct.startsWith(LAYOUT_NOTE_PREFIX))
-		expect(layoutNotes.map((note) => note.shapeName)).toContain('Text 1')
-		for (const note of render.slides[0]?.fidelity ?? []) expect(chromeNames.has(note.shapeName ?? '')).toBe(false)
+		// This used to be anchored on a live `layout.text.indent`, the last note left on
+		// this deck once upstream started re-authoring a layout's furniture into
+		// `defineSlideMaster({ objects })`. ts-pptx 3.2.0 retired that note too — it
+		// carries a paragraph's own margins now — so the corpus produces no
+		// `layout.`-prefixed note at all, and anchoring on one would assert nothing
+		// while looking like it asserts something.
+		//
+		// So the guard is asserted through the *class* a layout note belongs to: notes
+		// with no slide number. That class is non-empty here and stays that way — a
+		// deck-level loss (theme, master, docProps) is always in it — which is what
+		// keeps this from going quietly vacuous a second time.
+		expect(deck.fidelity.filter((note) => note.construct.startsWith(LAYOUT_NOTE_PREFIX))).toEqual([])
+
+		const deckLevel = deck.fidelity.filter((note) => note.slideNumber === null)
+		expect(deckLevel.length).toBeGreaterThan(0)
+		const slideNotes = render.slides[0]?.fidelity ?? []
+		for (const note of slideNotes) expect(note.slideNumber).toBe(1)
+		for (const note of deckLevel) expect(slideNotes).not.toContain(note)
+
+		for (const note of slideNotes) expect(chromeNames.has(note.shapeName ?? '')).toBe(false)
 	})
 
 	it('leaves chrome empty for a deck whose layout carries only placeholders', async () => {

@@ -30,34 +30,34 @@ theme-color         hard       slides=1 (1a/0c)  calls=2
 
 # fidelity notes by disposition × cause (whole corpus)
              unread       unwritable   unsupported  
-dropped      26           47           6            
+dropped      26           25           6            
 flattened    0            25           9            
 approximated 25           0            4            
 
 # constructs named, by deck
-text-box            deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
+text-box            deck.docProps, master.background, master.txStyles, theme.fmtScheme
 autoshape           deck.docProps, master.background, master.txStyles, theme.fmtScheme
 preset-geometry     deck.docProps, master.background, master.txStyles, theme.fmtScheme
 custgeom            deck.docProps, master.background, master.txStyles, shape.custGeom.guides, theme.fmtScheme
-table               deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, text.indent, theme.fmtScheme
-cell-fill           deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, text.indent, theme.fmtScheme
+table               deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
+cell-fill           deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
 picture             deck.docProps, master.background, master.txStyles, theme.fmtScheme
 connector           deck.docProps, master.background, master.txStyles, theme.fmtScheme
 gradient            deck.docProps, master.background, master.txStyles, theme.fmtScheme
-group               deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
-nested-group        deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
-hyperlink           deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
+group               deck.docProps, master.background, master.txStyles, theme.fmtScheme
+nested-group        deck.docProps, master.background, master.txStyles, theme.fmtScheme
+hyperlink           deck.docProps, master.background, master.txStyles, theme.fmtScheme
 line-cap            deck.docProps, master.background, master.txStyles, theme.fmtScheme
-bullet              deck.docProps, master.background, master.txStyles, text.bullet.picture, text.indent, theme.fmtScheme
-autofit-shrink      deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
-text-decoration     deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
-paragraph-align     deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
-paragraph-bullet    deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.indent, theme.fmtScheme
-master-background   deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, text.indent, theme.fmtScheme
-layout-chrome       deck.docProps, layout.text.indent, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, text.indent, theme.fmtScheme
+bullet              deck.docProps, master.background, master.txStyles, text.bullet.picture, theme.fmtScheme
+autofit-shrink      deck.docProps, master.background, master.txStyles, theme.fmtScheme
+text-decoration     deck.docProps, master.background, master.txStyles, theme.fmtScheme
+paragraph-align     deck.docProps, master.background, master.txStyles, theme.fmtScheme
+paragraph-bullet    deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, theme.fmtScheme
+master-background   deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, theme.fmtScheme
+layout-chrome       deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, theme.fmtScheme
 chart               chart.workbook, deck.docProps, master.background, master.txStyles, theme.fmtScheme
-layout-placeholder  deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, text.indent, theme.fmtScheme
-notes               deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
+layout-placeholder  deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, theme.fmtScheme
+notes               deck.docProps, master.background, master.txStyles, theme.fmtScheme
 rotated-flipped     deck.docProps, master.background, master.txStyles, theme.fmtScheme
-theme-color         deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme"
+theme-color         deck.docProps, master.background, master.txStyles, theme.fmtScheme"
 `;

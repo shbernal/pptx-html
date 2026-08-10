@@ -314,7 +314,7 @@ it. So the property waited, with the reason recorded where a reader would ask fo
 it, and the ask went upstream as
 [ts-pptx#15](https://github.com/shbernal/ts-pptx/issues/15) — the same shape as
 ts-pptx#10, which added a spelling for an inherited *fill*. `bullet: 'inherit'`
-landed in `aedf5753`, and the property is in surface as of that pin.
+shipped in ts-pptx 3.2.0, and the property is in surface as of that release.
 
 What may be **set** is still narrower than what is **carried**. A numbering scheme
 outside the option's sixteen, a picture bullet, a glyph with its own theme colour:

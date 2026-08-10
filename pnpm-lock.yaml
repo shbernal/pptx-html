@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@shbernal/ts-pptx':
-        specifier: github:shbernal/ts-pptx#aedf57539a214fd16ad3cbfe899e06a85a0df47a
-        version: https://codeload.github.com/shbernal/ts-pptx/tar.gz/aedf57539a214fd16ad3cbfe899e06a85a0df47a
+        specifier: ^3.2.0
+        version: 3.2.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.7
@@ -735,9 +735,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@shbernal/ts-pptx@https://codeload.github.com/shbernal/ts-pptx/tar.gz/aedf57539a214fd16ad3cbfe899e06a85a0df47a':
-    resolution: {gitHosted: true, integrity: sha512-8pRg02kKcgMwcrOGTK/n5cd7oN/oxinRuUgMq0WVpCa4W6zfIs7gnqG8k+YuncRsZCN9y98lO28BorUPY54f9Q==, tarball: https://codeload.github.com/shbernal/ts-pptx/tar.gz/aedf57539a214fd16ad3cbfe899e06a85a0df47a}
-    version: 3.1.0
+  '@shbernal/ts-pptx@3.2.0':
+    resolution: {integrity: sha512-RK/1Zurg+L0PRckAIM2NuJHSlIOKmTrnDxRvTbpdtffFn23VWPAGpuFvqa2W3x8BBm6bzIkbKBEcpYfwcu3f6A==}
     engines: {node: '>=24'}
     peerDependencies:
       mathml2omml: ^0.5.0
@@ -2400,7 +2399,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.4':
     optional: true
 
-  '@shbernal/ts-pptx@https://codeload.github.com/shbernal/ts-pptx/tar.gz/aedf57539a214fd16ad3cbfe899e06a85a0df47a':
+  '@shbernal/ts-pptx@3.2.0':
     dependencies:
       '@xmldom/xmldom': 0.9.10
       fflate: 0.8.3

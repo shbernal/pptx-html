@@ -16,18 +16,27 @@
 # than left blank because an unanswered build script makes `pnpm install` exit
 # non-zero, and every `pnpm run` performs that check first.
 #
-# The writer is allowed because it is pinned to a git sha, and a git dependency
-# has to be built before it can be installed: `dist/` is gitignored upstream, so
-# pnpm packs the checkout, which runs its `prepack` — `pnpm run build`. This is
-# not the answerable-either-way case the two above are. Denying it, or leaving it
-# unanswered, fails the install outright with
-# `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`. The cost is a from-source build the
-# first time each sha is installed; the store keeps the prepared package, so
-# every later install of that sha is a link.
+# The writer flipped from `true` to `false`, and the entry still has to be here.
+# While it was pinned to a git sha it had to be *built* before it could be
+# installed — `dist/` is gitignored upstream, so pnpm packed the checkout and ran
+# its `prepack` — and denying or not answering that failed the install outright
+# with `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`.
+#
+# The pin is a registry range now and the published tarball carries `dist/`, so
+# there is nothing left to build. The entry survives because the published
+# manifest still declares `prepare`, which pnpm counts as a build script and asks
+# about no matter where the package came from; removing the line just makes pnpm
+# write `set this to true or false` back into this file. Denied rather than
+# allowed because that `prepare` is upstream's own dev wiring — `install-hooks`,
+# which skips when `INIT_CWD` is outside its checkout, and `ensure-dist
+# --if-missing`, a no-op against a `dist/` that shipped. Neither does anything for
+# a consumer, so this is the answerable-either-way case the two below are, and
+# `false` is the answer that runs no foreign script. Back to `true` if the pin
+# ever returns to a sha.
 allowBuilds:
+  '@shbernal/ts-pptx': false
   esbuild: false
   lefthook: false
-  '@shbernal/ts-pptx': true
 #
 # The writer is excluded from the release-age gate. That gate exists to keep a
 # compromised publish from being pulled in before anyone notices it; this repo
@@ -39,8 +48,9 @@ allowBuilds:
 # lockfile verification that runs before every script does not honour it, so the
 # entry it wrote does not unblock the commit it was written for.
 #
-# Inert while the pin is a git sha — the gate reads a registry publish date and a
-# git tarball has none — and live again the moment the pin returns to a version
-# range, which is why it stays.
+# This is the entry that stopped being theoretical. It was inert for as long as
+# the pin was a git sha — the gate reads a registry publish date and a git tarball
+# has none — and the pin is a version range again, so it is now the thing keeping
+# a same-day bump installable rather than a note about one.
 minimumReleaseAgeExclude:
   - '@shbernal/ts-pptx'
