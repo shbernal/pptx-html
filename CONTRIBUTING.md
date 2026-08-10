@@ -58,7 +58,7 @@ environment already provides.
 
 ```bash
 pnpm run build        # tsdown → ESM dist/
-pnpm run typecheck    # tsc --noEmit
+pnpm run typecheck    # tsc --noEmit, over src/ and site/; needs `build` first
 pnpm run check        # biome: lint + format + import sorting
 pnpm run check:fix
 

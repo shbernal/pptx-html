@@ -52,11 +52,17 @@ jobs:
       - name: Check formatting
         run: pnpm run format:check
 
-      - name: Typecheck
-        run: pnpm run typecheck
-
+      # Before the typecheck, and the order is load-bearing. `pnpm run typecheck`
+      # checks `site/` too, and the site imports `pptx-html` by name — resolved
+      # through the `exports` map to `dist/index.d.ts`, the way a consumer's
+      # editor resolves it. With no `dist/` on disk that is seventeen errors
+      # about a module that cannot be found, which is a true statement about the
+      # runner and nothing at all about the code.
       - name: Build package artifacts
         run: pnpm run build
+
+      - name: Typecheck
+        run: pnpm run typecheck
 
       # The example is a public claim about the API, and it imports the package by
       # name rather than by relative path — so it is the only thing here that
