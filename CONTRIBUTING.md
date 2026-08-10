@@ -228,22 +228,36 @@ upstream and what stays here.
 
 ## Releasing
 
-Publishing is **manual and deliberate**. There is no release workflow in
-`.github/`, and the omission is the current answer rather than a gap nobody
-noticed: CI gates every push already, and a tag-triggered publish would make the
-irreversible half of a release — the version on the registry — a side effect of
-pushing a tag.
+Publishing runs from CI, through npm's **trusted publishing**. The job in
+[`.github/workflows/publish.yml`](./.github/workflows/publish.yml) mints a
+short-lived OIDC token, npm exchanges it for a credential scoped to this package
+and to that one workflow file, and the package comes out carrying provenance
+that points back at the run. There is no `NPM_TOKEN` in the repo secrets, and
+there should not be one: a stored credential outlives every job that uses it and
+is worth stealing, which a token that expires in minutes and cannot publish
+anything else is not.
 
-`prepack` builds and `prepublishOnly` runs typecheck, biome and the oracle, so
-the package cannot go out unbuilt or with a red gate. Neither of those runs the
-browser layer or the site, which is why the first step is by hand:
+Two things are load-bearing and easy to break while tidying:
 
-```bash
-pnpm run test          # build + all three vitest projects
-pnpm run site:build    # dead-link checking; the acceptance test for the docs mirror
-```
+- **The filename.** npm's trusted-publisher configuration names `publish.yml`.
+  Renaming the file revokes the package's ability to publish until the
+  configuration on npmjs.com is changed to match — and the failure arrives at
+  publish time, not at lint time.
+- **The trigger.** Publishing the GitHub *release* is what starts it, not pushing
+  the tag. A tag travels on a `git push --follow-tags` and can be cut by a script
+  or by accident; publishing a release is a decision, and it is also the act that
+  produces the notes a consumer reads. So the deliberate half stays human and the
+  irreversible half follows it.
 
-Then, in order:
+The workflow re-checks that the tag matches `package.json` and that the changelog
+has a section for the version, then runs `pnpm run test` — the browser layer
+included — and the example before publishing. `prepack` builds and
+`prepublishOnly` runs typecheck, biome and the oracle at the moment of publishing,
+exactly as they would from a laptop, so the two paths cannot drift apart.
+
+### Before you tag
+
+What no check can have an opinion about:
 
 1. **Bump `version` in `package.json`.** Pre-1.0 the loop's four legs and the
    editable surface are the stable surface and the heuristic lane's model is not,
@@ -256,18 +270,27 @@ Then, in order:
 4. **Inspect the tarball**: `npm pack --dry-run`. `files` is `dist` plus the
    changelog, and npm adds `README.md`, `LICENSE` and `package.json` on its own;
    anything else appearing is a bug in `files`.
-5. **Commit, tag, push.** `git tag v<version> && git push --follow-tags`. The tag
-   has to exist before the changelog's `[x.y.z]` link resolves.
-6. **`pnpm publish`.** It refuses a dirty tree or a non-default branch by default;
-   let it. The package is unscoped and public, so no `--access` flag is needed.
-7. **Cut the GitHub release** against the tag, with the changelog section as its
-   body.
 
-If publishing ever moves into CI, the thing to reach for is npm's **trusted
-publishing** (OIDC from GitHub Actions) rather than a long-lived `NPM_TOKEN` in
-the repo secrets — it needs no stored credential and stamps the package with
-provenance. That is a decision about the release, not a refactor, so it is not
-made here in passing.
+Commit that and let CI go green on `main`. The site is deployed from that run,
+which is why the publish workflow does not build it again.
+
+### Then
+
+```bash
+git tag -a v<version> -m "v<version> — <one line>"
+git push --follow-tags
+gh release create v<version> --verify-tag --notes-file <file>   # this is the publish
+```
+
+The tag has to exist before the changelog's `[x.y.z]` link resolves, and
+`--verify-tag` refuses to invent one that does not. Use the changelog section as
+the release body.
+
+Then watch it — `gh run watch` — and check the npm page shows the new version
+with a provenance badge. If the job fails after the release exists, re-run it
+from the Actions tab; the release does not need cutting again. If it failed
+*after* the upload, the version is gone for good — npm does not reuse a version
+number — so the fix is the next patch, not a retry.
 
 ## Commits
 

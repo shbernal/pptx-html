@@ -1,0 +1,145 @@
+name: Publish
+
+# Publishing the GitHub release is the trigger, not pushing the tag. The two are
+# one command apart, but only one of them is a decision: a tag travels on a
+# `git push --follow-tags` and can be cut by a script or by accident, and the
+# irreversible half of a release should not be reachable that way. Publishing a
+# release is deliberate, and it is the act that produces the notes a consumer
+# reads — so the registry write follows it rather than racing it.
+#
+# A draft release triggers nothing until it is published; publishing an edited
+# release re-triggers, and the registry refuses the duplicate version, which is
+# the right answer rather than an error to design around.
+on:
+  release:
+    types:
+      - published
+
+# `id-token: write` is the whole mechanism. It lets this job mint a short-lived
+# OIDC token that npm exchanges for a credential scoped to this package, this
+# repository and this workflow file — so there is no `NPM_TOKEN` in the repo
+# secrets, and adding one would be a downgrade: a stored credential outlives
+# every job that uses it and is worth stealing. The exchange also stamps the
+# package with provenance, which is why nothing here passes a `--provenance`
+# flag; it is a property of how the credential was obtained.
+#
+# The filename is load-bearing. npm's trusted-publisher configuration names
+# `publish.yml` specifically, so renaming this file revokes the package's
+# ability to publish until the configuration is updated to match.
+permissions:
+  contents: read
+  id-token: write
+
+# Never cancel a publish in flight. Everything else in this repo is safe to
+# supersede — the CI workflow says so itself — but a registry write is not, and
+# a run killed between `prepack` and the upload is the one failure mode with no
+# clean retry.
+concurrency:
+  group: publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    steps:
+      # The release event names a tag and nothing else, so check out the tag
+      # rather than trusting the default ref to be the same thing.
+      - name: Checkout the released tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      # A release cut against a commit whose `version` was never bumped would
+      # publish this tag's contents under the previous number, or be rejected by
+      # the registry minutes later with a message about a duplicate. Neither is
+      # a good way to find out. The tag is interpolated through the environment
+      # rather than into the script, because a `${{ }}` inside `run:` is
+      # substituted before the shell ever sees it.
+      - name: Check the tag against package.json
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version")
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::release tag $TAG does not match package.json version $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # The changelog is the only part of a release that cannot be reconstructed
+      # afterwards from the repository, and it is the part easiest to forget.
+      - name: Check the changelog has a section for it
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ! grep -qF "## [$VERSION]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$VERSION]' section"
+            exit 1
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.3.0
+          run_install: false
+
+      # One version, not the CI matrix. The matrix exists to prove the library
+      # across Node releases and has already run on this commit; what happens
+      # here is a build and an upload, and doing it twice would mean two
+      # publishes of the same version.
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      # Deliberately no `registry-url:`. It would write an `.npmrc` containing
+      # `${NODE_AUTH_TOKEN}`, and with trusted publishing that variable does not
+      # exist — pnpm refuses an unset variable in a config file rather than
+      # expanding it to nothing, so the convenience would break the publish.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # `prepublishOnly` runs typecheck, biome and the oracle, so those are
+      # covered at the moment of publishing and are not repeated here. What it
+      # cannot reach is the browser layer, and that is the gap this closes: the
+      # heuristic lane needs real Chromium, and a release is exactly when a
+      # green oracle should not be mistaken for a green suite.
+      #
+      # The site is not built here. CI builds it on every push to `main`, and a
+      # tag that is not on `main` has no site to deploy anyway.
+      - name: Test
+        run: pnpm run test
+
+      # The one check that imports the package by name, through the `exports`
+      # map, the way a consumer will.
+      - name: Example
+        run: pnpm run example
+
+      # `prepack` rebuilds `dist/` and `prepublishOnly` re-runs the gates — the
+      # same two hooks a publish from a laptop would fire, so the two paths
+      # cannot drift apart. `--no-git-checks` is required and not a loosening:
+      # the checkout above is a detached HEAD at a tag, which is precisely what
+      # pnpm's branch check exists to refuse, and here it is the point.
+      - name: Publish
+        run: pnpm publish --no-git-checks
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          {
+            echo "### Published \`pptx-html@$VERSION\`"
+            echo
+            echo "<https://www.npmjs.com/package/pptx-html/v/$VERSION>"
+            echo
+            echo "Published through npm trusted publishing, so the package carries"
+            echo "provenance pointing back at this run."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -13,6 +13,22 @@ model is expected to move.
 
 Nothing yet.
 
+## [0.1.1] — 2026-08-10
+
+The library is unchanged from 0.1.0. What changed is how it reaches you.
+
+### Changed
+
+- **Releases are published from CI, through npm's trusted publishing.** The
+  workflow mints a short-lived OIDC token that npm exchanges for a credential
+  scoped to this package and that one workflow file — no long-lived token exists
+  to be stolen — and the package is stamped with **provenance**, so the npm page
+  links the tarball to the commit and the run that built it. 0.1.0 was published
+  from a laptop and carries none; this is the first version you can verify that
+  way.
+- Publishing is triggered by publishing the GitHub release rather than by
+  pushing the tag, keeping the deliberate half of a release a human act.
+
 ## [0.1.0] — 2026-08-10
 
 First public release.
@@ -82,5 +98,6 @@ First public release.
 - ESM only, Node `>=24`. `@shbernal/ts-pptx` `^3.2.0` is the one runtime
   dependency.
 
-[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/shbernal/pptx-html/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/shbernal/pptx-html/releases/tag/v0.1.0
