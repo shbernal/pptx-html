@@ -2,10 +2,12 @@
  * The editable surface, made operable.
  *
  * The panel this drives is `EDITABLE_SURFACE` with controls attached: run text,
- * `bold` / `italic` / `underline` / `strike` / `sizePt` / `color`, and node
- * deletion. Nothing else gets a control, because an input whose value is silently
- * dropped at emit is exactly the failure this project is arranged against,
- * reproduced in its own demo.
+ * `bold` / `italic` / `underline` / `strike` / `sizePt` / `color`, the paragraph's
+ * `align`, and node deletion. Nothing else gets a control, because an input whose
+ * value is silently dropped at emit is exactly the failure this project is
+ * arranged against, reproduced in its own demo. That is also why there is no
+ * bullet control: see `EDITABLE_PARA_PROPS` for the state the write API cannot
+ * say, and ts-pptx#15 for the ask.
  *
  * The pairing *was* hand-wired, and that was a divergence risk the surface file
  * exists to prevent: `EDITABLE_RUN_PROPS` said which properties are in surface,
@@ -23,15 +25,16 @@
  * return path works by never using it.
  */
 
-import type { Color, EditableRunProp, RenderIr, RunProperties } from 'pptx-html'
+import type { Color, EditableParaProp, EditableRunProp, ParagraphProperties, RenderIr, RunProperties } from 'pptx-html'
 import { project } from 'pptx-html'
 
 /**
- * How each surface property is operated. Four kinds, not six: `underline` and
+ * How each surface property is operated. Five kinds, not seven: `underline` and
  * `strike` are the same control because they are the same shape — three named
- * values plus *inherited*, which is what an absent key means.
+ * values plus *inherited*, which is what an absent key means — and `align` is a
+ * fourth of the same family, four named values plus the same absence.
  */
-export type ControlKind = 'toggle' | 'decoration' | 'number' | 'color'
+export type ControlKind = 'toggle' | 'decoration' | 'number' | 'color' | 'align'
 
 /**
  * Every property in the surface, with the control that drives it.
@@ -55,6 +58,33 @@ export const CONTROLS: readonly { prop: EditableRunProp; kind: ControlKind }[] =
 ).map((prop) => ({ prop, kind: CONTROL_OF[prop] }))
 
 /**
+ * The paragraph tier, under the same rule and for the same reason: a
+ * `Record<EditableParaProp, …>`, so a property added to the paragraph surface and
+ * not given a control here is a `site:typecheck` error rather than a missing input
+ * nobody notices.
+ */
+export const PARA_CONTROL_OF: Record<EditableParaProp, ControlKind> = {
+	align: 'align',
+}
+
+export const PARA_CONTROLS: readonly { prop: EditableParaProp; kind: ControlKind }[] = (
+	Object.keys(PARA_CONTROL_OF) as EditableParaProp[]
+).map((prop) => ({ prop, kind: PARA_CONTROL_OF[prop] }))
+
+/**
+ * The four values `align` models, plus the absence that means *inherited* — the
+ * same shape as {@link DECORATION_CHOICES}, and the same empty-string stand-in for
+ * an absence a `<select>` cannot hold.
+ */
+export const ALIGN_CHOICES: readonly { value: string; label: string }[] = [
+	{ value: '', label: 'inherited' },
+	{ value: 'left', label: 'left' },
+	{ value: 'center', label: 'center' },
+	{ value: 'right', label: 'right' },
+	{ value: 'justify', label: 'justify' },
+]
+
+/**
  * The three values `underline` and `strike` model, plus the absence that means
  * *inherited*. The empty string is the `<option>` value for that absence, since
  * a `<select>` has no way to hold `undefined`.
@@ -69,14 +99,25 @@ export const DECORATION_CHOICES: readonly { value: string; label: string }[] = [
 export interface RunRow {
 	/** `node/paragraph/run` — the address the renderer wrote and the parser reads. */
 	address: string
+	/** Which paragraph holds it, so the panel can nest the two tiers without re-parsing the address. */
+	paragraph: number
 	text: string
 	/** Exactly what the run *states*, which is what the projection carries. */
 	props: Pick<RunProperties, EditableRunProp>
 }
 
+export interface ParagraphRow {
+	/** `node/paragraph` — one address shorter than a run's, and the same idea. */
+	address: string
+	props: Pick<ParagraphProperties, EditableParaProp>
+	/** The runs inside it, so the panel can show a paragraph as the box that holds them. */
+	runs: RunRow[]
+}
+
 export interface NodeRow {
 	id: string
 	kind: string
+	paragraphs: ParagraphRow[]
 	runs: RunRow[]
 }
 
@@ -89,15 +130,24 @@ export interface SlideRow {
 export function surfaceOf(ir: RenderIr): SlideRow[] {
 	return project(ir).slides.map((slide) => ({
 		number: slide.number,
-		nodes: slide.nodes.map((node) => ({
-			id: node.id,
-			kind: node.kind,
-			runs: node.runs.map((run) => ({
+		nodes: slide.nodes.map((node) => {
+			const runs = node.runs.map((run) => ({
 				address: `${run.node}/${run.paragraph}/${run.run}`,
 				text: run.text,
 				props: run.props,
-			})),
-		})),
+				paragraph: run.paragraph,
+			}))
+			return {
+				id: node.id,
+				kind: node.kind,
+				paragraphs: node.paragraphs.map((paragraph) => ({
+					address: `${paragraph.node}/${paragraph.paragraph}`,
+					props: paragraph.props,
+					runs: runs.filter((run) => run.paragraph === paragraph.paragraph),
+				})),
+				runs,
+			}
+		}),
 	}))
 }
 
@@ -115,12 +165,28 @@ export function setText(doc: Document, address: string, text: string): void {
  */
 export function setProp(doc: Document, address: string, prop: EditableRunProp, value: unknown): void {
 	const element = span(doc, address)
-	const stated = statedProps(element)
+	const stated = statedProps(element, 'data-pxh-props')
 	if (value === undefined) delete stated[prop]
 	else stated[prop] = value
 
 	if (Object.keys(stated).length === 0) element.removeAttribute('data-pxh-props')
 	else element.setAttribute('data-pxh-props', JSON.stringify(stated))
+}
+
+/**
+ * The same, one tier up: the `<p>` carries `data-pxh-paraprops` and nothing else
+ * about it differs. Setting it on the paragraph rather than on each of its runs is
+ * not a convenience — a paragraph property stated on only some of a paragraph's
+ * runs is what the write path reads as *two paragraphs*.
+ */
+export function setParaProp(doc: Document, address: string, prop: EditableParaProp, value: unknown): void {
+	const element = paragraph(doc, address)
+	const stated = statedProps(element, 'data-pxh-paraprops')
+	if (value === undefined) delete stated[prop]
+	else stated[prop] = value
+
+	if (Object.keys(stated).length === 0) element.removeAttribute('data-pxh-paraprops')
+	else element.setAttribute('data-pxh-paraprops', JSON.stringify(stated))
 }
 
 /**
@@ -156,11 +222,17 @@ function span(doc: Document, address: string): Element {
 	return element
 }
 
-function statedProps(element: Element): Record<string, unknown> {
-	const raw = element.getAttribute('data-pxh-props')
+function paragraph(doc: Document, address: string): Element {
+	const element = doc.querySelector(`[data-pxh-para="${cssEscape(address)}"]`)
+	if (element === null) throw new Error(`paragraph ${address} is not in the document`)
+	return element
+}
+
+function statedProps(element: Element, attribute: string): Record<string, unknown> {
+	const raw = element.getAttribute(attribute)
 	if (raw === null) return {}
 	const parsed: unknown = JSON.parse(raw)
-	if (parsed === null || typeof parsed !== 'object') throw new Error('data-pxh-props is not an object')
+	if (parsed === null || typeof parsed !== 'object') throw new Error(`${attribute} is not an object`)
 	return { ...(parsed as Record<string, unknown>) }
 }
 

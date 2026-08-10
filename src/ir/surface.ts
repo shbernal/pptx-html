@@ -20,14 +20,14 @@
  * ## v1 surface
  *
  * The smallest set that is useful: run text, the character properties that map
- * 1:1 onto a write-API option, and deleting a node. Everything else —
- * moving a box, changing geometry, restyling a table, reordering or inserting
- * slides — is out. Slide reordering is out for a second reason as well: the
- * writer has `removeSlide(index)` but no `insertSlide`/`moveSlide`, so emit
- * builds decks in append order.
+ * 1:1 onto a write-API option, the one *paragraph* property that does, and
+ * deleting a node. Everything else — moving a box, changing geometry, restyling
+ * a table, reordering or inserting slides — is out. Slide reordering is out for
+ * a second reason as well: the writer has `removeSlide(index)` but no
+ * `insertSlide`/`moveSlide`, so emit builds decks in append order.
  */
 
-import type { NodeId, NodeKind, RenderIr, RenderNode, RunProperties } from './render'
+import type { NodeId, NodeKind, ParagraphProperties, RenderIr, RenderNode, RunProperties } from './render'
 
 /**
  * The character properties inside the surface, and the single place they are
@@ -55,14 +55,45 @@ export const EDITABLE_RUN_PROPS = ['bold', 'italic', 'underline', 'strike', 'siz
 
 export type EditableRunProp = (typeof EDITABLE_RUN_PROPS)[number]
 
+/**
+ * The paragraph properties inside the surface — the same 1:1 bar, one tier up.
+ *
+ * `align` clears it exactly. {@link ParagraphProperties.align} is the four values
+ * `TextBaseProps.align` declares and no others (`dist`/`thaiDist` are imported as
+ * a `text.align` note rather than rounded into one of the four), and the writer
+ * omits `a:pPr/@algn` entirely when the option is absent — so *inherited*, *left*
+ * and *centre* are three states the option can say and the file can hold.
+ *
+ * ## Why `bullet` is not here
+ *
+ * It fails the bar on exactly one of its three states, which is the state that
+ * matters. {@link ParagraphProperties.bullet} models *inherited* as absence,
+ * `{kind:'none'}` as the explicit `a:buNone`, and a glyph as itself — but the
+ * write API has no spelling for the first: an omitted `bullet` and `bullet: false`
+ * emit byte-identical `<a:pPr indent="0" marL="0"><a:buNone/></a:pPr>`. Upstream
+ * knows and declares it (`text.bullet.inherited`, `dropped`/`unread`), and it is
+ * filed as ts-pptx#15 — https://github.com/shbernal/ts-pptx/issues/15.
+ *
+ * A control offering *inherited* would therefore write the explicit off instead,
+ * and nothing would look wrong: a suppressed bullet and an inherited-none paint
+ * the same, so the lie would only surface later, when someone edited the master
+ * and the slide stopped following it. The surface promises that an edit made
+ * through it is honoured; a third position that silently produces the second is
+ * the one failure it cannot afford. Add it when the option can say "inherit".
+ */
+export const EDITABLE_PARA_PROPS = ['align'] as const
+
+export type EditableParaProp = (typeof EDITABLE_PARA_PROPS)[number]
+
 /** One rule of the surface. Paths are dotted, relative to a `RenderSlide`. */
 export interface SurfaceRule {
-	kind: 'text' | 'runProp' | 'delete'
+	kind: 'text' | 'runProp' | 'paraProp' | 'delete'
 	path: string
 	why: string
 }
 
-const RUNS = 'nodes[].text.paragraphs[].runs[]'
+const PARAGRAPHS = 'nodes[].text.paragraphs[]'
+const RUNS = `${PARAGRAPHS}.runs[]`
 
 /**
  * The surface, in full. Table cell text and text inside groups are reached by
@@ -80,6 +111,13 @@ export const EDITABLE_SURFACE: readonly SurfaceRule[] = [
 			kind: 'runProp',
 			path: `${RUNS}.props.${prop}`,
 			why: 'Maps 1:1 onto a write-API option, so the return path sets it without interpreting anything.',
+		})
+	),
+	...EDITABLE_PARA_PROPS.map(
+		(prop): SurfaceRule => ({
+			kind: 'paraProp',
+			path: `${PARAGRAPHS}.props.${prop}`,
+			why: 'Maps 1:1 onto a write-API option, and unlike the rest of `a:pPr` the option can also state nothing, which is what an absent key means.',
 		})
 	),
 	{
@@ -104,9 +142,25 @@ export interface ProjectedRun {
 	props: Pick<RunProperties, EditableRunProp>
 }
 
+/**
+ * A paragraph, reduced the same way.
+ *
+ * Present for *every* paragraph of a text-bearing node, including one with no
+ * runs. A blank line is a paragraph in the source and can state an alignment
+ * like any other, so a projection keyed off runs alone would have made exactly
+ * the paragraphs with nothing in them uneditable.
+ */
+export interface ProjectedParagraph {
+	node: NodeId
+	paragraph: number
+	/** Only the {@link EDITABLE_PARA_PROPS}, and only those the paragraph states. */
+	props: Pick<ParagraphProperties, EditableParaProp>
+}
+
 export interface ProjectedNode {
 	id: NodeId
 	kind: NodeKind
+	paragraphs: ProjectedParagraph[]
 	runs: ProjectedRun[]
 }
 
@@ -151,24 +205,37 @@ function projectNode(node: RenderNode): ProjectedNode[] {
 	// flattening here is what keeps addressing by node id rather than by path.
 	if (node.kind === 'group') return node.children.flatMap(projectNode)
 
+	const paragraphs: ProjectedParagraph[] = []
 	const runs: ProjectedRun[] = []
-	if (node.kind === 'shape') collectRuns(node.id, node.text, runs)
+	if (node.kind === 'shape') collectText(node.id, node.text, paragraphs, runs)
 	if (node.kind === 'table') {
 		for (const row of node.rows) {
-			for (const cell of row.cells) collectRuns(cell.id, cell.text, runs)
+			for (const cell of row.cells) collectText(cell.id, cell.text, paragraphs, runs)
 		}
 	}
-	return [{ id: node.id, kind: node.kind, runs }]
+	return [{ id: node.id, kind: node.kind, paragraphs, runs }]
 }
 
-/** The shape {@link collectRuns} needs; both `ShapeNode.text` and `TableCell.text` satisfy it. */
-type TextBodyLike = { paragraphs: { runs: { text: string; props: RunProperties }[] }[] } | null
+/** The shape {@link collectText} needs; both `ShapeNode.text` and `TableCell.text` satisfy it. */
+type TextBodyLike = {
+	paragraphs: { props: ParagraphProperties; runs: { text: string; props: RunProperties }[] }[]
+} | null
 
-function collectRuns(owner: NodeId, text: TextBodyLike, into: ProjectedRun[]): void {
+function collectText(
+	owner: NodeId,
+	text: TextBodyLike,
+	intoParagraphs: ProjectedParagraph[],
+	intoRuns: ProjectedRun[]
+): void {
 	if (!text) return
 	text.paragraphs.forEach((paragraph, paragraphIndex) => {
+		intoParagraphs.push({
+			node: owner,
+			paragraph: paragraphIndex,
+			props: editableParaProps(paragraph.props),
+		})
 		paragraph.runs.forEach((run, runIndex) => {
-			into.push({
+			intoRuns.push({
 				node: owner,
 				paragraph: paragraphIndex,
 				run: runIndex,
@@ -196,6 +263,25 @@ export function editableRunProps(props: RunProperties): Pick<RunProperties, Edit
 		// Assign only what is stated. An absent key means *inherited*, and writing
 		// `undefined` instead would both break the JSON island's "absence has one
 		// spelling" rule and turn inheritance into an explicit value.
+		if (props[key] !== undefined) Object.assign(picked, { [key]: props[key] })
+	}
+	return picked
+}
+
+/**
+ * A paragraph's stated properties, narrowed to the surface.
+ *
+ * The counterpart of {@link editableRunProps}, and exported for the same reason:
+ * the renderer writes exactly this onto each `<p>` (`data-pxh-paraprops`) and the
+ * return path reads exactly this back. `level`, the indents and the spacings stay
+ * out — every one of them is either unwritable through the write API or needs the
+ * list style it indexes into, which the paint model does not carry.
+ */
+export function editableParaProps(
+	props: Pick<ParagraphProperties, EditableParaProp>
+): Pick<ParagraphProperties, EditableParaProp> {
+	const picked: Pick<ParagraphProperties, EditableParaProp> = {}
+	for (const key of EDITABLE_PARA_PROPS) {
 		if (props[key] !== undefined) Object.assign(picked, { [key]: props[key] })
 	}
 	return picked
@@ -244,6 +330,7 @@ function stripNode(node: RenderNode): void {
 function stripText(text: TextBodyLike): void {
 	if (!text) return
 	for (const paragraph of text.paragraphs) {
+		for (const key of EDITABLE_PARA_PROPS) delete paragraph.props[key]
 		for (const run of paragraph.runs) {
 			run.text = ''
 			for (const key of EDITABLE_RUN_PROPS) delete run.props[key]

@@ -2,11 +2,12 @@
  * Reading the editable surface back out of a document.
  *
  * This is the only place in the return path that looks at the visual DOM, and it
- * looks at exactly two things: the text inside each `[data-pxh-run]` span, and
- * the `data-pxh-props` attribute beside it. Nothing else. It does not read a
- * computed style, a transform, a path or a fill, because the island already
- * states all of those *better* than the DOM can — and re-deriving them is the
- * inference this architecture exists to avoid.
+ * looks at exactly three things: the text inside each `[data-pxh-run]` span, the
+ * `data-pxh-props` attribute beside it, and the `data-pxh-paraprops` on the
+ * `[data-pxh-para]` that encloses them. Nothing else. It does not read a computed
+ * style, a transform, a path or a fill, because the island already states all of
+ * those *better* than the DOM can — and re-deriving them is the inference this
+ * architecture exists to avoid.
  *
  * ## The island is the schema
  *
@@ -21,10 +22,10 @@
  * ## What drift this can and cannot see
  *
  * The plan's drifted lane is "the DOM differs outside the surface". Detected in
- * full: a run element removed, a run address that is not in the model, a
- * duplicate address, and a `data-pxh-props` that is not a well-formed set of the
- * editable properties. **Not** detected: a moved box, a recoloured path, a
- * rewritten transform.
+ * full: a run or paragraph element removed, an address that is not in the model, a
+ * duplicate address, and a `data-pxh-props` / `data-pxh-paraprops` that is not a
+ * well-formed set of the editable properties. **Not** detected: a moved box, a
+ * recoloured path, a rewritten transform.
  *
  * That gap is deliberate and it is safe, for a reason worth stating rather than
  * apologising for: **an out-of-surface DOM edit is inert, not dangerous.** The
@@ -35,11 +36,15 @@
  * would put inference back into the trusted path.
  */
 
-import type { NodeId, RenderIr, RunProperties } from '../ir/render'
+import type { NodeId, ParagraphProperties, RenderIr, RunProperties } from '../ir/render'
 import {
+	EDITABLE_PARA_PROPS,
 	EDITABLE_RUN_PROPS,
+	type EditableParaProp,
 	type EditableRunProp,
+	editableParaProps,
 	editableRunProps,
+	type ProjectedParagraph,
 	type ProjectedRun,
 	project,
 	type SanctionedProjection,
@@ -94,6 +99,78 @@ function readProps(raw: string | null, address: string, anomalies: string[]): Pi
 	// document's projection is not merely equal but *identically serialized* — the
 	// two hashes are compared as strings and key order is part of a JSON string.
 	return editableRunProps(picked as RunProperties)
+}
+
+/**
+ * `data-pxh-paraprops`, validated the same way and by the same rules.
+ *
+ * Kept as its own function rather than folded into {@link readProps} with a
+ * parameterised key list: the two attributes carry different property sets and
+ * different value shapes, and a shared reader would have to be keyed off a union,
+ * which is precisely the sort of "one of the two" indirection that lets a value
+ * from one tier be accepted on the other.
+ */
+function readParaProps(
+	raw: string | null,
+	address: string,
+	anomalies: string[]
+): Pick<ParagraphProperties, EditableParaProp> {
+	if (raw === null) return {}
+	let parsed: unknown
+	try {
+		parsed = JSON.parse(raw)
+	} catch {
+		anomalies.push(`paragraph ${address}: data-pxh-paraprops is not JSON; the paragraph's stated formatting was kept`)
+		return {}
+	}
+	if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+		anomalies.push(`paragraph ${address}: data-pxh-paraprops is not an object; the paragraph's stated formatting was kept`)
+		return {}
+	}
+
+	const entries = parsed as Record<string, unknown>
+	for (const key of Object.keys(entries)) {
+		if (!(EDITABLE_PARA_PROPS as readonly string[]).includes(key)) {
+			anomalies.push(
+				`paragraph ${address}: data-pxh-paraprops carries ${JSON.stringify(key)}, which is not in the editable surface`
+			)
+		}
+	}
+
+	const picked: Record<string, unknown> = {}
+	for (const key of EDITABLE_PARA_PROPS) {
+		const value = entries[key]
+		if (value === undefined) continue
+		const complaint = paraValueComplaint(key, value)
+		if (complaint !== null) {
+			anomalies.push(`paragraph ${address}: data-pxh-paraprops.${key} ${complaint}`)
+			continue
+		}
+		picked[key] = value
+	}
+	return editableParaProps(picked as Pick<ParagraphProperties, EditableParaProp>)
+}
+
+/** The four `a:pPr/@algn` values the write API expresses, and the only four `align` may be. */
+const ALIGN_VALUES = new Set(['left', 'center', 'right', 'justify'])
+
+/**
+ * What is wrong with one stated paragraph property, or `null` if nothing is.
+ *
+ * Keyed off {@link EDITABLE_PARA_PROPS} for the same reason its run-level
+ * counterpart is: a property added there without a case here must not compile.
+ */
+function paraValueComplaint(key: EditableParaProp, value: unknown): string | null {
+	switch (key) {
+		case 'align':
+			// `dist` and `thaiDist` are real `ST_TextAlignType` members and are
+			// deliberately not among them — import files a `text.align` note for those
+			// rather than rounding one into a neighbour, so accepting one back here
+			// would put a value into the model that emit has nowhere to send.
+			return typeof value === 'string' && ALIGN_VALUES.has(value)
+				? null
+				: `is ${JSON.stringify(value)} and must be one of left, center, right, justify`
+	}
 }
 
 /** The three values `underline` and `strike` each model, and the only three either may be. */
@@ -161,6 +238,7 @@ export function readSurface(root: ParentNode, ir: RenderIr): SurfaceReading {
 	const anomalies: string[] = []
 	const deleted: NodeId[] = []
 	const claimed = new Set<string>()
+	const claimedParagraphs = new Set<string>()
 
 	// Which nodes were actually drawn. A node with no resolvable placement is not
 	// in the document at all (see `render/node.ts`), so its absence is the
@@ -181,7 +259,15 @@ export function readSurface(root: ParentNode, ir: RenderIr): SurfaceReading {
 				// Never drawn, so never deletable: keep what the island says.
 				return [node]
 			}
-			return [{ ...node, runs: node.runs.map((run) => readRun(root, run, claimed, anomalies)) }]
+			return [
+				{
+					...node,
+					paragraphs: node.paragraphs.map((paragraph) =>
+						readParagraph(root, paragraph, claimedParagraphs, anomalies)
+					),
+					runs: node.runs.map((run) => readRun(root, run, claimed, anomalies)),
+				},
+			]
 		}),
 	}))
 
@@ -189,6 +275,12 @@ export function readSurface(root: ParentNode, ir: RenderIr): SurfaceReading {
 		const address = element.getAttribute('data-pxh-run') ?? ''
 		if (!claimed.has(address)) {
 			anomalies.push(`run ${address} is in the document but not in the model; it was ignored`)
+		}
+	}
+	for (const element of root.querySelectorAll('[data-pxh-para]')) {
+		const address = element.getAttribute('data-pxh-para') ?? ''
+		if (!claimedParagraphs.has(address)) {
+			anomalies.push(`paragraph ${address} is in the document but not in the model; it was ignored`)
 		}
 	}
 
@@ -203,6 +295,39 @@ function collectDrawn(nodes: RenderIr['slides'][number]['nodes'], into: Set<Node
 		if (node.kind === 'table') {
 			for (const row of node.rows) for (const cell of row.cells) into.add(cell.id)
 		}
+	}
+}
+
+/**
+ * One paragraph, read back.
+ *
+ * The mirror of {@link readRun} minus the text: a paragraph holds no string of its
+ * own, so the only thing to read is the attribute — and a paragraph whose element
+ * is gone keeps what the island said, because removing a `<p>` is a structural
+ * change the surface has no rule for.
+ */
+function readParagraph(
+	root: ParentNode,
+	paragraph: ProjectedParagraph,
+	claimed: Set<string>,
+	anomalies: string[]
+): ProjectedParagraph {
+	const address = `${paragraph.node}/${paragraph.paragraph}`
+	const matches = root.querySelectorAll(`[data-pxh-para="${cssEscape(address)}"]`)
+	if (matches.length === 0) {
+		anomalies.push(`paragraph ${address} was removed from the document; the model's formatting was kept`)
+		return paragraph
+	}
+	claimed.add(address)
+	if (matches.length > 1) {
+		anomalies.push(`paragraph ${address} appears ${matches.length} times in the document; the first was read`)
+	}
+
+	const element = matches[0] as Element
+	return {
+		node: paragraph.node,
+		paragraph: paragraph.paragraph,
+		props: readParaProps(element.getAttribute('data-pxh-paraprops'), address, anomalies),
 	}
 }
 

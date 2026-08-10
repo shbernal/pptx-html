@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RenderIr, ShapeNode, TableNode } from '../../src/ir/render'
-import { EDITABLE_RUN_PROPS, EDITABLE_SURFACE, freeze, project } from '../../src/ir/surface'
+import { EDITABLE_PARA_PROPS, EDITABLE_RUN_PROPS, EDITABLE_SURFACE, freeze, project } from '../../src/ir/surface'
 import { SAMPLE_IR } from '../fixtures/render-ir'
 
 const clone = (ir: RenderIr): RenderIr => JSON.parse(JSON.stringify(ir)) as RenderIr
@@ -11,6 +11,23 @@ describe('the surface is one list, not two opinions', () => {
 			rule.path.slice(rule.path.lastIndexOf('.') + 1)
 		)
 		expect(props).toEqual([...EDITABLE_RUN_PROPS])
+	})
+
+	it('names every editable paragraph property exactly once', () => {
+		const props = EDITABLE_SURFACE.filter((rule) => rule.kind === 'paraProp').map((rule) =>
+			rule.path.slice(rule.path.lastIndexOf('.') + 1)
+		)
+		expect(props).toEqual([...EDITABLE_PARA_PROPS])
+	})
+
+	it('keeps `bullet` out, because the write API cannot state the third of its three values', () => {
+		// Not a stylistic omission and not an oversight — `ParagraphProperties.bullet`
+		// models *inherited* as absence, and an omitted `bullet` option emits an
+		// explicit `a:buNone` rather than nothing (ts-pptx#15). A control with an
+		// "inherited" position would silently write the explicit off, and the two
+		// paint identically, so nothing downstream would show the lie.
+		expect(EDITABLE_SURFACE.some((rule) => rule.path.endsWith('.bullet'))).toBe(false)
+		expect(EDITABLE_PARA_PROPS).not.toContain('bullet')
 	})
 
 	it('permits run text and node deletion, and nothing structural', () => {
@@ -74,6 +91,29 @@ describe('project', () => {
 		expect(JSON.parse(JSON.stringify(projection))).toStrictEqual(projection)
 	})
 
+	it('carries a paragraph’s alignment, and only what the paragraph states', () => {
+		const bullets = projection.slides[0]?.nodes.find((node) => node.id === 's1.sp3')
+		// Three paragraphs: one stating `left`, one stating no alignment at all, and a
+		// blank line stating `right`. `level` and `bullet` sit beside `align` on the
+		// same object and are not in surface, so a projection that copied the props
+		// wholesale would fail on the first of these.
+		expect(bullets?.paragraphs.map((paragraph) => paragraph.props)).toStrictEqual([
+			{ align: 'left' },
+			{},
+			{ align: 'right' },
+		])
+	})
+
+	it('projects a paragraph that holds no runs', () => {
+		// A blank line is a paragraph in the source and can state an alignment like
+		// any other. Keying the surface off runs would have made exactly the empty
+		// paragraphs uneditable — and silently, since they have nothing to show for it.
+		const bullets = projection.slides[0]?.nodes.find((node) => node.id === 's1.sp3')
+		expect(bullets?.paragraphs).toHaveLength(3)
+		expect(bullets?.runs.filter((run) => run.paragraph === 2)).toHaveLength(0)
+		expect(bullets?.paragraphs[2]).toStrictEqual({ node: 's1.sp3', paragraph: 2, props: { align: 'right' } })
+	})
+
 	it('flattens groups but keeps opaque and picture nodes visible with no runs', () => {
 		const kinds = projection.slides.flatMap((slide) => slide.nodes.map((node) => node.kind))
 		expect(kinds).not.toContain('group')
@@ -133,6 +173,26 @@ describe('freeze is the complement of project', () => {
 		run.props.strike = 'single'
 
 		expect(freeze(edited)).toStrictEqual(freeze(SAMPLE_IR))
+	})
+
+	it('is unchanged when a paragraph’s alignment moves, and changes when its level does', () => {
+		// The paragraph tier's version of the pair above, and the same trap: `align`
+		// and `level` are neighbours on one object, and only the first is in surface.
+		// A `freeze` that stripped `props` wholesale would pass the first half here
+		// and let an out-of-surface indent change go unnoticed.
+		const edited = clone(SAMPLE_IR)
+		const bullets = edited.slides[0]?.nodes.find((node) => node.id === 's1.sp3') as ShapeNode
+		const paragraph = bullets.text?.paragraphs[0]
+		if (!paragraph) throw new Error('fixture lost its bulleted paragraph')
+		paragraph.props.align = 'justify'
+		expect(freeze(edited)).toStrictEqual(freeze(SAMPLE_IR))
+
+		const drifted = clone(SAMPLE_IR)
+		const sameNode = drifted.slides[0]?.nodes.find((node) => node.id === 's1.sp3') as ShapeNode
+		const other = sameNode.text?.paragraphs[0]
+		if (!other) throw new Error('fixture lost its bulleted paragraph')
+		other.props.level = 3
+		expect(freeze(drifted)).not.toStrictEqual(freeze(SAMPLE_IR))
 	})
 
 	it('strips text inside table cells and groups too', () => {

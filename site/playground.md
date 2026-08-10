@@ -31,17 +31,25 @@ because a deck where one slide was edited and eleven were not should not describ
 all twelve the same way.
 
 The panel beside the preview is the **editable surface** — run text, `bold`,
-`italic`, `underline`, `strike`, `sizePt`, `color`, and deleting a node. That list
-is not a subset chosen for the demo: it is `EDITABLE_SURFACE`, exported from the
-package, and there is deliberately no control for anything outside it. An input
-whose value was silently dropped on the way back would be the exact failure this
-project is built to refuse.
+`italic`, `underline`, `strike`, `sizePt`, `color`, a paragraph's `align`, and
+deleting a node. That list is not a subset chosen for the demo: it is
+`EDITABLE_SURFACE`, exported from the package, and there is deliberately no
+control for anything outside it. An input whose value was silently dropped on the
+way back would be the exact failure this project is built to refuse.
 
-`underline` and `strike` are drop-downs rather than checkboxes, and the extra
-option is the point: **inherited** clears the property, while **none** states
-outright that the run is not underlined. A run that would otherwise take an
+`underline`, `strike` and `align` are drop-downs rather than checkboxes, and the
+extra option is the point: **inherited** clears the property, while **none**
+states outright that the run is not underlined. A run that would otherwise take an
 underline from its placeholder needs the second, and a checkbox has no way to say
 it.
+
+The conspicuous gap in the paragraph controls is `bullet`, and it is the same
+rule doing its job. The write API can say *this paragraph has a bullet* and *this
+paragraph has none*, but not *this paragraph says nothing about its bullet* — an
+omitted option writes the explicit "none" — so an **inherited** position would
+quietly produce the wrong one of the three. The two look identical on screen,
+which is exactly why the control is missing rather than approximate. The ask is
+[ts-pptx#15](https://github.com/shbernal/ts-pptx/issues/15).
 
 ## What it does not prove
 

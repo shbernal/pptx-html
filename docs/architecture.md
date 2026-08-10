@@ -233,9 +233,10 @@ follows call order.
 
 `src/ir/surface.ts` defines exactly what a human may change in the rendered HTML
 and have honoured on the way back: **run text,
-`bold`/`italic`/`underline`/`strike`/`sizePt`/`color`, and deleting a node.**
-Everything else — moving a box, changing geometry, restyling a table, reordering
-or inserting slides — is **detected as drift**, never interpreted.
+`bold`/`italic`/`underline`/`strike`/`sizePt`/`color`, a paragraph's `align`, and
+deleting a node.** Everything else — moving a box, changing geometry, restyling a
+table, reordering or inserting slides — is **detected as drift**, never
+interpreted.
 
 The test a property has to pass is a 1:1 write-API option, not usefulness.
 `underline` and `strike` pass because `RunProperties` already models each as the
@@ -263,6 +264,35 @@ the same reason it could not see ts-pptx#13, so it was pinned by a test
 asserting the loss until the fix landed in `b16fb74b` — which the test then
 caught, and now asserts survival instead. The contract model carries the tokens,
 so the lanes can see a regression here on their own.
+
+### The paragraph tier, and the one property in it
+
+`align` is the whole of it, and `bullet` is the instructive absence. Both live on
+`ParagraphProperties`, both look equally editable, and only one passes the 1:1
+test. `align`'s four values are the write option's own, and omitting the option
+writes no `a:pPr/@algn` — so *inherited*, *left* and *centre* are three states the
+option can say. `bullet` models the same three-way distinction and the write API
+can express two of them: an omitted `bullet` and `bullet: false` both emit an
+explicit `<a:buNone/>`, so there is no way to author a paragraph that states
+nothing about its bullet. Upstream declares the loss
+(`text.bullet.inherited`), and the ask is
+[ts-pptx#15](https://github.com/shbernal/ts-pptx/issues/15) — the same shape as
+ts-pptx#10, which added a spelling for an inherited *fill*.
+
+A control with an "inherited" position that silently wrote the explicit off would
+be the worst kind of wrong: a suppressed bullet and an inherited-none paint
+identically, so nothing would look broken until someone edited the master and the
+slide stopped following it. So the property waits.
+
+The tier also changed where a value is *written*. Paragraph properties ride on
+runs in the write contract — `readModelToIr` replicates each paragraph's options
+onto every one of its runs — and the writer groups that flat list back into
+paragraphs, **starting a new one wherever two adjacent runs disagree about
+`align`**. Setting the value on the first run of a three-run paragraph therefore
+does not restyle that paragraph; it splits it in two, and the run count is
+unchanged, so a count-based guard cannot see it. `parse/edits.ts` writes a
+paragraph property onto every run of the paragraph for that reason, and
+`test/oracle/loop.test.ts` asserts the paragraph count rather than the value alone.
 
 It is a data structure, not prose, because two consumers read it: the renderer
 makes those regions editable, and the return path decides what counts as drift.

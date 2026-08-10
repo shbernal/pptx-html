@@ -40,7 +40,7 @@
  */
 
 import type { Bullet, Paragraph, ParagraphProperties, TextBody, TextRun } from '../ir/render'
-import { editableRunProps } from '../ir/surface'
+import { editableParaProps, editableRunProps } from '../ir/surface'
 import { cssColor, escapeAttr } from './paint'
 
 /** Text-node escaping. `&` first, or it would double-escape the entities below. */
@@ -181,6 +181,29 @@ function surfaceSpan(run: TextRun, address: string, styleAttr: string): string {
 }
 
 /**
+ * The paragraph's half of the surface: its address, and what it states.
+ *
+ * The `<p>` is *not* `contenteditable` and does not become so — a paragraph
+ * property is set by a control, not by typing, and the runs inside it already
+ * carry the invitation to type. What the address buys is the ability to name a
+ * paragraph that holds no runs: a blank line is a paragraph in the source, it can
+ * state an alignment like any other, and keying the surface off runs alone would
+ * have left exactly those uneditable.
+ *
+ * A `null` `nodeId` is chrome and gets neither attribute, for the reason
+ * {@link renderRun} gives — and with the same consequence, that the parser's sweep
+ * for unmodeled paragraphs stays quiet instead of reporting the template's own
+ * text on every slide.
+ */
+function paragraphSurface(paragraph: Paragraph, nodeId: string | null, index: number): string {
+	if (nodeId === null) return ''
+	const stated = editableParaProps(paragraph.props)
+	const statedAttr =
+		Object.keys(stated).length === 0 ? '' : ` data-pxh-paraprops="${escapeAttr(JSON.stringify(stated))}"`
+	return ` data-pxh-para="${escapeAttr(`${nodeId}/${index}`)}"${statedAttr}`
+}
+
+/**
  * The bullet glyph, as a leading span.
  *
  * Rendered inline rather than with CSS `list-style`, because the IR states the
@@ -306,7 +329,10 @@ export function renderTextBody(text: TextBody, nodeId: string | null): string {
 			// one: an empty `<p>` collapses to nothing without something to give it
 			// height.
 			const content = runs === '' ? '<br/>' : runs
-			return `<p style="${escapeAttr(paragraphStyle(paragraph.props, reduction))}">${glyph}${content}</p>`
+			return (
+				`<p${paragraphSurface(paragraph, nodeId, index)}` +
+				` style="${escapeAttr(paragraphStyle(paragraph.props, reduction))}">${glyph}${content}</p>`
+			)
 		})
 		.join('')
 

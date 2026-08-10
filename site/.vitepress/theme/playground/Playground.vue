@@ -5,7 +5,7 @@ import { type DeckSession, describe, idleStages, kb, openDeck, reread } from './
 import PipelineStrip from './PipelineStrip.vue'
 import { type Sample, sampleNamed, samples } from './samples.ts'
 import SurfacePanel from './SurfacePanel.vue'
-import { deleteNode, setProp, setText, type SlideRow, surfaceOf } from './surface.ts'
+import { deleteNode, setParaProp, setProp, setText, type SlideRow, surfaceOf } from './surface.ts'
 
 /** Straight from `reconcile.ts`, because paraphrasing a guarantee weakens it. */
 const LANES: Record<string, string> = {
@@ -231,6 +231,7 @@ function onDrop(event: DragEvent): void {
 						:slides="rows"
 						@text="(address, value) => edit((doc) => setText(doc, address, value))"
 						@prop="(address, prop, value) => edit((doc) => setProp(doc, address, prop, value))"
+						@para-prop="(address, prop, value) => edit((doc) => setParaProp(doc, address, prop, value))"
 						@remove="(id) => edit((doc) => deleteNode(doc, id))"
 					/>
 				</div>

@@ -36,8 +36,8 @@
  */
 
 import type { CallIr, DeckIr, IrValue } from '@shbernal/ts-pptx/script'
-import type { Color, NodeId, RenderIr, RenderNode, RunProperties, TextBody } from '../ir/render'
-import { EDITABLE_RUN_PROPS, type EditableRunProp } from '../ir/surface'
+import type { Color, NodeId, ParagraphProperties, RenderIr, RenderNode, RunProperties, TextBody } from '../ir/render'
+import { EDITABLE_PARA_PROPS, EDITABLE_RUN_PROPS, type EditableParaProp, type EditableRunProp } from '../ir/surface'
 
 /** The write-API option each surface property is spelled as. */
 const OPTION_OF: Record<EditableRunProp, string> = {
@@ -47,6 +47,15 @@ const OPTION_OF: Record<EditableRunProp, string> = {
 	strike: 'strike',
 	sizePt: 'fontSize',
 	color: 'color',
+}
+
+/**
+ * The same, for the paragraph tier. `align`'s four values are the option's own
+ * spelling, so unlike `underline` and `strike` there is no token table beneath
+ * this one.
+ */
+const PARA_OPTION_OF: Record<EditableParaProp, string> = {
+	align: 'align',
 }
 
 /**
@@ -88,14 +97,21 @@ interface RunEdit {
 	props: Partial<Record<EditableRunProp, unknown>>
 }
 
+/** One paragraph's new state. `undefined` for a value means *back to inherited*. */
+interface ParaEdit {
+	props: Partial<Record<EditableParaProp, unknown>>
+}
+
 export interface EditSet {
 	/** `nodeId/paragraph/run` → what changed. */
 	runs: Map<string, RunEdit>
+	/** `nodeId/paragraph` → what changed. */
+	paragraphs: Map<string, ParaEdit>
 	deleted: Set<NodeId>
 }
 
 export function isEmpty(edits: EditSet): boolean {
-	return edits.runs.size === 0 && edits.deleted.size === 0
+	return edits.runs.size === 0 && edits.paragraphs.size === 0 && edits.deleted.size === 0
 }
 
 /**
@@ -107,6 +123,7 @@ export function isEmpty(edits: EditSet): boolean {
  */
 export function editsBetween(before: RenderIr, after: RenderIr): EditSet {
 	const runs = new Map<string, RunEdit>()
+	const paragraphs = new Map<string, ParaEdit>()
 	const deleted = new Set<NodeId>()
 
 	for (const slide of before.slides) {
@@ -118,10 +135,16 @@ export function editsBetween(before: RenderIr, after: RenderIr): EditSet {
 		}
 		const surviving = new Set<NodeId>()
 		collectIds(now.nodes, surviving)
-		diffNodes(slide.nodes, indexById(now.nodes), surviving, runs, deleted)
+		diffNodes(slide.nodes, indexById(now.nodes), surviving, { runs, paragraphs }, deleted)
 	}
 
-	return { runs, deleted }
+	return { runs, paragraphs, deleted }
+}
+
+/** The two address maps `diffNodes` fills, carried together so the walk stays readable. */
+interface TextEdits {
+	runs: Map<string, RunEdit>
+	paragraphs: Map<string, ParaEdit>
 }
 
 function collectIds(nodes: readonly RenderNode[], into: Set<NodeId>): void {
@@ -147,7 +170,7 @@ function diffNodes(
 	nodes: readonly RenderNode[],
 	after: ReadonlyMap<NodeId, RenderNode>,
 	surviving: ReadonlySet<NodeId>,
-	runs: Map<string, RunEdit>,
+	edits: TextEdits,
 	deleted: Set<NodeId>
 ): void {
 	for (const node of nodes) {
@@ -159,26 +182,38 @@ function diffNodes(
 		if (now === undefined || now.kind !== node.kind) continue
 
 		if (node.kind === 'group' && now.kind === 'group') {
-			diffNodes(node.children, after, surviving, runs, deleted)
+			diffNodes(node.children, after, surviving, edits, deleted)
 			continue
 		}
-		if (node.kind === 'shape' && now.kind === 'shape') diffText(node.id, node.text, now.text, runs)
+		if (node.kind === 'shape' && now.kind === 'shape') diffText(node.id, node.text, now.text, edits)
 		if (node.kind === 'table' && now.kind === 'table') {
 			node.rows.forEach((row, rowIndex) => {
 				row.cells.forEach((cell, cellIndex) => {
 					const cellNow = now.rows[rowIndex]?.cells[cellIndex]
-					if (cellNow !== undefined) diffText(cell.id, cell.text, cellNow.text, runs)
+					if (cellNow !== undefined) diffText(cell.id, cell.text, cellNow.text, edits)
 				})
 			})
 		}
 	}
 }
 
-function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null, runs: Map<string, RunEdit>): void {
+function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null, edits: TextEdits): void {
 	if (before === null || after === null) return
 	before.paragraphs.forEach((paragraph, paragraphIndex) => {
+		const paragraphNow = after.paragraphs[paragraphIndex]
+		if (paragraphNow !== undefined) {
+			const paraEdit: ParaEdit = { props: {} }
+			for (const key of EDITABLE_PARA_PROPS) {
+				const wasSet = paragraph.props[key]
+				const isSet = paragraphNow.props[key]
+				if (wasSet === isSet) continue
+				paraEdit.props[key] = isSet === undefined ? undefined : paraOptionValue(key, isSet)
+			}
+			if (Object.keys(paraEdit.props).length > 0) edits.paragraphs.set(`${owner}/${paragraphIndex}`, paraEdit)
+		}
+
 		paragraph.runs.forEach((run, runIndex) => {
-			const now = after.paragraphs[paragraphIndex]?.runs[runIndex]
+			const now = paragraphNow?.runs[runIndex]
 			if (now === undefined) return
 
 			const edit: RunEdit = { props: {} }
@@ -190,7 +225,7 @@ function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null
 				edit.props[key] = isSet === undefined ? undefined : optionValue(key, isSet)
 			}
 			if (edit.text !== undefined || Object.keys(edit.props).length > 0) {
-				runs.set(`${owner}/${paragraphIndex}/${runIndex}`, edit)
+				edits.runs.set(`${owner}/${paragraphIndex}/${runIndex}`, edit)
 			}
 		})
 	})
@@ -221,6 +256,19 @@ function optionValue(key: EditableRunProp, value: RunProperties[EditableRunProp]
 	}
 	if (key === 'underline') return { style: UNDERLINE_OPTION[value as NonNullable<RunProperties['underline']>] }
 	if (key === 'strike') return STRIKE_OPTION[value as NonNullable<RunProperties['strike']>]
+	return value
+}
+
+/**
+ * A paragraph value in the write API's spelling — which for `align` is the same
+ * four strings, because {@link ParagraphProperties.align} was defined as the
+ * option's own domain rather than as OOXML's (`l`/`ctr`/`r`/`just` are the
+ * *attribute's* spelling, and the importer translates them on the way in).
+ *
+ * A function rather than a pass-through so the next paragraph property added has
+ * somewhere to put its table, the way `underline` and `strike` needed one.
+ */
+function paraOptionValue(_key: EditableParaProp, value: ParagraphProperties[EditableParaProp]): unknown {
 	return value
 }
 
@@ -353,12 +401,26 @@ function patchGroup(nodes: readonly RenderNode[], children: IrValue[], edits: Ed
 }
 
 /**
- * The one place a run's new value is actually written.
+ * The one place a run's or a paragraph's new value is actually written.
  *
  * The paint model nests runs in paragraphs and the write API states them flat,
  * with the paragraph break carried as `breakLine` on the run *before* it. So the
  * join is document order, and it is guarded by a count: if the two disagree about
  * how many runs a frame has, no edit is placed at all.
+ *
+ * ## A paragraph property goes on every run of the paragraph
+ *
+ * Not on the first, even though the first is the only one the writer reads it
+ * from. `groupRunsIntoLines` starts a **new paragraph** wherever two adjacent runs
+ * disagree about `align`, so setting it on one run of a three-run paragraph does
+ * not restyle that paragraph — it splits it into two, and the frame comes back
+ * with a paragraph the model does not have. The run count is unchanged, so the
+ * guard above would not catch it either.
+ *
+ * Writing to all of them is also what upstream's own reader does — `readModelToIr`
+ * replicates each paragraph's options onto every one of its runs — so this keeps
+ * the contract in the shape it produces rather than in a shape that merely happens
+ * to work.
  */
 function patchRuns(
 	owner: NodeId,
@@ -369,12 +431,19 @@ function patchRuns(
 ): void {
 	if (text === null) return
 	const addresses: string[] = []
+	// Which paragraph each flat run belongs to, so a paragraph edit can reach all
+	// of that paragraph's entries and none of its neighbour's.
+	const paragraphOf: number[] = []
 	text.paragraphs.forEach((paragraph, paragraphIndex) => {
 		paragraph.runs.forEach((_run, runIndex) => {
 			addresses.push(`${owner}/${paragraphIndex}/${runIndex}`)
+			paragraphOf.push(paragraphIndex)
 		})
 	})
-	if (!addresses.some((address) => edits.runs.has(address))) return
+	const touched =
+		addresses.some((address) => edits.runs.has(address)) ||
+		paragraphOf.some((index) => edits.paragraphs.has(`${owner}/${index}`))
+	if (!touched) return
 
 	if (!Array.isArray(runArgs)) {
 		warnings.push(`${owner}: the write contract states its text in a form this build cannot address; its edits were not applied`)
@@ -389,15 +458,24 @@ function patchRuns(
 
 	addresses.forEach((address, index) => {
 		const edit = edits.runs.get(address)
-		if (edit === undefined) return
+		const paraEdit = edits.paragraphs.get(`${owner}/${paragraphOf[index] ?? -1}`)
+		if (edit === undefined && paraEdit === undefined) return
 		const entry = runArgs[index] as { text?: unknown; options?: Record<string, unknown> }
-		if (edit.text !== undefined) entry.text = edit.text
-		if (Object.keys(edit.props).length === 0) return
+		if (edit?.text !== undefined) entry.text = edit.text
+
+		const props = { ...edit?.props }
+		const paraProps = paraEdit?.props ?? {}
+		if (Object.keys(props).length === 0 && Object.keys(paraProps).length === 0) return
 
 		const options = entry.options ?? {}
 		entry.options = options
-		for (const [key, value] of Object.entries(edit.props)) {
+		for (const [key, value] of Object.entries(props)) {
 			const option = OPTION_OF[key as EditableRunProp]
+			if (value === undefined) delete options[option]
+			else options[option] = value
+		}
+		for (const [key, value] of Object.entries(paraProps)) {
+			const option = PARA_OPTION_OF[key as EditableParaProp]
 			if (value === undefined) delete options[option]
 			else options[option] = value
 		}

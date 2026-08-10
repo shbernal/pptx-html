@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Color, EditableRunProp } from 'pptx-html'
-import { CONTROLS, DECORATION_CHOICES, type RunRow, type SlideRow, srgb } from './surface.ts'
+import type { Color, EditableParaProp, EditableRunProp } from 'pptx-html'
+import { ALIGN_CHOICES, CONTROLS, DECORATION_CHOICES, PARA_CONTROLS, type RunRow, type SlideRow, srgb } from './surface.ts'
 
 defineProps<{ slides: SlideRow[] }>()
 
@@ -9,10 +9,16 @@ defineProps<{ slides: SlideRow[] }>()
  * event name. `undefined` is *clear the key*, which is how this model spells
  * inherited — so the panel can express the difference between "not struck
  * through" and "says nothing about being struck through".
+ *
+ * `paraProp` is a second event rather than a flag on the first because the two
+ * address different things — `node/paragraph/run` against `node/paragraph` — and
+ * a single event would have to be told which, which is a discriminator waiting to
+ * be passed wrongly.
  */
 const emit = defineEmits<{
 	text: [address: string, value: string]
 	prop: [address: string, prop: EditableRunProp, value: unknown]
+	paraProp: [address: string, prop: EditableParaProp, value: unknown]
 	remove: [id: string]
 }>()
 
@@ -36,6 +42,11 @@ function onDecoration(address: string, prop: EditableRunProp, value: string) {
 	emit('prop', address, prop, value === '' ? undefined : value)
 }
 
+/** The same reading of the empty option, one tier up. */
+function onAlign(address: string, prop: EditableParaProp, value: string) {
+	emit('paraProp', address, prop, value === '' ? undefined : value)
+}
+
 function onColor(address: string, value: string) {
 	emit('prop', address, 'color', srgb(value))
 }
@@ -57,7 +68,28 @@ function onColor(address: string, value: string) {
 					No text runs. Deleting the node is the only edit the surface defines for it.
 				</p>
 
-				<div v-for="run in node.runs" :key="run.address" class="pxh-run">
+				<div v-for="para in node.paragraphs" :key="para.address" class="pxh-para">
+					<div class="pxh-para-head">
+						<span class="pxh-para-label">paragraph</span>
+						<label v-for="control in PARA_CONTROLS" :key="control.prop">
+							{{ control.prop }}
+							<select
+								class="pxh-select"
+								:value="para.props[control.prop] ?? ''"
+								@change="onAlign(para.address, control.prop, ($event.target as HTMLSelectElement).value)"
+							>
+								<option v-for="choice in ALIGN_CHOICES" :key="choice.value" :value="choice.value">
+									{{ choice.label }}
+								</option>
+							</select>
+						</label>
+					</div>
+
+					<p v-if="para.runs.length === 0" class="pxh-empty">
+						A blank line. It states no text to edit, and its alignment is editable like any other paragraph's.
+					</p>
+
+					<div v-for="run in para.runs" :key="run.address" class="pxh-run">
 					<input
 						class="pxh-text"
 						type="text"
@@ -119,6 +151,7 @@ function onColor(address: string, value: string) {
 						Setting a value here replaces the reference with a fixed one. That is a legal edit; it is just not
 						the same fact.
 					</p>
+					</div>
 				</div>
 			</div>
 		</section>
@@ -180,6 +213,34 @@ function onColor(address: string, value: string) {
 	margin: 6px 0 0;
 	font-size: 12px;
 	color: var(--vp-c-text-3);
+}
+
+.pxh-para {
+	margin-top: 8px;
+	padding-left: 8px;
+	border-left: 2px solid var(--vp-c-divider);
+}
+
+.pxh-para-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	font-size: 12px;
+	color: var(--vp-c-text-2);
+}
+
+.pxh-para-label {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--vp-c-text-3);
+}
+
+.pxh-para-head label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .pxh-run + .pxh-run {

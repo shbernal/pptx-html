@@ -82,7 +82,14 @@ export type { Integrity } from './render/island'
  * in this HTML?" is a question a caller has to be able to answer without reading
  * the renderer.
  */
-export { EDITABLE_SURFACE, type EditableRunProp, freeze, project, type SanctionedProjection } from './ir/surface'
+export {
+	EDITABLE_SURFACE,
+	type EditableParaProp,
+	type EditableRunProp,
+	freeze,
+	project,
+	type SanctionedProjection,
+} from './ir/surface'
 
 // ---------------------------------------------------------------------------
 // The heuristic lane

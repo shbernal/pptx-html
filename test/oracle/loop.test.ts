@@ -149,6 +149,70 @@ describe('an edit made through the surface', () => {
 		expect(run?.props.strike).toBe('none')
 	})
 
+	it('carries a paragraph’s alignment, and puts it on every run of that paragraph', async () => {
+		// The paragraph tier's first property, and the one place its mapping can fail
+		// in a way no run-level test would catch. The writer groups the flat run list
+		// into paragraphs and starts a new one wherever two adjacent runs disagree
+		// about `align` — so writing the value onto the first run of a two-run
+		// paragraph does not restyle it, it *splits* it. The run count is unchanged
+		// either way, which is why the assertion is on the paragraph count.
+		const { source, html } = await rendered('paragraph-align')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text) throw new Error('the paragraph-align deck changed shape')
+		const paragraphs = shape.text.paragraphs
+		expect(paragraphs).toHaveLength(5)
+		expect(paragraphs[4]?.runs).toHaveLength(2)
+
+		// The last paragraph is the two-run one. Re-align it and the whole frame must
+		// come back with the same five paragraphs.
+		const target = paragraphs[4]
+		if (!target) throw new Error('the paragraph-align deck lost its two-run paragraph')
+		target.props.align = 'right'
+
+		const emitted = await emitDeck(parsed, { source })
+		const ir = readModelToIr(await Presentation.load(emitted.bytes))
+		const runs = ir.slides[0]?.calls[0]?.args[0] as { options?: Record<string, unknown> }[]
+		expect(runs.at(-2)?.options?.align).toBe('right')
+		expect(runs.at(-1)?.options?.align).toBe('right')
+
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs).toHaveLength(5)
+		expect(back.text?.paragraphs.map((paragraph) => paragraph.props.align)).toStrictEqual([
+			'left',
+			'center',
+			'right',
+			'justify',
+			'right',
+		])
+	})
+
+	it('returns a paragraph to inheriting its alignment, which states nothing rather than "left"', async () => {
+		// The clearing half, and the one that separates *inherited* from *left*: the
+		// writer omits `a:pPr/@algn` entirely when the option is absent, so a paragraph
+		// whose alignment was cleared has to come back with no `align` at all. Writing
+		// `left` instead would be a different paragraph — one that overrides whatever
+		// its list style says rather than following it.
+		const { source, html } = await rendered('paragraph-align')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[1]) throw new Error('fixture changed')
+		expect(shape.text.paragraphs[1].props.align).toBe('center')
+		delete shape.text.paragraphs[1].props.align
+
+		const emitted = await emitDeck(parsed, { source })
+		const ir = readModelToIr(await Presentation.load(emitted.bytes))
+		const runs = ir.slides[0]?.calls[0]?.args[0] as { options?: Record<string, unknown> }[]
+		expect(runs[1]?.options && 'align' in runs[1].options).toBe(false)
+
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs[1]?.props.align).toBeUndefined()
+	})
+
 	it('drops a deleted node and leaves its siblings', async () => {
 		// `bullet` has two shapes on one slide, so a deletion that took the wrong one
 		// — or took both — is visible rather than indistinguishable from success.

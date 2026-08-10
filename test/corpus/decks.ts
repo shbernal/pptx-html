@@ -426,6 +426,33 @@ export const CORPUS: CorpusDeck[] = [
 	),
 
 	deck(
+		'paragraph-align',
+		'primitive',
+		'the four alignments a paragraph can state, one paragraph that states none, and a two-run paragraph',
+		(pptx) => {
+			// `align` is the paragraph half of the editable surface, and the only one:
+			// see `EDITABLE_PARA_PROPS` for why `bullet` is not beside it.
+			//
+			// The last paragraph is the one worth having. `groupRunsIntoLines` starts a
+			// new paragraph wherever two adjacent runs disagree about their alignment,
+			// so a paragraph whose runs all agree is what proves the edit path writes
+			// the value onto every run of a paragraph rather than onto the first — get
+			// that wrong and this frame comes back with five paragraphs, not four.
+			pptx.addSlide().addText(
+				[
+					{ text: 'left', options: { align: 'left', breakLine: true } },
+					{ text: 'centre', options: { align: 'center', breakLine: true } },
+					{ text: 'right', options: { align: 'right', breakLine: true } },
+					{ text: 'justified across the width of the frame', options: { align: 'justify', breakLine: true } },
+					{ text: 'two runs, ', options: { align: 'center' } },
+					{ text: 'one paragraph', options: { align: 'center', bold: true } },
+				],
+				{ x: 0.5, y: 0.5, w: 6, h: 3, fontSize: 16, objectName: 'aligned' }
+			)
+		}
+	),
+
+	deck(
 		'master-background',
 		'primitive',
 		'a slide whose whole chain states no background — the surface has to be white',

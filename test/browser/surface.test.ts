@@ -124,6 +124,54 @@ describe('an edited document', () => {
 		expect(JSON.stringify(reconcile(SAMPLE_IR, reading).ir)).not.toContain('wavyHeavy')
 	})
 
+	it('reads a paragraph’s alignment off the `<p>`, not off the runs inside it', async () => {
+		// The paragraph tier's version of the attribute test above, and the reason it
+		// has to be here rather than in Node: a `<p>` is the one element in this
+		// document a browser may reparent or normalize, and the address has to survive
+		// that. `text-align` is also on the same element's `style`, so this is again
+		// the distinction between what the deck *states* and what the browser paints.
+		const dom = await documentOf(SAMPLE_IR)
+		const para = dom.querySelector('[data-pxh-para]')
+		if (para === null) throw new Error('the rendered document has no addressable paragraphs')
+		para.setAttribute('data-pxh-paraprops', JSON.stringify({ align: 'justify' }))
+
+		const reading = readSurface(dom, SAMPLE_IR)
+		expect(reading.anomalies).toEqual([])
+
+		const address = para.getAttribute('data-pxh-para')
+		const read = reading.projection.slides
+			.flatMap((slide) => slide.nodes)
+			.flatMap((node) => node.paragraphs)
+			.find((paragraph) => `${paragraph.node}/${paragraph.paragraph}` === address)
+		expect(read?.props).toStrictEqual({ align: 'justify' })
+		expect(reconcile(SAMPLE_IR, reading).slides[0]?.lane).toBe('reconciled')
+	})
+
+	it('refuses an alignment outside the four the write API expresses', async () => {
+		// `dist` is a real `ST_TextAlignType` member that import files a note for
+		// rather than rounding into a neighbour, so accepting it back here would put a
+		// value into the model with nowhere to send it.
+		const dom = await documentOf(SAMPLE_IR)
+		const para = dom.querySelector('[data-pxh-para]')
+		if (para === null) throw new Error('the rendered document has no addressable paragraphs')
+		para.setAttribute('data-pxh-paraprops', JSON.stringify({ align: 'dist' }))
+
+		const reading = readSurface(dom, SAMPLE_IR)
+		expect(reading.anomalies.join('\n')).toContain('must be one of left, center, right, justify')
+		expect(JSON.stringify(reconcile(SAMPLE_IR, reading).ir)).not.toContain('"dist"')
+	})
+
+	it('does not address a chrome paragraph, so the template’s own text is not read as drift', async () => {
+		// Chrome is drawn and nothing more. Its `<p>` carries no `data-pxh-para`, which
+		// is what keeps the sweep for unmodeled paragraphs quiet — without it every
+		// slide would report the layout's every paragraph as an anomaly, on every pass.
+		const dom = await documentOf(SAMPLE_IR)
+		const chrome = dom.querySelector('[data-pxh-chrome]')
+		expect(chrome).not.toBeNull()
+		expect(chrome?.querySelector('[data-pxh-para]')).toBeNull()
+		expect(readSurface(dom, SAMPLE_IR).anomalies).toEqual([])
+	})
+
 	it('reports a removed node as a deletion and a removed run as drift', async () => {
 		// Two structurally similar edits with opposite meanings. Deleting a node is in
 		// surface and is honoured; deleting a *run* is not, so the model's text stands

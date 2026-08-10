@@ -156,8 +156,18 @@ const BULLETS: ShapeNode = {
 				runs: [{ text: 'Revenue up', props: {}, resolved: { sizePt: 18, fontFace: 'Calibri' } }],
 			},
 			{
-				props: { align: 'left', level: 1, bullet: { kind: 'number', scheme: 'arabicPeriod', startAt: 1 } },
+				// States no alignment, which is what makes `project`'s paragraph
+				// narrowing falsifiable: the paragraph above it states one, so a
+				// projection that invented `left` here would still look plausible.
+				props: { level: 1, bullet: { kind: 'number', scheme: 'arabicPeriod', startAt: 1 } },
 				runs: [{ text: 'North', props: { bold: true }, resolved: { bold: true, sizePt: 18 } }],
+			},
+			{
+				// A blank line that states an alignment. It holds no run, so it is only
+				// in the surface at all because the projection is keyed off paragraphs
+				// rather than off the runs inside them.
+				props: { align: 'right', level: 0 },
+				runs: [],
 			},
 		],
 		autofit: 'resize',

@@ -67,8 +67,11 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  * check and be reported as *tampered with* — a false accusation about a document
  * whose only fault is being older than this build's idea of what may be edited.
  * The version check runs first and says "re-render it", which is the true answer.
+ * `4` → `5` is the same kind of move one tier up: the surface gained a
+ * *paragraph* projection, so `project` returns nodes with a `paragraphs` array
+ * that a v4 document's reader never wrote. Same consequence, same remedy.
  */
-export const IR_VERSION = 4
+export const IR_VERSION = 5
 
 /** English Metric Units per inch. The one conversion constant in the model. */
 export const EMU_PER_INCH = 914_400

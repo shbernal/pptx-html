@@ -8,9 +8,10 @@
  * here has no exceptions — when the surface does not define what an edit means,
  * refuse it, keep the island's value, and say so.
  *
- * What that leaves is small and total: a run's text, four of its character
- * properties, and whether a node still exists. Those are the only things this
- * file writes.
+ * What that leaves is small and total: a run's text, the six character properties
+ * `EDITABLE_RUN_PROPS` names, the one paragraph property `EDITABLE_PARA_PROPS`
+ * does, and whether a node still exists. Those are the only things this file
+ * writes.
  *
  * ## The lanes
  *
@@ -30,8 +31,14 @@
  * is the outcome a caller has to act on.
  */
 
-import type { NodeId, RenderIr, RenderNode, RunProperties, TextBody } from '../ir/render'
-import { EDITABLE_RUN_PROPS, type ProjectedRun, project } from '../ir/surface'
+import type { NodeId, ParagraphProperties, RenderIr, RenderNode, RunProperties, TextBody } from '../ir/render'
+import {
+	EDITABLE_PARA_PROPS,
+	EDITABLE_RUN_PROPS,
+	type ProjectedParagraph,
+	type ProjectedRun,
+	project,
+} from '../ir/surface'
 import type { SurfaceReading } from './surface'
 
 /** How much of Invariant R a slide still carries. */
@@ -69,8 +76,12 @@ export function reconcile(ir: RenderIr, reading: SurfaceReading): Reconciliation
 
 	const deleted = new Set(reading.deleted)
 	const readRuns = new Map<string, ProjectedRun>()
+	const readParagraphs = new Map<string, ProjectedParagraph>()
 	for (const slide of reading.projection.slides) {
 		for (const node of slide.nodes) {
+			for (const paragraph of node.paragraphs) {
+				readParagraphs.set(`${paragraph.node}/${paragraph.paragraph}`, paragraph)
+			}
 			for (const run of node.runs) readRuns.set(`${run.node}/${run.paragraph}/${run.run}`, run)
 		}
 	}
@@ -95,7 +106,7 @@ export function reconcile(ir: RenderIr, reading: SurfaceReading): Reconciliation
 		edits += slide.nodes.length - kept.length
 		slide.nodes = kept
 
-		for (const node of slide.nodes) edits += applyRuns(node, readRuns)
+		for (const node of slide.nodes) edits += applyRuns(node, readRuns, readParagraphs)
 
 		const notes = anomaliesBySlide.get(slide.number) ?? []
 		const lane: Lane = notes.length > 0 ? 'drifted' : edits > 0 ? 'reconciled' : 'exact'
@@ -123,21 +134,38 @@ function pruneDeleted(node: RenderNode, deleted: ReadonlySet<NodeId>): number {
 	return removed + (before - node.children.length)
 }
 
-function applyRuns(node: RenderNode, read: ReadonlyMap<string, ProjectedRun>): number {
-	if (node.kind === 'group') return node.children.reduce((sum, child) => sum + applyRuns(child, read), 0)
-	if (node.kind === 'shape') return applyText(node.id, node.text, read)
+function applyRuns(
+	node: RenderNode,
+	read: ReadonlyMap<string, ProjectedRun>,
+	readParagraphs: ReadonlyMap<string, ProjectedParagraph>
+): number {
+	if (node.kind === 'group') {
+		return node.children.reduce((sum, child) => sum + applyRuns(child, read, readParagraphs), 0)
+	}
+	if (node.kind === 'shape') return applyText(node.id, node.text, read, readParagraphs)
 	if (node.kind === 'table') {
 		let edits = 0
-		for (const row of node.rows) for (const cell of row.cells) edits += applyText(cell.id, cell.text, read)
+		for (const row of node.rows) {
+			for (const cell of row.cells) edits += applyText(cell.id, cell.text, read, readParagraphs)
+		}
 		return edits
 	}
 	return 0
 }
 
-function applyText(owner: NodeId, text: TextBody | null, read: ReadonlyMap<string, ProjectedRun>): number {
+function applyText(
+	owner: NodeId,
+	text: TextBody | null,
+	read: ReadonlyMap<string, ProjectedRun>,
+	readParagraphs: ReadonlyMap<string, ProjectedParagraph>
+): number {
 	if (text === null) return 0
 	let edits = 0
 	text.paragraphs.forEach((paragraph, paragraphIndex) => {
+		const incomingParagraph = readParagraphs.get(`${owner}/${paragraphIndex}`)
+		if (incomingParagraph !== undefined) {
+			edits += applyProps(paragraph.props, incomingParagraph.props, EDITABLE_PARA_PROPS)
+		}
 		paragraph.runs.forEach((run, runIndex) => {
 			const incoming = read.get(`${owner}/${paragraphIndex}/${runIndex}`)
 			if (incoming === undefined) return
@@ -145,7 +173,7 @@ function applyText(owner: NodeId, text: TextBody | null, read: ReadonlyMap<strin
 				run.text = incoming.text
 				edits++
 			}
-			edits += applyProps(run.props, incoming.props)
+			edits += applyProps(run.props, incoming.props, EDITABLE_RUN_PROPS)
 		})
 	})
 	return edits
@@ -158,10 +186,18 @@ function applyText(owner: NodeId, text: TextBody | null, read: ReadonlyMap<strin
  * "inherited", so a run whose explicit bold was cleared in the document must lose
  * the key rather than keep it. Treating absence as "no news" would make clearing
  * a property the one edit the surface silently ignores.
+ *
+ * The key list is a parameter rather than a second copy of this function, and it
+ * is the surface's own list either way — a run's properties and a paragraph's
+ * differ in which keys they hold, never in what absence means.
  */
-function applyProps(target: RunProperties, incoming: ProjectedRun['props']): number {
+function applyProps<Target extends RunProperties | ParagraphProperties, Key extends keyof Target & string>(
+	target: Target,
+	incoming: Partial<Pick<Target, Key>>,
+	keys: readonly Key[]
+): number {
 	let edits = 0
-	for (const key of EDITABLE_RUN_PROPS) {
+	for (const key of keys) {
 		const value = incoming[key]
 		if (value === undefined) {
 			if (target[key] !== undefined) {
