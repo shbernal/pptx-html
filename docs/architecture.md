@@ -152,6 +152,32 @@ Each of these will break something if ignored.
   matching `FidelityNote` is worse than an honest carried one — the note is what
   makes a difference *declared* rather than a defect.
 
+### An unstated value asks two questions, not one
+
+The model records what the deck said and the renderer decides what to draw, and
+those are independent facts about the same field. Conflating them cost this project
+its most visible rendering bug, and the shape of the mistake is worth keeping.
+
+The `inherit` arms were audited once and cleared: asked per shape, every stroke and
+fill upstream can resolve was already being painted, and the arm was firing only on
+shapes that state nothing *and* carry no `p:style` to fall back through —
+shapes PowerPoint draws no outline for either. The finding was right. The
+conclusion drawn from it — *so the current behaviour is correct* — did not follow
+from it, and nothing had measured the other half. `render/paint.ts` was painting
+every one of those unresolvable fills a flat `#d8dce6`, which on real input meant a
+grey slab behind the title of essentially every slide that had one.
+
+> **Are we losing information** and **are we painting the right thing** are two
+> questions. Answering the first says nothing about the second.
+
+A second lesson came out of fixing it, because the same helper paints slide
+backgrounds. A shape and a slide surface both ask *what does an unstated fill look
+like*, and they have different right answers — so a shared default silently applied
+one model's answer to the other's. That arm had no PowerPoint deck to find it in
+either: it is what **every `defineSlideMaster` without an explicit `background`**
+produces, which is to say the writer this library is scoped to. The corpus that
+finds a bug is not necessarily the corpus the bug lives in.
+
 ## Import is mapping, not parsing
 
 `src/import/` turns a `.pptx` into both models. It is **browser-capable** — the
@@ -233,9 +259,9 @@ follows call order.
 
 `src/ir/surface.ts` defines exactly what a human may change in the rendered HTML
 and have honoured on the way back: **run text,
-`bold`/`italic`/`underline`/`strike`/`sizePt`/`color`, a paragraph's `align`, and
-deleting a node.** Everything else — moving a box, changing geometry, restyling a
-table, reordering or inserting slides — is **detected as drift**, never
+`bold`/`italic`/`underline`/`strike`/`sizePt`/`color`, a paragraph's `align` and
+`bullet`, and deleting a node.** Everything else — moving a box, changing geometry,
+restyling a table, reordering or inserting slides — is **detected as drift**, never
 interpreted.
 
 The test a property has to pass is a 1:1 write-API option, not usefulness.
@@ -324,6 +350,17 @@ It is a data structure, not prose, because two consumers read it: the renderer
 makes those regions editable, and the return path decides what counts as drift.
 Two hand-maintained copies of "what is editable" diverge silently, and the failure
 is invisible in both directions.
+
+The file used to claim that adding a key to the list was the whole change. It was
+not: `parse/edits.ts` also needs the write-API *spelling* of each value and
+`parse/surface.ts` its *shape*, and a property added without either would have
+compiled — a `Record` lookup returning `undefined`, an `if` chain skipping an
+unknown key. Both are keyed off the element type now (a `Record`, an exhaustive
+`switch`), so the omission is a type error in exactly the files that need to know.
+The generalisation is worth more than the fix: **a single-source list makes its
+consumers consistent, not complete.** Completeness is the type system's job, and it
+only does it when the consumer is keyed off the list's element type rather than
+merely reading its values.
 
 - `project(ir)` is the editable view — the part that may change, addressed by node
   id (positional addressing misaligns the moment a user deletes a node, which the

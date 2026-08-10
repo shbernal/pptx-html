@@ -86,6 +86,37 @@ The full lane (`test/oracle/html-lane.ts`) runs all four legs.
 edit path, the integrity refusals and the lane decision, each tested by
 *constructing* the case rather than by observing its absence.
 
+## What a green oracle does not prove
+
+Every lane test is a statement of the form *`diffDeckIr` found nothing*, and that
+sentence is only as strong as the set of constructs `DeckIr` models. There is a
+gap it cannot cover, and it is not a matter of corpus breadth:
+
+> A loss in the **intersection** of "the writer can author it" and "`DeckIr` does
+> not carry it" is invisible to the whole harness, by construction.
+
+Three things have to be true at once, and when they are, they conspire:
+`readModelToIr` flattens the value on the read leg, nothing declares a note for it,
+and `canonicalDeckIr` omits it — so the differ compares two models that are *both*
+missing the field and reports clean. Adding decks does not help; both sides lose the
+same thing the same way.
+
+It has happened twice. A baked `<a:normAutofit fontScale="70000">` re-emitted as a
+bare `<a:normAutofit/>`, and an explicit `u="none"` / `strike="noStrike"` re-emitted
+as silence — a *visible* wrong answer on any deck whose runs inherit a decoration.
+Both were found by asking what the write API does with a value, not by a failing
+test. Both are fixed upstream and both are now carried by the canonical model, so
+the oracle can see a regression in either on its own.
+
+The response, when you find one, is a **pinning test that asserts the loss** rather
+than the absence of one. It fails on the release that fixes it, which is what stops
+the fix from arriving unnoticed and being rediscovered later by someone re-deriving
+the same workaround. Both of the above did exactly that, and now assert survival.
+
+The preview is not affected by any of this: `RenderIr` is built from the read model
+directly and never passes through `DeckIr`. That is the two-IR split paying for
+itself in the direction it was not designed for.
+
 ## Assert on the lane, not just the file
 
 Three bugs in the return path each made the system *quietly do nothing* and each

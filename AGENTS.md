@@ -97,6 +97,18 @@ are easy to skip and expensive to skip:
   in-repo imports through the entry point, so a broken public surface is invisible
   to `tsc` and to every test.
 
+Two habits that have each paid for themselves more than once:
+
+- **Probe the write leg; do not read it off the types.** What the writer emits for
+  a given option is not in its type signature and is in its source only if you find
+  the right function. A throwaway script in `.tmp/` that builds a deck and prints
+  the XML answers the question in one run — and twice now that script has become
+  the upstream reproduction unchanged.
+- **When a property joins the editable surface, check the test that used it as the
+  out-of-surface example.** Such a test keeps passing while proving the opposite of
+  what it was written to prove. Move it to a property that is still out, and add
+  the mirror case.
+
 ## Upstream
 
 Gaps in `@shbernal/ts-pptx` are filed as GitHub issues **in the same unit of work
