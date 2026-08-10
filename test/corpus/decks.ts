@@ -490,6 +490,62 @@ export const CORPUS: CorpusDeck[] = [
 	),
 
 	deck(
+		'paragraph-indent',
+		'primitive',
+		'a paragraph’s own left margin and first-line indent, including the paragraph that states neither',
+		(pptx) => {
+			// The third property of the paragraph tier, and the deck that needs a master
+			// for the same reason `paragraph-bullet` does: an *inherited* margin and a
+			// stated `marL="0"` differ only in whether the master's list style still
+			// reaches the paragraph, and a frame with nothing above it lays all of these
+			// out identically.
+			//
+			// Every paragraph here says `bullet: 'inherit'`, which is what makes the deck
+			// about the margins at all: until ts-pptx#15 the bullet decided both
+			// attributes — a glyph wrote its own hanging pair and `bullet: false` wrote
+			// `marL="0" indent="0"` — so a paragraph stating one margin and inheriting
+			// the other could not be written.
+			pptx.defineSlideMaster({
+				title: 'CORPUS_INDENTED_MASTER',
+				objects: [
+					{ placeholder: { options: { name: 'body', type: 'body', x: 0.5, y: 0.8, w: 9, h: 3 }, text: 'Body' } },
+				],
+			})
+			pptx.addSlide({ masterTitle: 'CORPUS_INDENTED_MASTER' }).addText(
+				[
+					{ text: 'inherits both', options: { bullet: 'inherit', breakLine: true } },
+					{ text: 'body text starts 36pt in', options: { bullet: 'inherit', paraMarginLeft: 36, breakLine: true } },
+					{
+						text: 'and hangs its first line 18pt left of that',
+						options: { bullet: 'inherit', paraMarginLeft: 36, paraIndent: -18, breakLine: true },
+					},
+					// A stated zero, which is not the same paragraph as the first: it
+					// overrides the master's margin rather than following it, and the two
+					// are told apart only by the attribute being present.
+					{
+						text: 'states zero, overriding the master',
+						options: { bullet: 'inherit', paraMarginLeft: 0, breakLine: true },
+					},
+					// The paragraph whose bullet is *not* inherited, and the only one on which
+					// clearing a margin is observable: with the option omitted the writer
+					// falls back to the bullet's default and writes `marL="0"`, so a cleared
+					// margin that comes back absent proves `'inherit'` was written instead.
+					{
+						text: 'no bullet, and its own margins',
+						options: { bullet: false, paraMarginLeft: 36, paraIndent: -18, breakLine: true },
+					},
+					// Two runs sharing one paragraph, as in the two decks above. Nothing in
+					// the writer groups on a margin, so this is the case that would show a
+					// *future* placement change splitting a paragraph it must not.
+					{ text: 'two runs, ', options: { bullet: 'inherit', paraMarginLeft: 24 } },
+					{ text: 'one margin', options: { bullet: 'inherit', paraMarginLeft: 24, bold: true } },
+				],
+				{ placeholder: 'body', objectName: 'indented' }
+			)
+		}
+	),
+
+	deck(
 		'master-background',
 		'primitive',
 		'a slide whose whole chain states no background — the surface has to be white',

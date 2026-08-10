@@ -3,9 +3,9 @@
  *
  * The panel this drives is `EDITABLE_SURFACE` with controls attached: run text,
  * `bold` / `italic` / `underline` / `strike` / `sizePt` / `color`, the paragraph's
- * `align` and `bullet`, and node deletion. Nothing else gets a control, because an
- * input whose value is silently dropped at emit is exactly the failure this
- * project is arranged against, reproduced in its own demo.
+ * `align`, `bullet` and two margins, and node deletion. Nothing else gets a
+ * control, because an input whose value is silently dropped at emit is exactly the
+ * failure this project is arranged against, reproduced in its own demo.
  *
  * That rule is why the bullet control has a position it will not let you *choose*.
  * A paragraph can hold a glyph the write API cannot author back — a numbering
@@ -46,7 +46,7 @@ import { project } from 'pptx-html'
  * values plus *inherited*, which is what an absent key means — and `align` is a
  * fourth of the same family, four named values plus the same absence.
  */
-export type ControlKind = 'toggle' | 'decoration' | 'number' | 'color' | 'align' | 'bullet'
+export type ControlKind = 'toggle' | 'decoration' | 'number' | 'color' | 'align' | 'bullet' | 'points'
 
 /**
  * Every property in the surface, with the control that drives it.
@@ -78,6 +78,20 @@ export const CONTROLS: readonly { prop: EditableRunProp; kind: ControlKind }[] =
 export const PARA_CONTROL_OF: Record<EditableParaProp, ControlKind> = {
 	align: 'align',
 	bullet: 'bullet',
+	marginLeftPt: 'points',
+	indentPt: 'points',
+}
+
+/**
+ * The two margin inputs, with the range `a:pPr/@marL` and `@indent` each accept.
+ *
+ * `min` is not decoration: a negative `marL` is a value PowerPoint reports as
+ * needing repair, and `parse/edits.ts` refuses one rather than letting the writer
+ * clamp it. The input says so before the refusal has to.
+ */
+export const POINTS_BOUNDS: Record<'marginLeftPt' | 'indentPt', { min: number; max: number }> = {
+	marginLeftPt: { min: 0, max: 4032 },
+	indentPt: { min: -4032, max: 4032 },
 }
 
 export const PARA_CONTROLS: readonly { prop: EditableParaProp; kind: ControlKind }[] = (

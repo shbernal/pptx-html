@@ -90,14 +90,20 @@ describe('project', () => {
 		expect(JSON.parse(JSON.stringify(projection))).toStrictEqual(projection)
 	})
 
-	it('carries a paragraph’s alignment and bullet, and only what the paragraph states', () => {
+	it('carries a paragraph’s alignment, bullet and margins, and only what the paragraph states', () => {
 		const bullets = projection.slides[0]?.nodes.find((node) => node.id === 's1.sp3')
-		// Three paragraphs: one stating both, one stating a bullet and no alignment,
-		// and a blank line stating an alignment and no bullet. `level`, the margins and
-		// the indents sit beside them on the same object and are not in surface, so a
-		// projection that copied the props wholesale would fail on the first of these.
+		// Three paragraphs: one stating an alignment, a bullet and both margins, one
+		// stating a bullet and no alignment, and a blank line stating an alignment and
+		// no bullet. `level` and `spaceBeforePt` sit beside them on the same object and
+		// are not in surface, so a projection that copied the props wholesale would fail
+		// on the first of these.
 		expect(bullets?.paragraphs.map((paragraph) => paragraph.props)).toStrictEqual([
-			{ align: 'left', bullet: { kind: 'character', char: '•', font: 'Arial' } },
+			{
+				align: 'left',
+				bullet: { kind: 'character', char: '•', font: 'Arial' },
+				marginLeftPt: 18,
+				indentPt: -18,
+			},
 			{ bullet: { kind: 'number', scheme: 'arabicPeriod', startAt: 1 } },
 			{ align: 'right' },
 		])
@@ -189,17 +195,20 @@ describe('freeze is the complement of project', () => {
 		expect(freeze(edited)).toStrictEqual(freeze(SAMPLE_IR))
 	})
 
-	it('is unchanged when a paragraph’s alignment or bullet moves, and changes when its level does', () => {
+	it('is unchanged when a paragraph’s alignment, bullet or margins move, and changes when its level does', () => {
 		// The paragraph tier's version of the pair above, and the same trap: `align`,
-		// `bullet` and `level` are neighbours on one object, and only the first two are
-		// in surface. A `freeze` that stripped `props` wholesale would pass the first
-		// half here and let an out-of-surface indent change go unnoticed.
+		// `bullet`, the two margins, `level` and `spaceBeforePt` are all neighbours on
+		// one object, and only the first four are in surface. A `freeze` that stripped
+		// `props` wholesale would pass the first half here and let an out-of-surface
+		// outline level change go unnoticed.
 		const edited = clone(SAMPLE_IR)
 		const bullets = edited.slides[0]?.nodes.find((node) => node.id === 's1.sp3') as ShapeNode
 		const paragraph = bullets.text?.paragraphs[0]
 		if (!paragraph) throw new Error('fixture lost its bulleted paragraph')
 		paragraph.props.align = 'justify'
 		paragraph.props.bullet = { kind: 'none' }
+		paragraph.props.marginLeftPt = 72
+		delete paragraph.props.indentPt
 		expect(freeze(edited)).toStrictEqual(freeze(SAMPLE_IR))
 
 		const drifted = clone(SAMPLE_IR)
@@ -208,6 +217,15 @@ describe('freeze is the complement of project', () => {
 		if (!other) throw new Error('fixture lost its bulleted paragraph')
 		other.props.level = 3
 		expect(freeze(drifted)).not.toStrictEqual(freeze(SAMPLE_IR))
+
+		// And the neighbour that is a measurement like the margins are, so the
+		// separation cannot be "strip every number on a paragraph".
+		const spaced = clone(SAMPLE_IR)
+		const spacedNode = spaced.slides[0]?.nodes.find((node) => node.id === 's1.sp3') as ShapeNode
+		const spacedParagraph = spacedNode.text?.paragraphs[0]
+		if (!spacedParagraph) throw new Error('fixture lost its bulleted paragraph')
+		spacedParagraph.props.spaceBeforePt = 24
+		expect(freeze(spaced)).not.toStrictEqual(freeze(SAMPLE_IR))
 	})
 
 	it('strips text inside table cells and groups too', () => {

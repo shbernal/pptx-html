@@ -31,8 +31,9 @@ because a deck where one slide was edited and eleven were not should not describ
 all twelve the same way.
 
 The panel beside the preview is the **editable surface** — run text, `bold`,
-`italic`, `underline`, `strike`, `sizePt`, `color`, a paragraph's `align` and
-`bullet`, and deleting a node. That list is not a subset chosen for the demo: it is
+`italic`, `underline`, `strike`, `sizePt`, `color`, a paragraph's `align`,
+`bullet`, `marginLeftPt` and `indentPt`, and deleting a node. That list is not a
+subset chosen for the demo: it is
 `EDITABLE_SURFACE`, exported from the package, and there is deliberately no
 control for anything outside it. An input whose value was silently dropped on the
 way back would be the exact failure this project is built to refuse.
@@ -51,6 +52,14 @@ paragraph says nothing about its bullet* — the omitted option wrote the explic
 three, and the two look identical on screen. Rather than ship a control that lies
 in a way nothing on the page could show, there was no control at all until the
 option gained an `inherit` spelling.
+
+The two margin fields — `marginLeftPt` is where the body text starts,
+`indentPt` how far the first line sits from it — came with the same upstream
+change, and an empty field is the drop-downs' **inherited** in another shape: a
+paragraph whose margin is cleared follows its list style again, which is not the
+same paragraph as one stating `0`. Until `bullet` gained its third state the
+bullet decided both attributes, so *suppress this bullet but keep the margin it
+inherits* was not a deck the write API could produce.
 
 Its fourth position, *as the deck states it*, is disabled and is the same rule
 still doing its job. A paragraph can hold a numbered bullet, a picture bullet or a

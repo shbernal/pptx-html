@@ -198,6 +198,45 @@ describe('an edited document', () => {
 		expect(JSON.stringify(reconcile(SAMPLE_IR, reading).ir)).not.toContain('"emoji"')
 	})
 
+	it('reads a paragraph’s margins back as numbers, and clearing one as absence', async () => {
+		// The margins are the surface's only measurement on the paragraph tier, and the
+		// attribute is text — so this is the test that a point value survives the
+		// document as a number rather than as `"18"`, which `reconcile` would read as a
+		// change on every pass and emit would hand the writer as a string.
+		const dom = await documentOf(SAMPLE_IR)
+		const para = dom.querySelector('[data-pxh-para]')
+		if (para === null) throw new Error('the rendered document has no addressable paragraphs')
+		para.setAttribute('data-pxh-paraprops', JSON.stringify({ marginLeftPt: 36 }))
+
+		const reading = readSurface(dom, SAMPLE_IR)
+		expect(reading.anomalies).toEqual([])
+
+		const address = para.getAttribute('data-pxh-para')
+		const read = reading.projection.slides
+			.flatMap((slide) => slide.nodes)
+			.flatMap((node) => node.paragraphs)
+			.find((paragraph) => `${paragraph.node}/${paragraph.paragraph}` === address)
+		// The alignment this paragraph stated is gone from the attribute, which is how a
+		// document spells *back to inherited* — so the reading has to be the margin
+		// alone rather than the margin folded into what the island still says.
+		expect(read?.props).toStrictEqual({ marginLeftPt: 36 })
+		expect(reconcile(SAMPLE_IR, reading).slides[0]?.lane).toBe('reconciled')
+	})
+
+	it('refuses a margin that is not a number, and keeps the model’s', async () => {
+		// The shape gate, not the range one: `parse/edits.ts` decides what the attribute
+		// can hold, because a value out of range is still a margin the file may state.
+		// A string is not, and accepting one would hand the writer `"36pt"` to drop.
+		const dom = await documentOf(SAMPLE_IR)
+		const para = dom.querySelector('[data-pxh-para]')
+		if (para === null) throw new Error('the rendered document has no addressable paragraphs')
+		para.setAttribute('data-pxh-paraprops', JSON.stringify({ marginLeftPt: '36pt' }))
+
+		const reading = readSurface(dom, SAMPLE_IR)
+		expect(reading.anomalies.join('\n')).toContain('must be a finite number of points')
+		expect(JSON.stringify(reconcile(SAMPLE_IR, reading).ir)).not.toContain('36pt')
+	})
+
 	it('does not address a chrome paragraph, so the template’s own text is not read as drift', async () => {
 		// Chrome is drawn and nothing more. Its `<p>` carries no `data-pxh-para`, which
 		// is what keeps the sweep for unmodeled paragraphs quiet — without it every

@@ -148,8 +148,13 @@ const BULLETS: ShapeNode = {
 					align: 'left',
 					level: 0,
 					bullet: { kind: 'character', char: '•', font: 'Arial' },
+					// The two margins are in the surface and `spaceBeforePt` beside them is
+					// not, which is what keeps the paragraph tier's narrowing falsifiable in
+					// the same way the title's underlined run keeps the run tier's: one
+					// paragraph object holding both kinds of property.
 					marginLeftPt: 18,
 					indentPt: -18,
+					spaceBeforePt: 4,
 				},
 				// The inherited run: it states nothing, so everything a renderer needs
 				// is in `resolved` and `props` is empty.

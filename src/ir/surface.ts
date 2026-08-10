@@ -20,7 +20,7 @@
  * ## v1 surface
  *
  * The smallest set that is useful: run text, the character properties that map
- * 1:1 onto a write-API option, the two *paragraph* properties that do, and
+ * 1:1 onto a write-API option, the *paragraph* properties that do, and
  * deleting a node. Everything else — moving a box, changing geometry, restyling
  * a table, reordering or inserting slides — is out. Slide reordering is out for
  * a second reason as well: the writer has `removeSlide(index)` but no
@@ -88,8 +88,29 @@ export type EditableRunProp = (typeof EDITABLE_RUN_PROPS)[number]
  * through the projection unchanged and is therefore never re-authored, and the
  * `DeckIr` keeps the spelling `readModelToIr` gave it. `parse/edits.ts` draws the
  * line, and warns rather than approximating when a caller crosses it.
+ *
+ * ## The two margins, which `bullet` was hiding
+ *
+ * `marginLeftPt` and `indentPt` are `a:pPr/@marL` and `@indent` — where the body
+ * text starts, and how far the first line is offset from it. They clear the bar
+ * for the same reason `bullet` now does and could not before it: `paraMarginLeft`
+ * and `paraIndent` take a number *or* `'inherit'`, so *36pt*, *explicitly zero*
+ * and *whatever the list style says* are three states the option can spell.
+ *
+ * Omitting the option is none of those three. It means *the bullet's default* — a
+ * drawn glyph writes its own hanging margin, `bullet: false` writes `marL="0"
+ * indent="0"`, and only `bullet: 'inherit'` writes nothing — which is why the
+ * margins could not be in surface while the bullet decided them. They are separate
+ * facts now: an explicitly bulletless paragraph can keep the margin it inherits,
+ * and a bulleted one can state its own.
+ *
+ * The value domain is a point measurement rather than an enumeration, so the
+ * per-value bar lands on the range instead: `@marL` is unsigned and both attributes
+ * stop at 4032pt, and the writer *clamps* a value outside that rather than
+ * refusing it. A clamped value is an approximation the surface does not make, so
+ * `parse/edits.ts` refuses one — the same warning-and-keep the bullets get.
  */
-export const EDITABLE_PARA_PROPS = ['align', 'bullet'] as const
+export const EDITABLE_PARA_PROPS = ['align', 'bullet', 'marginLeftPt', 'indentPt'] as const
 
 export type EditableParaProp = (typeof EDITABLE_PARA_PROPS)[number]
 
@@ -281,9 +302,11 @@ export function editableRunProps(props: RunProperties): Pick<RunProperties, Edit
  *
  * The counterpart of {@link editableRunProps}, and exported for the same reason:
  * the renderer writes exactly this onto each `<p>` (`data-pxh-paraprops`) and the
- * return path reads exactly this back. `level`, the indents and the spacings stay
- * out — every one of them is either unwritable through the write API or needs the
- * list style it indexes into, which the paint model does not carry.
+ * return path reads exactly this back. `level` stays out because `@lvl` is an index
+ * into a list style the paint model does not carry, and `spaceBeforePt` /
+ * `spaceAfterPt` because the option treats `0` as unset — a paragraph that states
+ * zero space to suppress its list style's cannot be authored back, which is
+ * upstream's own `text.paragraphSpaceZero` note and the per-value bar again.
  */
 export function editableParaProps(
 	props: Pick<ParagraphProperties, EditableParaProp>

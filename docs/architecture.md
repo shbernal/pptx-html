@@ -131,7 +131,8 @@ Each of these will break something if ignored.
   the same deck agrees with the first and the differ aligns sides by id instead of
   by position.
 - **Absent means inherited, not default.** Every `RunProperties` field, plus a
-  paragraph's `align`/`bullet`, and the `inherit` arm of `Fill` and `Stroke`. This
+  paragraph's `align`/`bullet` and its `marL`/`indent`, and the `inherit` arm of
+  `Fill` and `Stroke`. This
   is why `TextRun` carries **two** property sets: `props` is what the run itself
   stated (what emit reads), `resolved` is what to paint after the placeholder →
   layout → master chain is walked. Writing the resolved value into `props` renders
@@ -259,10 +260,10 @@ follows call order.
 
 `src/ir/surface.ts` defines exactly what a human may change in the rendered HTML
 and have honoured on the way back: **run text,
-`bold`/`italic`/`underline`/`strike`/`sizePt`/`color`, a paragraph's `align` and
-`bullet`, and deleting a node.** Everything else — moving a box, changing geometry,
-restyling a table, reordering or inserting slides — is **detected as drift**, never
-interpreted.
+`bold`/`italic`/`underline`/`strike`/`sizePt`/`color`, a paragraph's `align`,
+`bullet`, `marginLeftPt` and `indentPt`, and deleting a node.** Everything else —
+moving a box, changing geometry, restyling a table, reordering or inserting
+slides — is **detected as drift**, never interpreted.
 
 The test a property has to pass is a 1:1 write-API option, not usefulness.
 `underline` and `strike` pass because `RunProperties` already models each as the
@@ -293,10 +294,11 @@ so the lanes can see a regression here on their own.
 
 ### The paragraph tier, and the bar it sharpened
 
-`align` and `bullet` are the whole of it, and the second is why the bar is stated
-the way it is: **the 1:1 test is per _value_, not per property.** The two run
-properties added before it passed at the property level and the question never
-came up, because their value sets happened to be total.
+`align`, `bullet` and the paragraph's own two margins are the whole of it, and the
+second is why the bar is stated the way it is: **the 1:1 test is per _value_, not
+per property.** The two run properties added before it passed at the property
+level and the question never came up, because their value sets happened to be
+total.
 
 `align` clears the bar outright. Its four values are the write option's own, and
 omitting the option writes no `a:pPr/@algn`, so *inherited*, *left* and *centre*
@@ -325,6 +327,30 @@ told, in a warning, and the deck keeps what it had. Refusing them in the *reader
 instead would have been the tempting mistake: it would report an unedited slide
 with a numbered list as drifted.
 
+#### The margins the bullet was deciding
+
+`marginLeftPt` and `indentPt` — `a:pPr/@marL` and `@indent`, where the body text
+starts and how far the first line sits from it — arrived with the same fix, and
+they are the reason `bullet: 'inherit'` was more than a third position on one
+control. Before it, the bullet *was* the margins: a drawn glyph wrote its own
+hanging pair, `bullet: false` wrote `marL="0" indent="0"`, and no option said
+anything about either. A paragraph that suppressed its bullet and kept the margin
+it inherited could not be written at all.
+
+`paraMarginLeft` and `paraIndent` state each attribute independently, in every
+bullet state, and take `'inherit'` for the silence — so *36pt*, *explicitly zero*
+and *whatever the list style says* are three states, exactly as with `align` and
+`bullet`. Clearing one therefore writes `'inherit'` rather than deleting the
+option, which would fall back to the bullet's default and move the text.
+
+The per-value bar lands on a *range* here rather than on a set of tokens, which is
+the one difference worth naming. `@marL` is unsigned and both attributes stop at
+4032pt, and the writer **clamps** an out-of-range value rather than refusing it —
+`paraMarginLeft: -10` writes `marL="0"`. A clamp is an approximation, so
+`parse/edits.ts` refuses one and warns, and the reader stays wide: it takes any
+finite number, because what a rendered `<p>` states is what the file stated, and
+refusing it there would read as *cleared* rather than as refused.
+
 #### Where a paragraph property is written
 
 Paragraph properties do not exist in the write contract. They ride on runs, and
@@ -336,12 +362,17 @@ property, in opposite directions**:
 |---|---|---|
 | `align` | every run of the paragraph | two adjacent runs that disagree start a new paragraph |
 | `bullet` | the opening run only | a run stating a glyph starts a new paragraph by itself |
+| `marginLeftPt`, `indentPt` | every run of the paragraph | nothing groups on them; this is the shape a fresh read produces |
 
 Use `align`'s placement for `bullet` and setting one glyph on a three-run
 paragraph returns three one-run paragraphs; use `bullet`'s for `align` and the
-paragraph splits at the first run that still disagrees. Both are also the shape
-`readModelToIr` produces, so the contract left behind is the one a fresh read
-would have written. Neither failure moves the run count, which is what the guard
+paragraph splits at the first run that still disagrees. The margins are the row
+where the placement is a *choice*: the grouper does not read them and the
+serializer takes `a:pPr` from whichever run opens the line, so both placements emit
+the same attribute. Every run is chosen because it is what upstream produces, and
+one shape of contract per paragraph is worth more than the shorter write. All
+three are that shape, so the contract left behind is the one a fresh read would
+have written. Neither failure moves the run count, which is what the guard
 in `parse/edits.ts` checks — so `test/oracle/loop.test.ts` asserts the *paragraph*
 count after the round trip, and the corpus decks each keep a paragraph with two
 runs in it for exactly that assertion to have something to fail on.

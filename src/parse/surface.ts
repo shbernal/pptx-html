@@ -172,6 +172,16 @@ function paraValueComplaint(key: EditableParaProp, value: unknown): string | nul
 				: `is ${JSON.stringify(value)} and must be one of left, center, right, justify`
 		case 'bullet':
 			return bulletComplaint(value)
+		case 'marginLeftPt':
+		case 'indentPt':
+			// A measurement, so the gate is the type and finiteness and *not* the range
+			// the write API accepts. Refusing an out-of-range margin here would drop the
+			// key, which reads as *cleared* rather than refused — and a paragraph's
+			// margin is whatever the file says, including a value no writer would emit.
+			// The range is checked where a value is authored, in `parse/edits.ts`.
+			return typeof value === 'number' && Number.isFinite(value)
+				? null
+				: `is ${JSON.stringify(value)} and must be a finite number of points`
 	}
 }
 

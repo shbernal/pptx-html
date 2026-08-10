@@ -9,7 +9,7 @@
  * refuse it, keep the island's value, and say so.
  *
  * What that leaves is small and total: a run's text, the six character properties
- * `EDITABLE_RUN_PROPS` names, the two paragraph properties `EDITABLE_PARA_PROPS`
+ * `EDITABLE_RUN_PROPS` names, the four paragraph properties `EDITABLE_PARA_PROPS`
  * does, and whether a node still exists. Those are the only things this file
  * writes.
  *

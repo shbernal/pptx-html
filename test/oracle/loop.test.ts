@@ -315,6 +315,120 @@ describe('an edit made through the surface', () => {
 		expect(back.text?.paragraphs[0]?.props.bullet).toStrictEqual({ kind: 'none' })
 	})
 
+	it('carries a paragraph’s margins, and writes them on every run of it', async () => {
+		// The paragraph tier's third and fourth properties. Nothing in the writer groups
+		// on a margin, so the placement cannot split a paragraph the way `align`'s and
+		// `bullet`'s can — the assertion is still on the paragraph count, because that
+		// is what a *future* placement change would break first, and on both runs of the
+		// two-run paragraph, which is the shape a fresh read produces.
+		const { source, html } = await rendered('paragraph-indent')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text) throw new Error('the paragraph-indent deck changed shape')
+		const paragraphs = shape.text.paragraphs
+		expect(paragraphs).toHaveLength(6)
+		expect(paragraphs.map((paragraph) => paragraph.props.marginLeftPt)).toStrictEqual([undefined, 36, 36, 0, 36, 24])
+		expect(paragraphs.map((paragraph) => paragraph.props.indentPt)).toStrictEqual([
+			undefined,
+			undefined,
+			-18,
+			undefined,
+			-18,
+			undefined,
+		])
+
+		const target = paragraphs[5]
+		if (!target) throw new Error('the paragraph-indent deck lost its two-run paragraph')
+		expect(target.runs).toHaveLength(2)
+		target.props.marginLeftPt = 48
+		target.props.indentPt = -12
+
+		const emitted = await emitDeck(parsed, { source })
+		const ir = readModelToIr(await Presentation.load(emitted.bytes))
+		const runs = ir.slides[0]?.calls[0]?.args[0] as { options?: Record<string, unknown> }[]
+		expect(runs.at(-2)?.options?.paraMarginLeft).toBe(48)
+		expect(runs.at(-1)?.options?.paraMarginLeft).toBe(48)
+		expect(runs.at(-2)?.options?.paraIndent).toBe(-12)
+
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs).toHaveLength(6)
+		expect(back.text?.paragraphs[5]?.props).toMatchObject({ marginLeftPt: 48, indentPt: -12 })
+		expect(back.text?.paragraphs[5]?.runs).toHaveLength(2)
+	})
+
+	it('returns a margin to inherited, which is not the same deck as setting it to zero', async () => {
+		// The clearing half, and the one the whole property was waiting for. Deleting
+		// the *option* does not state nothing — it restores the bullet's default, which
+		// for anything but an inherited bullet is `marL="0"`, a margin the paragraph
+		// never had. So the edit is made on the one paragraph whose bullet is explicitly
+		// none: there, `'inherit'` and a deleted option produce different files, and the
+		// stated zero above it is the control the wrong one would look identical to.
+		const { source, html } = await rendered('paragraph-indent')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[4]) throw new Error('fixture changed')
+		expect(shape.text.paragraphs[4].props).toMatchObject({ marginLeftPt: 36, bullet: { kind: 'none' } })
+		delete shape.text.paragraphs[4].props.marginLeftPt
+
+		const emitted = await emitDeck(parsed, { source })
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs[4]?.props.marginLeftPt).toBeUndefined()
+		// Everything else about that paragraph stands: the bullet it suppresses and the
+		// indent it states are not what was cleared.
+		expect(back.text?.paragraphs[4]?.props).toMatchObject({ indentPt: -18, bullet: { kind: 'none' } })
+		// And the stated zero above it is untouched, and still stated.
+		expect(back.text?.paragraphs[3]?.props.marginLeftPt).toBe(0)
+	})
+
+	it('keeps an inherited margin under a bullet it suppresses, which takes writing one edit as two', async () => {
+		// The combination the two options unlocked, and the one place a paragraph edit
+		// changes the meaning of an option it did not write: `bullet: false` writes
+		// `marL="0" indent="0"` unless the margins say otherwise, and the contract omits
+		// them for a paragraph whose bullet is inherited. So suppressing the bullet
+		// alone would flatten the inherited indent in the same stroke, invisibly —
+		// `pinMarginsBesideBullet` restates them as `'inherit'`, which is what a fresh
+		// read of the result produces.
+		const { source, html } = await rendered('paragraph-indent')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]) throw new Error('fixture changed')
+		const first = shape.text.paragraphs[0]
+		expect(first.props.marginLeftPt).toBeUndefined()
+		first.props.bullet = { kind: 'none' }
+
+		const emitted = await emitDeck(parsed, { source })
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs[0]?.props.bullet).toStrictEqual({ kind: 'none' })
+		expect(back.text?.paragraphs[0]?.props.marginLeftPt).toBeUndefined()
+		expect(back.text?.paragraphs[0]?.props.indentPt).toBeUndefined()
+	})
+
+	it('refuses a margin the attribute cannot hold, rather than letting the writer clamp it', async () => {
+		// The per-value bar on a measurement. `a:pPr/@marL` is unsigned, and the writer
+		// clamps a negative one to zero and warns — which would move the text to a place
+		// the caller did not ask for and the model does not hold. Refused here instead,
+		// with the deck keeping the margin it had.
+		const { source, html } = await rendered('paragraph-indent')
+		const parsed = await parseDeck(html, { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[1]) throw new Error('fixture changed')
+		shape.text.paragraphs[1].props.marginLeftPt = -10
+
+		const emitted = await emitDeck(parsed, { source })
+		expect(emitted.warnings.join('\n')).toContain('a margin of -10pt')
+
+		const reimported = await importDeck(emitted.bytes)
+		const back = reimported.render.slides[0]?.nodes[0]
+		if (back?.kind !== 'shape') throw new Error('the emitted deck lost its text shape')
+		expect(back.text?.paragraphs[1]?.props.marginLeftPt).toBe(36)
+	})
+
 	it('refuses a bullet the write API cannot author, and says so instead of rounding it', async () => {
 		// The per-value bar, exercised from the one direction that can reach it: only
 		// the delta is written, so a numbered bullet nobody touched is never

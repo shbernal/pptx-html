@@ -9,6 +9,8 @@ import {
 	CONTROLS,
 	DECORATION_CHOICES,
 	PARA_CONTROLS,
+	type ParagraphRow,
+	POINTS_BOUNDS,
 	type RunRow,
 	type SlideRow,
 	srgb,
@@ -71,6 +73,29 @@ function onBullet(address: string, value: string) {
 function onColor(address: string, value: string) {
 	emit('prop', address, 'color', srgb(value))
 }
+
+/**
+ * A margin in points, or the empty field that clears it.
+ *
+ * Empty is *inherited* here for the same reason the empty `<option>` is on the
+ * drop-downs — and it is the position with something to say: a paragraph whose
+ * margin is cleared follows its list style again, which is a different paragraph
+ * from one stating `0`. Both are reachable from this input.
+ */
+function onPoints(address: string, prop: EditableParaProp, value: string) {
+	const parsed = Number.parseFloat(value)
+	emit('paraProp', address, prop, value.trim() === '' || Number.isNaN(parsed) ? undefined : parsed)
+}
+
+function pointsBounds(prop: EditableParaProp): { min: number; max: number } {
+	return POINTS_BOUNDS[prop as 'marginLeftPt' | 'indentPt']
+}
+
+/** What to show in the field: the stated points, or nothing when the paragraph inherits. */
+function pointsValue(props: ParagraphRow['props'], prop: EditableParaProp): number | '' {
+	const value = props[prop as 'marginLeftPt' | 'indentPt']
+	return typeof value === 'number' ? value : ''
+}
 </script>
 
 <template>
@@ -105,7 +130,7 @@ function onColor(address: string, value: string) {
 								</option>
 							</select>
 							<select
-								v-else
+								v-else-if="control.kind === 'bullet'"
 								class="pxh-select"
 								:value="bulletChoiceOf(para.props.bullet)"
 								@change="onBullet(para.address, ($event.target as HTMLSelectElement).value)"
@@ -119,6 +144,17 @@ function onColor(address: string, value: string) {
 									{{ choice.label }}
 								</option>
 							</select>
+							<input
+								v-else
+								class="pxh-size"
+								type="number"
+								step="1"
+								:min="pointsBounds(control.prop).min"
+								:max="pointsBounds(control.prop).max"
+								:value="pointsValue(para.props, control.prop)"
+								placeholder="inherited"
+								@change="onPoints(para.address, control.prop, ($event.target as HTMLInputElement).value)"
+							/>
 						</label>
 					</div>
 

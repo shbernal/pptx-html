@@ -62,33 +62,42 @@ const OPTION_OF: Record<EditableRunProp, string> = {
 const PARA_OPTION_OF: Record<EditableParaProp, string> = {
 	align: 'align',
 	bullet: 'bullet',
+	marginLeftPt: 'paraMarginLeft',
+	indentPt: 'paraIndent',
 }
 
 /**
  * How each paragraph property says **nothing** — the value to write when an edit
  * returns one to inherited.
  *
- * This table exists because the two answers differ, and the difference is the
- * whole of ts-pptx#15. Omitting `align` omits `a:pPr/@algn`, so *absent* and
- * *inherited* are the same act and the option is simply deleted. Omitting
- * `bullet` does not omit anything: it means `false`, which writes an explicit
- * `<a:buNone/>` plus `indent="0" marL="0"` and *overrides* the list style —
- * silently, since a suppressed bullet and an inherited-none paint identically.
- * `'inherit'` is the spelling for saying nothing, and it is what `readModelToIr`
- * itself emits for such a paragraph, so an edit that clears a bullet leaves the
- * contract in the shape a fresh read would have produced.
+ * This table exists because the answers differ, and the difference is the whole of
+ * ts-pptx#15. Omitting `align` omits `a:pPr/@algn`, so *absent* and *inherited* are
+ * the same act and the option is simply deleted. Omitting `bullet` does not omit
+ * anything: it means `false`, which writes an explicit `<a:buNone/>` plus
+ * `indent="0" marL="0"` and *overrides* the list style — silently, since a
+ * suppressed bullet and an inherited-none paint identically. `'inherit'` is the
+ * spelling for saying nothing, and it is what `readModelToIr` itself emits for such
+ * a paragraph, so an edit that clears a bullet leaves the contract in the shape a
+ * fresh read would have produced.
  *
- * Deleting the option here would be the one failure the surface cannot afford: an
- * edit made through it, accepted, and quietly turned into its opposite.
+ * The two margins take `'inherit'` for the same reason, and it is the same
+ * sentence one attribute along: an omitted `paraMarginLeft` is not silence either,
+ * it is *the bullet's default* — the hanging margin of a drawn glyph, or the
+ * `marL="0"` that `bullet: false` writes. Deleting the option on a paragraph whose
+ * bullet is anything but inherited would move its text, which is the one failure
+ * the surface cannot afford: an edit made through it, accepted, and quietly turned
+ * into something else.
  */
 const PARA_INHERITED_OF: Record<EditableParaProp, unknown> = {
 	align: undefined,
 	bullet: 'inherit',
+	marginLeftPt: 'inherit',
+	indentPt: 'inherit',
 }
 
 /**
- * Which runs of a paragraph a property is written to — and the two answers are
- * opposite, which is why this is a table and not a rule.
+ * Which runs of a paragraph a property is written to — and two of the answers are
+ * opposites, which is why this is a table and not a rule.
  *
  * The write API has no paragraph tier: properties ride on runs, and
  * `groupRunsIntoLines` decides where one paragraph ends and the next begins by
@@ -103,12 +112,18 @@ const PARA_INHERITED_OF: Record<EditableParaProp, unknown> = {
  *   `align` is exactly wrong here: writing one glyph to all three runs produces
  *   three one-run paragraphs. `false` and `'inherit'` are inert either way, but
  *   the first run is the only placement correct for all three states.
+ * - **The two margins on every run**, and this one is a choice rather than a
+ *   constraint. The grouper does not look at them at all and the serializer reads
+ *   `a:pPr` off whichever run opens the line, so either placement emits the same
+ *   attribute. Every run is what `readModelToIr` produces, and matching it is worth
+ *   more than the shorter write: it keeps one shape of contract for a paragraph
+ *   rather than one the edit path recognises and one a fresh read does.
  *
- * Both are also the shape `readModelToIr` produces — it replicates a paragraph's
- * alignment onto every run and states its bullet once — so the contract this
- * leaves behind is the one a fresh read of the same deck would have written.
+ * All three are that shape — upstream replicates a paragraph's options onto every
+ * run and deletes `bullet` from the continuations — so the contract this leaves
+ * behind is the one a fresh read of the same deck would have written.
  *
- * Neither mistake shows up in a run count, which is what the guard in
+ * None of these mistakes shows up in a run count, which is what the guard in
  * {@link patchRuns} checks. What catches them is asserting the *paragraph* count
  * after the round trip, which is what the corpus decks with two runs in one
  * paragraph exist for.
@@ -116,6 +131,8 @@ const PARA_INHERITED_OF: Record<EditableParaProp, unknown> = {
 const PARA_PLACEMENT_OF: Record<EditableParaProp, 'every-run' | 'first-run'> = {
 	align: 'every-run',
 	bullet: 'first-run',
+	marginLeftPt: 'every-run',
+	indentPt: 'every-run',
 }
 
 /**
@@ -257,6 +274,35 @@ function diffNodes(
 	}
 }
 
+/**
+ * Restate the margins when an edit stops the bullet being inherited.
+ *
+ * The one place a paragraph edit changes the meaning of an option it did not
+ * write. An omitted `paraMarginLeft` is *the bullet's default*, so what the
+ * contract's silence about the margins means depends on the bullet beside them:
+ * under `bullet: 'inherit'` it is silence too, and `readModelToIr` omits the keys
+ * for exactly that paragraph. Change that bullet to `false` or to a glyph and the
+ * same silence starts meaning `marL="0" indent="0"` or a hanging pair — so
+ * suppressing an inherited bullet would flatten the paragraph's inherited indent
+ * along with it, invisibly, having been asked for one thing.
+ *
+ * So a bullet edit carries the margins the paragraph *states* — a number, or
+ * `'inherit'` for one it does not state. That is what a fresh read of the result
+ * would produce, since upstream's own mapper omits the keys only while the bullet
+ * is inherited. Nothing is pinned when the margin was edited too (the edit already
+ * says it), nor when the bullet edit is one the write API cannot author (nothing is
+ * written, so nothing changes meaning).
+ */
+function pinMarginsBesideBullet(edit: ParaEdit, props: ParagraphProperties): void {
+	const bullet = edit.props.bullet
+	if (bullet === undefined || bullet === 'inherit' || whyUnspellable(bullet) !== null) return
+	for (const key of ['marginLeftPt', 'indentPt'] as const) {
+		if (key in edit.props) continue
+		const stated = props[key]
+		edit.props[key] = stated === undefined ? PARA_INHERITED_OF[key] : paraOptionValue(key, stated)
+	}
+}
+
 function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null, edits: TextEdits): void {
 	if (before === null || after === null) return
 	before.paragraphs.forEach((paragraph, paragraphIndex) => {
@@ -272,6 +318,7 @@ function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null
 				if (JSON.stringify(wasSet ?? null) === JSON.stringify(isSet ?? null)) continue
 				paraEdit.props[key] = isSet === undefined ? PARA_INHERITED_OF[key] : paraOptionValue(key, isSet)
 			}
+			pinMarginsBesideBullet(paraEdit, paragraphNow.props)
 			if (Object.keys(paraEdit.props).length > 0) edits.paragraphs.set(`${owner}/${paragraphIndex}`, paraEdit)
 		}
 
@@ -371,9 +418,13 @@ function whyUnspellable(value: unknown): string | null {
  *
  * None of those is reachable without a caller deliberately writing one, because
  * only the delta is applied and a bullet nobody moved is not a delta.
+ *
+ * The two margins pass through as their number, with the same bar applied to a
+ * range rather than to a set — see {@link marginOptionValue}.
  */
 function paraOptionValue(key: EditableParaProp, value: NonNullable<ParagraphProperties[EditableParaProp]>): unknown {
 	if (key === 'align') return value
+	if (key === 'marginLeftPt' || key === 'indentPt') return marginOptionValue(key, value as number)
 
 	const bullet = value as Bullet
 	if (bullet.kind === 'none') return false
@@ -387,6 +438,42 @@ function paraOptionValue(key: EditableParaProp, value: NonNullable<ParagraphProp
 	const points = [...bullet.char]
 	if (points.length !== 1) return unspellable(`the ${points.length}-character glyph ${JSON.stringify(bullet.char)}`)
 	return { characterCode: (bullet.char.codePointAt(0) as number).toString(16).toUpperCase().padStart(4, '0') }
+}
+
+/**
+ * `a:pPr/@marL` is `ST_TextMargin`, which is unsigned and stops at 4032pt;
+ * `@indent` is `ST_TextIndent`, signed and stopping at the same magnitude. A
+ * negative margin is not a narrower one, it is a file PowerPoint offers to repair.
+ */
+const MARGIN_BOUNDS: Record<'marginLeftPt' | 'indentPt', { noun: string; attribute: string; min: number; max: number }> =
+	{
+		marginLeftPt: { noun: 'a margin', attribute: 'a:pPr/@marL', min: 0, max: 4032 },
+		indentPt: { noun: 'an indent', attribute: 'a:pPr/@indent', min: -4032, max: 4032 },
+	}
+
+/**
+ * A margin in the write API's spelling, which is the number itself — as long as the
+ * attribute can hold it.
+ *
+ * This is the per-value bar on a measurement, where "which values can the option
+ * author" is a range rather than a list. The writer *clamps* a value outside the
+ * schema's, and warns as it does: `paraMarginLeft: -10` writes `marL="0"`, which is
+ * a paragraph the caller did not ask for and the model does not hold. So an
+ * out-of-range value is refused here instead, the deck keeps the margin
+ * `readModelToIr` gave it, and the caller is told which value was dropped — the
+ * same treatment a numbering scheme gets, for the same reason.
+ *
+ * Unreachable from the document: `parse/surface.ts` accepts any finite number, but
+ * a rendered margin is one this package imported from a conforming file, so only a
+ * caller editing the model can put a value out of range.
+ */
+function marginOptionValue(key: 'marginLeftPt' | 'indentPt', value: number): unknown {
+	const { noun, attribute, min, max } = MARGIN_BOUNDS[key]
+	if (!Number.isFinite(value)) return unspellable(`${noun} of ${JSON.stringify(value)}, which is not a measurement`)
+	if (value < min || value > max) {
+		return unspellable(`${noun} of ${value}pt, outside the ${min}pt to ${max}pt ${attribute} can hold`)
+	}
+	return value
 }
 
 // ---------------------------------------------------------------------------

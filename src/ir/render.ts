@@ -74,8 +74,11 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  * gained `bullet` once the write API could spell an inherited one, so both hashes
  * move — `project` states a bullet a v5 document's `<p>` does not carry, and
  * `freeze` now strips one it used to keep.
+ * `6` → `7` is the same move a third time: `EDITABLE_PARA_PROPS` gained
+ * `marginLeftPt` and `indentPt`, which 3.2.0's `paraMarginLeft`/`paraIndent` can
+ * now state — including the inherited one — so both hashes move again.
  */
-export const IR_VERSION = 6
+export const IR_VERSION = 7
 
 /** English Metric Units per inch. The one conversion constant in the model. */
 export const EMU_PER_INCH = 914_400
@@ -469,10 +472,10 @@ export type Bullet =
 /**
  * Paragraph formatting.
  *
- * `align` and `bullet` are optional for the same reason every {@link RunProperties}
- * field is: absent means *inherited from the list style*, which is a different
- * paragraph from one that explicitly says `left` or `a:buNone`. `level` is not
- * optional — `a:pPr/@lvl` genuinely defaults to `0`.
+ * `align`, `bullet` and the two margins are optional for the same reason every
+ * {@link RunProperties} field is: absent means *inherited from the list style*,
+ * which is a different paragraph from one that explicitly says `left`, `a:buNone`
+ * or `marL="0"`. `level` is not optional — `a:pPr/@lvl` genuinely defaults to `0`.
  */
 export interface ParagraphProperties {
 	/** `@algn`, restricted to the four the write API expresses; `dist`/`thaiDist` are a note. */
@@ -480,7 +483,12 @@ export interface ParagraphProperties {
 	/** `a:pPr/@lvl`, 0-based outline depth. */
 	level: number
 	bullet?: Bullet
-	/** `@marL` / `@indent`, points. */
+	/**
+	 * `@marL` / `@indent`, points. Where the paragraph's body text starts, and how
+	 * far its first line is offset from that — negative hangs it left, which is what
+	 * a bulleted paragraph does. Both are in the editable surface: `paraMarginLeft`
+	 * and `paraIndent` state each independently of the bullet, absence included.
+	 */
 	marginLeftPt?: number
 	indentPt?: number
 	/** `a:lnSpc`, in whichever of the two OOXML forms the source used. */

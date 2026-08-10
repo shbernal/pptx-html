@@ -104,7 +104,8 @@ per slide which lane it took (`exact`, `reconciled`, `drifted`, `heuristic`) and
 throws rather than guessing when a document's integrity hashes do not match.
 
 What a rendered document may be edited in is **declared, not implied**: run text,
-`bold` / `italic` / `sizePt` / `color`, and node deletion. `project(ir)` is that
+`bold` / `italic` / `underline` / `strike` / `sizePt` / `color`, a paragraph's
+`align` / `bullet` / `marginLeftPt` / `indentPt`, and node deletion. `project(ir)` is that
 surface and `freeze(ir)` is its complement; both are exported, so "what may I
 safely edit in this HTML?" is answerable without reading the renderer.
 
