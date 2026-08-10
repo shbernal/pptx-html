@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest'
 import { importDeck } from '../../src/import/deck'
 import type { RenderIr } from '../../src/ir/render'
+import { freeze, project } from '../../src/ir/surface'
 import { renderDeck } from '../../src/render/document'
 import { ASSETS_ID, ISLAND_ID } from '../../src/render/island'
 import { CORPUS, corpusBytes } from '../corpus/decks'
@@ -169,6 +170,59 @@ describe('what the picture admits to', () => {
 		const declared = ir.slides.flatMap((slide) => slide.fidelity)
 		expect(declared.length).toBeGreaterThan(0)
 		expect(html).toContain('Declared differences')
+	})
+})
+
+describe('chrome is drawn and nothing else', () => {
+	it('paints the template’s furniture beneath the slide’s own nodes', async () => {
+		const { ir, bytes } = await importCorpus('layout-chrome')
+		const { html } = await renderDeck(ir, { bytes })
+
+		// Both layout shapes reached the picture: the band by its fill, the wordmark
+		// by its text. Before the upstream accessor landed neither was drawable at all.
+		expect(html).toContain('<g data-pxh-chrome="true">')
+		expect(html).toContain('fill="#250F6B"')
+		expect(html).toContain('ACME')
+
+		// Paint order, read off the document rather than asserted about the model:
+		// the chrome group opens after the background rect and closes before the
+		// slide's own title. SVG has no z-index, so document order *is* the answer.
+		const chromeAt = html.indexOf('data-pxh-chrome')
+		const titleAt = html.indexOf(`data-pxh-node="${ir.slides[0]?.nodes[0]?.id}"`)
+		expect(chromeAt).toBeGreaterThan(-1)
+		expect(titleAt).toBeGreaterThan(chromeAt)
+	})
+
+	it('gives an inherited run no address and no invitation to type', async () => {
+		// The failure this prevents is not cosmetic. A `contenteditable` wordmark
+		// invites an edit that lives on the layout part — honouring it would rewrite
+		// every slide bound to that layout, and refusing it would mean the page
+		// offered something the return path drops on the floor.
+		const { ir, bytes } = await importCorpus('layout-chrome')
+		const { html } = await renderDeck(ir, { bytes })
+
+		// One editable run on this slide: the title the slide itself owns.
+		expect(html.match(/contenteditable="true"/g)?.length ?? 0).toBe(1)
+		for (const node of ir.slides[0]?.chrome ?? []) {
+			expect(html).not.toContain(`data-pxh-node="${node.id}"`)
+			expect(html).not.toContain(`data-pxh-run="${node.id}/`)
+		}
+		// The wordmark is drawn, so its absence above is suppression rather than the
+		// node having been skipped for want of a placement.
+		expect(html.slice(html.indexOf('data-pxh-chrome'))).toContain('ACME')
+	})
+
+	it('keeps chrome out of the projection and inside the frozen half', async () => {
+		// The two halves the hashes are taken over. Chrome in `project` would make a
+		// template shape look editable; chrome outside `freeze` would make a change
+		// to one invisible to the drift check.
+		const { ir } = await importCorpus('layout-chrome')
+		const chromeIds = new Set((ir.slides[0]?.chrome ?? []).map((node) => node.id))
+		expect(chromeIds.size).toBeGreaterThan(0)
+
+		const projected = project(ir).slides.flatMap((slide) => slide.nodes.map((node) => node.id))
+		for (const id of chromeIds) expect(projected).not.toContain(id)
+		expect(freeze(ir).slides[0]?.chrome.map((node) => node.id)).toEqual([...chromeIds])
 	})
 })
 

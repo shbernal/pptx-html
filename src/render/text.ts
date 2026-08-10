@@ -143,26 +143,41 @@ function runStyle(run: TextRun, fontScalePct: number | undefined): string {
  * would write the layout's value into the slide — taking 30.8 off it would write
  * a number no part of the deck contains. The attribute is omitted entirely when
  * the run states none of the four, so the common case costs nothing.
+ *
+ * A `null` `nodeId` means the run is **chrome** — text on the slide's layout or
+ * master, which is drawn and nothing more. It gets its style and neither of the
+ * surface attributes, so it is not typeable and not addressable: the wordmark on
+ * a template band belongs to the layout part, and honouring an edit to it would
+ * change every slide in the deck.
  */
 function renderRun(
 	run: TextRun,
-	nodeId: string,
+	nodeId: string | null,
 	paragraph: number,
 	index: number,
 	fontScalePct: number | undefined
 ): string {
 	const style = runStyle(run, fontScalePct)
-	const address = `${nodeId}/${paragraph}/${index}`
 	const link = run.props.hyperlink
-	const stated = editableRunProps(run.props)
-	const statedAttr =
-		Object.keys(stated).length === 0 ? '' : ` data-pxh-props="${escapeAttr(JSON.stringify(stated))}"`
+	const styleAttr = style === '' ? '' : ` style="${escapeAttr(style)}"`
 	const span =
-		`<span data-pxh-run="${escapeAttr(address)}" contenteditable="true"${statedAttr}` +
-		`${style === '' ? '' : ` style="${escapeAttr(style)}"`}>${escapeText(run.text)}</span>`
+		nodeId === null
+			? `<span${styleAttr}>${escapeText(run.text)}</span>`
+			: surfaceSpan(run, `${nodeId}/${paragraph}/${index}`, styleAttr)
 
 	if (link?.url == null) return span
 	return `<a href="${escapeAttr(link.url)}"${link.tooltip === undefined ? '' : ` title="${escapeAttr(link.tooltip)}"`}>${span}</a>`
+}
+
+/** The editable form of a run: its address, its invitation to type, its stated props. */
+function surfaceSpan(run: TextRun, address: string, styleAttr: string): string {
+	const stated = editableRunProps(run.props)
+	const statedAttr =
+		Object.keys(stated).length === 0 ? '' : ` data-pxh-props="${escapeAttr(JSON.stringify(stated))}"`
+	return (
+		`<span data-pxh-run="${escapeAttr(address)}" contenteditable="true"${statedAttr}` +
+		`${styleAttr}>${escapeText(run.text)}</span>`
+	)
 }
 
 /**
@@ -275,8 +290,10 @@ function ordinalsOf(paragraphs: readonly Paragraph[]): number[] {
  * preview had. The other 7 bake nothing, and PowerPoint draws *those* at full
  * size too until the next edit, so leaving them alone is agreement rather than
  * omission.
+ *
+ * `nodeId` is `null` for a chrome frame — see {@link renderRun}.
  */
-export function renderTextBody(text: TextBody, nodeId: string): string {
+export function renderTextBody(text: TextBody, nodeId: string | null): string {
 	const ordinals = ordinalsOf(text.paragraphs)
 	const scale = text.autofitFontScalePct
 	const reduction = text.autofitLineSpaceReductionPct ?? 0

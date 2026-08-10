@@ -286,6 +286,79 @@ describe('geometry', () => {
 	})
 })
 
+describe('the template’s furniture arrives as chrome, not as nodes', () => {
+	it('reaches a layout’s non-placeholder shapes and keeps them off the slide’s own tree', async () => {
+		// The gap this closes was the largest single one measured: `slide.shapes` is
+		// the slide's tree alone, so a template's band and wordmark were absent from
+		// every preview. They are here now, and they are *here* — in `chrome` — rather
+		// than in `nodes`, which is the whole distinction.
+		const ir = await importCorpus('layout-chrome')
+		const slide = ir.slides[0]
+		if (!slide) throw new Error('layout-chrome lost its slide')
+
+		const chrome = flatten(slide.chrome)
+		expect(chrome.map((node) => node.kind)).toEqual(['shape', 'shape'])
+
+		const band = chrome[0]
+		expect(band?.kind).toBe('shape')
+		if (band?.kind !== 'shape') return
+		expect(band.fill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: '250F6B' } })
+		// Slide-absolute EMU, straight off the read model: a 10in × 0.45in band.
+		expect(band.placement?.box).toStrictEqual({ x: 0, y: 0, w: 9_144_000, h: 411_480 })
+
+		const wordmark = chrome[1]
+		expect(wordmark?.kind === 'shape' && wordmark.text?.paragraphs[0]?.runs[0]?.text).toBe('ACME')
+
+		// The slide's own title is a node, and it is the only one. A layout
+		// placeholder that leaked into chrome would show up here as a third shape
+		// carrying the prompt text.
+		expect(slide.nodes).toHaveLength(1)
+		expect(slide.nodes[0]?.name).toBe('title')
+		expect(chrome.map((node) => node.name)).not.toContain('title')
+	})
+
+	it('namespaces a chrome id by tier so it cannot be addressed as a slide node', async () => {
+		// `p:cNvPr/@id` is unique within *a* tree, and chrome comes from two further
+		// trees — so without the tier in the id a layout shape and a slide shape
+		// collide, and an edit addressed to one would find the other.
+		const ir = await importCorpus('layout-chrome')
+		const slide = ir.slides[0]
+		if (!slide) throw new Error('layout-chrome lost its slide')
+
+		for (const node of flatten(slide.chrome)) expect(node.id).toMatch(/^s1\.(layout|master)\.sp\d+$/)
+		const slideIds = new Set(flatten(slide.nodes).map((node) => node.id))
+		for (const node of flatten(slide.chrome)) expect(slideIds.has(node.id)).toBe(false)
+	})
+
+	it('files no fidelity note of its own for what it found on a layout', async () => {
+		// Chrome is not emitted — the layout part travels in the template package and
+		// the emitted deck binds to it — so a note filed while *walking* it would
+		// declare a loss the round trip never takes, addressed to a shape that is not
+		// on the slide. Upstream's notes are untouched, and upstream already has the
+		// one that covers this ground: `master.decoration`, filed once for the tier
+		// rather than once per shape the importer happened to visit.
+		const entry = CORPUS.find((candidate) => candidate.name === 'layout-chrome')
+		if (!entry) throw new Error('the corpus lost its layout-chrome deck')
+		const { deck, render } = await importDeck(await corpusBytes(entry))
+
+		const chromeNames = new Set(flatten(render.slides[0]?.chrome ?? []).map((node) => node.name))
+		expect(chromeNames).toEqual(new Set(['Shape 0', 'Text 1']))
+		for (const note of render.slides[0]?.fidelity ?? []) expect(chromeNames.has(note.shapeName ?? '')).toBe(false)
+		expect(deck.fidelity.map((note) => note.construct)).toContain('master.decoration')
+	})
+
+	it('leaves chrome empty for a deck whose layout carries only placeholders', async () => {
+		// The negative case, and it is the common one: `defineSlideMaster` with
+		// nothing but placeholders puts no furniture on the layout, and an importer
+		// that mistook a placeholder for furniture would draw the prompt text under
+		// every slide in the corpus.
+		for (const name of ['layout-placeholder', 'master-background', 'text-box']) {
+			const ir = await importCorpus(name)
+			expect(ir.slides.map((slide) => slide.chrome.length)).toEqual(ir.slides.map(() => 0))
+		}
+	})
+})
+
 describe('media identity is shared with the contract model', () => {
 	it('names an asset the same way DeckIr does', async () => {
 		// Two names for one image is how a picture stops being traceable through the

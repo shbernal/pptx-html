@@ -175,6 +175,38 @@ cannot paint it*; `RenderSlide.source: 'carried'` means *the write API cannot
 author it*. A plain chart is the case that separates them — it round-trips through
 `addChart` perfectly and simply cannot be drawn in a browser.
 
+### The template's furniture is `chrome`, and it is not `nodes`
+
+A slide's own shape tree is `slide.shapes`. The bands, rules, logos and background
+pictures that carry a deck's visual identity are not in it — they live on the
+layout and the master, and in a PowerPoint-authored deck they are usually most of
+what a reader recognises. `RenderSlide.chrome` holds them, mapped by the same
+mappers as `nodes` (upstream returns one `AnyShape` union from all three trees) and
+painted beneath them, master tier first.
+
+Keeping them out of `nodes` is the load-bearing part, and there are four separate
+reasons, any one of which is sufficient:
+
+- `project` would offer them as editable, and an edit to a layout shape has
+  nowhere to go — emit **binds to** the layout part rather than redrawing it.
+- Node ids are scoped to one shape tree, so a layout shape and a slide shape can
+  both be `p:cNvPr/@id` 2. `chromeNodeId` gives each tier its own namespace
+  (`s1.layout.sp2`) precisely so the two can never be confused for one another.
+- Deleting a node is in surface. Deleting a master shape is not expressible.
+- `modelHash` would move for a reason that has nothing to do with the slide.
+
+They are excluded from `project` and included in `freeze` — drawn, never
+addressed. The renderer enforces the second half in the document as well as in the
+model: chrome carries no `data-pxh-node`, and its runs carry no `data-pxh-run` and
+no `contenteditable`.
+
+Whether a slide gets any is `p:sld/@showMasterSp` — PowerPoint's *Hide background
+graphics*. It comes from `AG_ChildSlide`, the attribute group each child tier
+carries about the tier above it, so the slide's flag governs the layout's shapes
+and the layout's own flag governs the master's. Both tiers' **placeholders** are
+excluded regardless: a layout placeholder is a prompt for the slide's content, and
+the slide's own shape already carries the geometry it inherited from it.
+
 ## Two ways to carry a slide, and they are not interchangeable
 
 `importSlide(source: Presentation, index)` needs the **live source package** and
@@ -212,6 +244,9 @@ is invisible in both directions.
 - A property is in surface only if it maps 1:1 onto a write-API option. Anything
   needing interpretation to get back into the deck stays out — the return path
   must never guess.
+- `RenderSlide.chrome` is outside it entirely — the layout and master shapes a
+  slide inherits are drawn and frozen, never projected. See *The template's
+  furniture is `chrome`* above.
 
 ## The return path
 
@@ -243,6 +278,13 @@ model upstream of anything local
 the preview is still right — a frame PowerPoint shrank to 40% otherwise renders
 two and a half times too large — but nothing may treat such a field as part of
 the round-trip guarantee, and each one says so in its own doc comment.
+
+`RenderSlide.chrome` is the other, and it is paint data for a different reason:
+not because the contract model dropped it, but because the contract model never
+needed it. The layout and master parts ride along in the template package that
+emit binds against, so the furniture is reproduced by the binding rather than by
+anything this project writes. Reading it changes the picture and can never change
+the deck.
 
 ### Two hashes, because one would collapse two different events
 

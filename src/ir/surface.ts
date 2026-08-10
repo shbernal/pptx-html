@@ -117,6 +117,12 @@ export interface SanctionedProjection {
  * back.
  * A difference between the projection that went out and the one that came back
  * is an *edit*; a difference anywhere else is *drift* — see {@link freeze}.
+ *
+ * `RenderSlide.chrome` is **not** walked. Those shapes belong to the layout and
+ * master parts, which the emitted deck binds to rather than redraws, so an edit
+ * to one has nowhere to go — and offering it would be the surface promising
+ * something the return path cannot honour. {@link freeze} keeps them, since a
+ * change to them is drift.
  */
 export function project(ir: RenderIr): SanctionedProjection {
 	return {

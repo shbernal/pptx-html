@@ -57,8 +57,10 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  * older renderer. Bump on any change that is not purely additive-optional.
  *
  * `1` was the legacy DOM-shaped IR in `./model`.
+ * `2` added nothing a reader can migrate to `3`: {@link RenderSlide.chrome} is a
+ * required array, and a v2 document has no key to read it from.
  */
-export const IR_VERSION = 2
+export const IR_VERSION = 3
 
 /** English Metric Units per inch. The one conversion constant in the model. */
 export const EMU_PER_INCH = 914_400
@@ -103,6 +105,24 @@ export function importedNodeId(slideNumber: number, shapeId: number): NodeId {
 /** Identity for a table cell, which has no `cNvPr` of its own. */
 export function cellNodeId(table: NodeId, row: number, column: number): NodeId {
 	return `${table}.r${row}c${column}`
+}
+
+/** Which tier of the template a {@link RenderSlide.chrome} node was inherited from. */
+export type ChromeTier = 'layout' | 'master'
+
+/**
+ * Identity for a chrome node — a shape inherited from the slide's layout or
+ * master rather than owned by the slide.
+ *
+ * The tier is in the id and not merely beside it, because `p:cNvPr/@id` is unique
+ * within *a* shape tree and chrome comes from two further trees. A layout band and
+ * a slide shape can both be id `2`, and `importedNodeId` would give them the same
+ * name — which would make a chrome node addressable as a slide node by anything
+ * that looks one up by id. Separating the namespaces is what keeps
+ * {@link RenderSlide.chrome} unaddressable rather than merely undocumented.
+ */
+export function chromeNodeId(slideNumber: number, tier: ChromeTier, shapeId: number): NodeId {
+	return `s${slideNumber}.${tier}.sp${shapeId}`
 }
 
 /**
@@ -756,6 +776,28 @@ export interface RenderSlide {
 	layout: SlideLayoutIr | null
 	hidden: boolean
 	background: Background
+	/**
+	 * The template's own furniture — the non-placeholder shapes of the slide's
+	 * master and layout, in paint order (master first, then layout), drawn beneath
+	 * {@link nodes}.
+	 *
+	 * **Not `nodes`, and the separation is load-bearing.** These shapes have no
+	 * identity in the slide's shape tree, so folding them in would give
+	 * {@link project} nodes that look editable and cannot be honoured, break node-id
+	 * addressing (`s{slide}.sp{id}` is scoped to one tree — see
+	 * {@link chromeNodeId}), let a user "delete" a master shape the surface has no
+	 * way to remove, and move `modelHash` for a reason that has nothing to do with
+	 * the slide's content.
+	 *
+	 * Excluded from {@link project} and never marked editable in the document;
+	 * included in {@link freeze}, because a change to it *is* drift. Emit never
+	 * reads it: the layout and master parts travel in the template package, so the
+	 * chrome is reproduced by binding to the layout, not by redrawing it.
+	 *
+	 * Empty when the slide resolves no layout, or when `p:sld/@showMasterSp`
+	 * suppresses the template's shapes.
+	 */
+	chrome: RenderNode[]
 	/** Paint order is array order, front-to-back, matching OOXML document order. */
 	nodes: RenderNode[]
 	/** Speaker notes as plain text; notes-slide geometry does not survive. */

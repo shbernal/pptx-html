@@ -27,7 +27,7 @@ import type {
 	TableNode,
 	TextBody,
 } from '../../src/ir/render'
-import { cellNodeId, EMU_PER_INCH, IR_VERSION, importedNodeId } from '../../src/ir/render'
+import { cellNodeId, chromeNodeId, EMU_PER_INCH, IR_VERSION, importedNodeId } from '../../src/ir/render'
 
 const inch = (n: number): number => Math.round(n * EMU_PER_INCH)
 
@@ -290,9 +290,50 @@ const CHART: OpaqueNode = {
 }
 
 /**
+ * The master's band: furniture, and text that is *not* in the editable surface.
+ *
+ * Its runs are here rather than left plain on purpose — a chrome node with no
+ * text would let the renderer's surface-suppression pass by default. This one
+ * fails the moment a `data-pxh-run` reaches it.
+ */
+const BAND: ShapeNode = {
+	kind: 'shape',
+	id: chromeNodeId(1, 'master', 2),
+	name: 'Header band',
+	placement: at(0, 0, 10, 0.45),
+	render: 'drawn',
+	geometry: { kind: 'preset', preset: 'rect', adjustValues: {} },
+	fill: SOLID,
+	stroke: { kind: 'none' },
+	text: body('ACME'),
+}
+
+/**
+ * The layout's rule, drawn over the master's band and under the slide's own
+ * nodes — the paint order chrome exists to get right.
+ *
+ * It shares `p:cNvPr/@id` `2` with {@link BAND} and with {@link TITLE}, which is
+ * the collision `chromeNodeId` separates: three trees, one id space each.
+ */
+const RULE: ShapeNode = {
+	kind: 'shape',
+	id: chromeNodeId(1, 'layout', 2),
+	name: 'Title rule',
+	placement: at(0.5, 1.55, 9, 0.02),
+	render: 'drawn',
+	geometry: { kind: 'preset', preset: 'rect', adjustValues: {} },
+	fill: { kind: 'solid', color: INK },
+	stroke: { kind: 'none' },
+	text: null,
+}
+
+/**
  * Two slides: one `authored` and fully modeled, one `carried` whose chart the
  * model does not represent — so it keeps its source XML in the residual channel
  * and declares the loss.
+ *
+ * Slide 1 inherits chrome from both template tiers; slide 2 has none, which is
+ * what a slide clearing `p:sld/@showMasterSp` looks like in the model.
  */
 export const SAMPLE_IR: RenderIr = {
 	irVersion: IR_VERSION,
@@ -312,6 +353,7 @@ export const SAMPLE_IR: RenderIr = {
 			layout: { name: 'Title and Content', index: 1, nameIsUnique: true },
 			hidden: false,
 			background: { source: 'master', fill: { kind: 'solid', color: { kind: 'srgb', hex: 'FFFFFF' } } },
+			chrome: [BAND, RULE],
 			nodes: [TITLE, BULLETS, FREEFORM, LOGO, ARROW, GROUP],
 			notes: 'Open with the headline number.',
 			residual: null,
@@ -323,6 +365,7 @@ export const SAMPLE_IR: RenderIr = {
 			layout: { name: 'Title Only', index: 2, nameIsUnique: true },
 			hidden: true,
 			background: { source: 'slide', fill: { kind: 'picture', asset: { $asset: 'image1.png' }, mode: 'stretch' } },
+			chrome: [],
 			nodes: [GRID, CHART],
 			notes: null,
 			residual: {

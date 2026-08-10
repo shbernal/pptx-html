@@ -25,6 +25,7 @@
  */
 
 import {
+	type AnyShape,
 	type BackgroundFill,
 	type OpcInput,
 	Presentation,
@@ -32,9 +33,9 @@ import {
 	type SlideBackground,
 } from '@shbernal/ts-pptx/read'
 import { type DeckIr, type FidelityNote, readModelToIr } from '@shbernal/ts-pptx/script'
-import { type Background, type Fill, IR_VERSION, type RenderIr, type RenderSlide } from '../ir/render'
+import { type Background, type Fill, IR_VERSION, type RenderIr, type RenderNode, type RenderSlide } from '../ir/render'
 import { type AssetIndex, buildAssetIndex } from './assets'
-import type { ImportScope } from './context'
+import { forChrome, type ImportScope } from './context'
 import { colorOf, gradientOf, pictureFillOf } from './paint'
 import { residualOf } from './residual'
 import { nodeOf } from './shape'
@@ -88,7 +89,7 @@ function renderSlideOf(
 	// account. Both are in one vocabulary; there is no second taxonomy here.
 	const notes: FidelityNote[] = deck.fidelity.filter((entry) => entry.slideNumber === number)
 
-	const scope: ImportScope = { slideNumber: number, shapeName: null, notes, assets, slideNumberByPart }
+	const scope: ImportScope = { slideNumber: number, shapeName: null, chrome: null, notes, assets, slideNumberByPart }
 	const nodes = slide.shapes.map((shape) => nodeOf(shape, scope))
 
 	const source = contract?.source ?? 'authored'
@@ -98,6 +99,7 @@ function renderSlideOf(
 		layout: contract?.layout ?? null,
 		hidden: slide.hidden,
 		background: backgroundOf(slide.background, scope),
+		chrome: chromeOf(slide, scope),
 		nodes,
 		// `notesText` is `''` for a slide with no notes part at all, which is not the
 		// same as a notes part holding nothing. The presence of the part is the
@@ -109,6 +111,50 @@ function renderSlideOf(
 		residual: source === 'carried' ? residualOf(slide, assets) : null,
 		fidelity: notes,
 	}
+}
+
+/**
+ * The template furniture drawn beneath a slide: its master's shapes, then its
+ * layout's.
+ *
+ * `p:sld/@showMasterSp` is PowerPoint's "Hide background graphics", and it is
+ * read here the way the schema states it rather than the way its name reads.
+ * The attribute comes from `AG_ChildSlide`, the group each *child* tier carries
+ * about the tier above it — so a slide's flag governs the layout's shapes, and
+ * the layout's own flag governs the master's. Both readings of the prose agree on
+ * the composite, which is what this function actually decides: a slide that clears
+ * the flag gets no furniture at all, and a layout that clears it contributes its
+ * own shapes without the master's.
+ *
+ * The placeholders of both tiers are excluded — see {@link furnitureOf}.
+ */
+function chromeOf(slide: Slide, scope: ImportScope): RenderNode[] {
+	if (!slide.showMasterSp) return []
+	const layout = slide.layout
+	if (layout === null) return []
+
+	const master = layout.showMasterSp ? layout.master : null
+	// Master first: paint order is array order, and the format inherits master →
+	// layout → slide, so the tier furthest from the slide goes furthest back.
+	return [
+		...furnitureOf(master?.shapes ?? [], forChrome(scope, 'master')),
+		...furnitureOf(layout.shapes, forChrome(scope, 'layout')),
+	]
+}
+
+/**
+ * One tier's shapes, minus its placeholders.
+ *
+ * A template placeholder is a **prompt for the slide's own content**, not
+ * furniture. The slide's title shape is already in `nodes`, already carrying the
+ * geometry it resolved from that very placeholder, so drawing the layout's copy
+ * as well would put "Click to edit Master title style" underneath every title in
+ * the deck — and underneath, so the duplicate would be invisible until a slide
+ * left its title empty. Upstream's `placeholders` is the filtered view of the same
+ * tree, which makes the complement exactly what chrome is.
+ */
+function furnitureOf(shapes: readonly AnyShape[], scope: ImportScope): RenderNode[] {
+	return shapes.filter((shape) => shape.placeholder === null).map((shape) => nodeOf(shape, scope))
 }
 
 /**

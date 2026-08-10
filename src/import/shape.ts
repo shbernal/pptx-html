@@ -34,6 +34,7 @@ import {
 } from '@shbernal/ts-pptx/read'
 import {
 	cellNodeId,
+	chromeNodeId,
 	type Connection,
 	type EdgeRect,
 	importedNodeId,
@@ -56,7 +57,8 @@ function idOf(shape: Shape, scope: ImportScope): NodeId {
 	// `p:cNvPr/@id` is required by the schema and unique within a shape tree, so a
 	// missing one means a malformed package rather than a case to design for; `0`
 	// keeps the id derivable instead of throwing on a deck we can still mostly draw.
-	return importedNodeId(scope.slideNumber, shape.id ?? 0)
+	const id = shape.id ?? 0
+	return scope.chrome === null ? importedNodeId(scope.slideNumber, id) : chromeNodeId(scope.slideNumber, scope.chrome, id)
 }
 
 function placementOf(shape: Shape, scope: ImportScope): Placement | null {
@@ -222,7 +224,14 @@ function connectionOf(
 		)
 		return { node: null, site: site.siteIndex }
 	}
-	return { node: importedNodeId(scope.slideNumber, site.shapeId), site: site.siteIndex }
+	// Through the same namespace the bound shape's own id came from: a connector on
+	// a layout binds to a layout shape, and naming it `s1.sp3` would point at
+	// whatever the *slide* happens to call id 3.
+	const node =
+		scope.chrome === null
+			? importedNodeId(scope.slideNumber, site.shapeId)
+			: chromeNodeId(scope.slideNumber, scope.chrome, site.shapeId)
+	return { node, site: site.siteIndex }
 }
 
 function graphicFrameNodeOf(frame: GraphicFrame, scope: ImportScope): RenderNode {

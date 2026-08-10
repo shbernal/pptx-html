@@ -17,6 +17,7 @@ line-cap            primitive  slides=1 (1a/0c)  calls=1
 bullet              primitive  slides=1 (1a/0c)  calls=2
 autofit-shrink      primitive  slides=1 (1a/0c)  calls=3
 master-background   primitive  slides=1 (1a/0c)  calls=1
+layout-chrome       primitive  slides=1 (1a/0c)  calls=1
 chart               hard       slides=1 (1a/0c)  calls=1
 layout-placeholder  hard       slides=1 (1a/0c)  calls=2
 notes               hard       slides=1 (1a/0c)  calls=1
@@ -25,9 +26,9 @@ theme-color         hard       slides=1 (1a/0c)  calls=2
 
 # fidelity notes by disposition × cause (whole corpus)
              unread       unwritable   unsupported  
-dropped      21           37           4            
-flattened    0            20           6            
-approximated 20           0            4            
+dropped      22           40           5            
+flattened    0            21           8            
+approximated 21           0            4            
 
 # constructs named, by deck
 text-box            deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
@@ -45,6 +46,7 @@ line-cap            deck.docProps, master.background, master.txStyles, theme.fmt
 bullet              deck.docProps, master.background, master.txStyles, text.bullet.picture, text.indent, theme.fmtScheme
 autofit-shrink      deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
 master-background   deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, text.indent, theme.fmtScheme
+layout-chrome       deck.docProps, master.background, master.decoration, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, text.indent, theme.fmtScheme
 chart               chart.workbook, deck.docProps, master.background, master.txStyles, theme.fmtScheme
 layout-placeholder  deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, text.indent, theme.fmtScheme
 notes               deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme

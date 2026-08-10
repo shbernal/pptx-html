@@ -15,7 +15,7 @@ import { Presentation } from '@shbernal/ts-pptx/read'
 import { readModelToIr } from '@shbernal/ts-pptx/script'
 import { describe, expect, it } from 'vitest'
 import { importDeck, importPresentation } from '../../src/import/deck'
-import type { RenderIr } from '../../src/ir/render'
+import { IR_VERSION, type RenderIr } from '../../src/ir/render'
 import { emitDeck } from '../../src/loop'
 import { parseDeck } from '../../src/parse/deck'
 import { applyEdits, editsBetween } from '../../src/parse/edits'
@@ -154,7 +154,10 @@ describe('what the return path refuses', () => {
 
 	it('refuses a version it cannot verify instead of guessing at the shape', async () => {
 		const { html } = await rendered('text-box')
-		const bumped = html.replace('"irVersion":2,"modelHash"', '"irVersion":99,"modelHash"')
+		// Off `IR_VERSION` rather than a literal: with the number written in, a bump
+		// makes the replacement a no-op and the test still passes — asserting that an
+		// unmodified document is refused, which it is not.
+		const bumped = html.replace(`"irVersion":${IR_VERSION},"modelHash"`, '"irVersion":99,"modelHash"')
 		expect(bumped).not.toBe(html)
 		await expect(parseDeck(bumped, { parseHtml: null })).rejects.toThrow(/IR version 99/)
 	})

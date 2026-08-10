@@ -370,6 +370,37 @@ export const CORPUS: CorpusDeck[] = [
 		}
 	),
 
+	deck(
+		'layout-chrome',
+		'primitive',
+		'a layout’s non-placeholder furniture — drawn beneath the slide, editable nowhere',
+		(pptx) => {
+			// `defineSlideMaster({ objects })` writes every non-`placeholder` member into
+			// the *layout* part (its own doc comment says so), so this is the one shape a
+			// generated corpus can put outside a slide's own tree at all. Three of them,
+			// each answering a different question:
+			//
+			//   band     a filled rect — does inherited furniture reach the picture
+			//   wordmark text on a template tier — is it drawn but not typeable
+			//   title    a placeholder — is it *excluded*, since the slide's own title
+			//            already carries the geometry it inherited from this one
+			//
+			// The band is at the top edge and the wordmark inside it, both clear of the
+			// slide's own shape, so a preview that drops the chrome differs visibly
+			// rather than by a few pixels of overlap.
+			pptx.defineSlideMaster({
+				title: 'CORPUS_CHROME',
+				background: { color: 'FFFFFF' },
+				objects: [
+					{ rect: { x: 0, y: 0, w: 10, h: 0.45, fill: { color: '250F6B' } } },
+					{ text: { text: 'ACME', options: { x: 8.2, y: 0.05, w: 1.6, h: 0.35, color: 'FFFFFF', fontSize: 12 } } },
+					{ placeholder: { options: { name: 'title', type: 'title', x: 0.5, y: 1, w: 9, h: 1 }, text: 'Title' } },
+				],
+			})
+			pptx.addSlide({ masterTitle: 'CORPUS_CHROME' }).addText('Over the band', { placeholder: 'title' })
+		}
+	),
+
 	deck('chart', 'hard', 'a full reader with no writer for every form — expected to be carried', (pptx) => {
 		pptx.addSlide().addChart([{ name: 'Share', labels: ['EMEA', 'AMER', 'APAC'], values: [48, 31, 21] }], {
 			type: 'bar',

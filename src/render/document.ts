@@ -89,15 +89,24 @@ function backgroundPaint(fill: RenderSlide['background']['fill'], defs: Defs): P
 
 function renderSlide(slide: RenderSlide, size: RenderIr['size'], warnings: string[]): string {
 	const defs = new Defs()
-	const context: NodeContext = { defs, skipped: [] }
+	const context: NodeContext = { defs, skipped: [], editable: true }
+	// The same `defs` — one `<defs>` per slide, so a gradient the layout and the
+	// slide both use is defined once — but `editable: false`, which is what keeps
+	// the template's shapes and runs out of the surface. See `NodeContext.editable`.
+	const chromeContext: NodeContext = { defs, skipped: [], editable: false }
 
-	// Order is paint order: the background first, then nodes front-to-back in
-	// document order, which is the order the array is already in.
+	// Order is paint order: the background, then the template's furniture, then
+	// the slide's own nodes front-to-back in document order, which is the order
+	// the array is already in.
 	const background = backgroundPaint(slide.background.fill, defs)
+	const chrome = slide.chrome.map((node) => renderNode(node, chromeContext)).join('')
 	const nodes = slide.nodes.map((node) => renderNode(node, context)).join('')
 
 	for (const id of context.skipped) {
 		warnings.push(`slide ${slide.number}: node ${id} has no resolvable placement and was not drawn`)
+	}
+	for (const id of chromeContext.skipped) {
+		warnings.push(`slide ${slide.number}: inherited node ${id} has no resolvable placement and was not drawn`)
 	}
 
 	const svg =
@@ -106,6 +115,7 @@ function renderSlide(slide: RenderSlide, size: RenderIr['size'], warnings: strin
 		defs.render() +
 		`<rect x="0" y="0" width="${size.w}" height="${size.h}" ${background.attrs}` +
 		`${background.approx === undefined ? '' : ` data-pxh-approx="${background.approx}"`}/>` +
+		(chrome === '' ? '' : `<g data-pxh-chrome="true">${chrome}</g>`) +
 		nodes +
 		`</svg>`
 

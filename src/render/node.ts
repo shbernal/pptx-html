@@ -21,6 +21,18 @@ export interface NodeContext {
 	defs: Defs
 	/** Nodes that could not be placed, for the caller to report. */
 	skipped: string[]
+	/**
+	 * Whether these nodes are the slide's own, and so carry the identity the
+	 * return path reads: `data-pxh-node` on the group, `data-pxh-run` and
+	 * `contenteditable` on every run.
+	 *
+	 * `false` for {@link RenderSlide.chrome}. Chrome is drawn and nothing else —
+	 * omitting the attributes is what makes it unaddressable *in the document*
+	 * rather than only in the model, so an inherited run cannot be typed into, and
+	 * `readSurface`'s sweep for unmodeled `[data-pxh-run]` does not report the
+	 * template's own text as an anomaly on every slide.
+	 */
+	editable: boolean
 }
 
 /**
@@ -146,13 +158,16 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 
 			const fill = fillPaint(cell.fill, context.defs)
 			parts.push(
-				`<g data-pxh-node="${escapeAttr(cell.id)}" transform="translate(${x} ${y})"` +
+				`<g ${context.editable ? `data-pxh-node="${escapeAttr(cell.id)}" ` : ''}transform="translate(${x} ${y})"` +
 					`${fill.approx === undefined ? '' : ` data-pxh-approx="${fill.approx}"`}>` +
 					`<rect x="0" y="0" width="${cellW}" height="${cellH}" ${fill.attrs}/>` +
 					edges(cell.borders, cellW, cellH, context) +
 					(cell.text === null
 						? ''
-						: textFrame({ x: 0, y: 0, w: cellW, h: cellH }, renderTextBody(cell.text, cell.id))) +
+						: textFrame(
+								{ x: 0, y: 0, w: cellW, h: cellH },
+								renderTextBody(cell.text, context.editable ? cell.id : null)
+							)) +
 					`</g>`
 			)
 			x += w
@@ -190,7 +205,10 @@ export function renderNode(node: RenderNode, context: NodeContext): string {
 	}
 
 	const box = node.placement.box
-	const attrs = [`data-pxh-node="${escapeAttr(node.id)}"`, `transform="${transformOf(node.placement)}"`]
+	const attrs = [
+		...(context.editable ? [`data-pxh-node="${escapeAttr(node.id)}"`] : []),
+		`transform="${transformOf(node.placement)}"`,
+	]
 	if (node.hidden === true) attrs.push('style="display:none"')
 	if (node.alt !== undefined) attrs.push(`aria-label="${escapeAttr(node.alt)}"`)
 
@@ -217,7 +235,7 @@ function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
 			return (
 				`<path d="${path.d}" ${fill.attrs} ${stroke.attrs}` +
 				`${approx === '' ? '' : ` data-pxh-approx="${escapeAttr(approx)}"`}/>` +
-				(node.text === null ? '' : textFrame(box, renderTextBody(node.text, node.id)))
+				(node.text === null ? '' : textFrame(box, renderTextBody(node.text, context.editable ? node.id : null)))
 			)
 		}
 
