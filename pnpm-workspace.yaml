@@ -15,9 +15,19 @@
 # re-resolves that same binary, so the site builds without it. Answered rather
 # than left blank because an unanswered build script makes `pnpm install` exit
 # non-zero, and every `pnpm run` performs that check first.
+#
+# The writer is allowed because it is pinned to a git sha, and a git dependency
+# has to be built before it can be installed: `dist/` is gitignored upstream, so
+# pnpm packs the checkout, which runs its `prepack` — `pnpm run build`. This is
+# not the answerable-either-way case the two above are. Denying it, or leaving it
+# unanswered, fails the install outright with
+# `ERR_PNPM_GIT_DEP_PREPARE_NOT_ALLOWED`. The cost is a from-source build the
+# first time each sha is installed; the store keeps the prepared package, so
+# every later install of that sha is a link.
 allowBuilds:
   esbuild: false
   lefthook: false
+  '@shbernal/ts-pptx': true
 #
 # The writer is excluded from the release-age gate. That gate exists to keep a
 # compromised publish from being pulled in before anyone notices it; this repo
@@ -28,5 +38,9 @@ allowBuilds:
 # By name, not `name@version`: `pnpm add` writes the pinned form itself, but the
 # lockfile verification that runs before every script does not honour it, so the
 # entry it wrote does not unblock the commit it was written for.
+#
+# Inert while the pin is a git sha — the gate reads a registry publish date and a
+# git tarball has none — and live again the moment the pin returns to a version
+# range, which is why it stays.
 minimumReleaseAgeExclude:
   - '@shbernal/ts-pptx'

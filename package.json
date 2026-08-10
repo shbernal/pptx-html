@@ -70,7 +70,7 @@
 		"prepublishOnly": "pnpm run typecheck && pnpm run check && pnpm run test:oracle"
 	},
 	"dependencies": {
-		"@shbernal/ts-pptx": "^3.1.0"
+		"@shbernal/ts-pptx": "github:shbernal/ts-pptx#aab5f2b39492741b91bd1fe23f27f54ee3dc0965"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.7",
