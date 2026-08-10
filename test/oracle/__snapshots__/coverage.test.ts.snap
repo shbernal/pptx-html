@@ -4,6 +4,7 @@ exports[`coverage > matches the recorded support baseline 1`] = `
 "# deck coverage — slides (authored/carried), calls
 text-box            primitive  slides=1 (1a/0c)  calls=1
 autoshape           primitive  slides=1 (1a/0c)  calls=1
+preset-geometry     primitive  slides=1 (1a/0c)  calls=3
 custgeom            primitive  slides=1 (1a/0c)  calls=1
 table               primitive  slides=1 (1a/0c)  calls=1
 cell-fill           primitive  slides=1 (1a/0c)  calls=1
@@ -27,13 +28,14 @@ theme-color         hard       slides=1 (1a/0c)  calls=2
 
 # fidelity notes by disposition × cause (whole corpus)
              unread       unwritable   unsupported  
-dropped      23           42           5            
-flattened    0            22           8            
-approximated 22           0            4            
+dropped      24           43           5            
+flattened    0            23           8            
+approximated 23           0            4            
 
 # constructs named, by deck
 text-box            deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
 autoshape           deck.docProps, master.background, master.txStyles, theme.fmtScheme
+preset-geometry     deck.docProps, master.background, master.txStyles, theme.fmtScheme
 custgeom            deck.docProps, master.background, master.txStyles, shape.custGeom.guides, theme.fmtScheme
 table               deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, text.indent, theme.fmtScheme
 cell-fill           deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, text.indent, theme.fmtScheme

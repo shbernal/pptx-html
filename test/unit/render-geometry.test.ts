@@ -46,6 +46,71 @@ describe('presets', () => {
 		expect(computed.d).toBe(absent.d)
 	})
 
+	it('draws a chevron, taking its inset from the shorter side', () => {
+		// `maxAdj` is `100000 * w / ss`, so `adj` is a fraction of the *shortest* side
+		// and not of the width. On a wide box that is the whole difference between a
+		// chevron and something with a 100-wide notch: 200×100 insets by 50, not 100.
+		const square = pathOf({ kind: 'preset', preset: 'chevron', adjustValues: {} }, 100, 100)
+		expect(square.d).toBe('M 0 0 L 50 0 L 100 50 L 50 100 L 0 100 L 50 50 Z')
+		expect(square.fallback).toBeUndefined()
+
+		const wide = pathOf({ kind: 'preset', preset: 'chevron', adjustValues: {} }, 200, 100)
+		expect(wide.d).toBe('M 0 0 L 150 0 L 200 50 L 150 100 L 0 100 L 50 50 Z')
+	})
+
+	it('draws a five-pointed star whose points reach every edge of the box', () => {
+		// `hf`/`vf` (105146 and 110557) exist to stretch the pentagon's circumscribed
+		// circle until the outer points sit exactly on the box. Asserted as a property
+		// rather than only as a string, because dropping either factor still produces
+		// a plausible star — just an inset one, which is the failure that would read
+		// as correct in a screenshot.
+		const result = pathOf({ kind: 'preset', preset: 'star5', adjustValues: {} }, 100, 100)
+		const numbers = result.d.match(/-?\d+(\.\d+)?/g)?.map(Number) ?? []
+		const xs = numbers.filter((_, index) => index % 2 === 0)
+		const ys = numbers.filter((_, index) => index % 2 === 1)
+		expect([Math.min(...xs), Math.max(...xs)]).toStrictEqual([0, 100])
+		expect([Math.min(...ys), Math.max(...ys)]).toStrictEqual([0, 100])
+
+		// The ten vertices, alternating outer and inner. 38.197 and 61.803 are the
+		// golden-ratio values the pentagon's diagonals give, which is the arithmetic
+		// check that the inner radius came from `adj` and not from a guess.
+		expect(result.d).toBe(
+			'M 0 38.197 L 38.197 38.197 L 50 0 L 61.803 38.197 L 100 38.197 ' +
+				'L 69.098 61.803 L 80.902 100 L 50 76.393 L 19.098 100 L 30.902 61.803 Z'
+		)
+	})
+
+	it('draws a block arc as two concentric arcs, and does not treat the box as its extent', () => {
+		// The default is a half ring across the top: start 180°, end 0°, thickness a
+		// quarter of the shorter side. Outer radius 50, inner 25.
+		const half = pathOf({ kind: 'preset', preset: 'blockArc', adjustValues: {} }, 100, 100)
+		expect(half.d).toBe('M 0 50 A 50 50 0 0 1 100 50 L 75 50 A 25 25 0 0 0 25 50 Z')
+
+		// A quarter turn fills one quadrant and leaves the other three empty — the one
+		// preset here whose outline does not reach its own bounding box, which is why
+		// it cannot be sanity-checked the way `star5` above is.
+		const quarter = pathOf(
+			{ kind: 'preset', preset: 'blockArc', adjustValues: { adj1: 'val 0', adj2: 'val 5400000' } },
+			100,
+			100
+		)
+		expect(quarter.d).toBe('M 100 50 A 50 50 0 0 1 50 100 L 50 75 A 25 25 0 0 0 75 50 Z')
+	})
+
+	it('splits a whole-turn block arc, which as one arc would draw nothing', () => {
+		// Equal angles mean the full ring, and SVG derives an arc's centre from its
+		// endpoints — so a single 360° `A`, whose endpoints coincide, is degenerate and
+		// renders as empty. Two half turns is the same ring and actually draws.
+		const ring = pathOf(
+			{ kind: 'preset', preset: 'blockArc', adjustValues: { adj1: 'val 0', adj2: 'val 0' } },
+			100,
+			100
+		)
+		expect(ring.d).toBe(
+			'M 100 50 A 50 50 0 0 1 0 50 A 50 50 0 0 1 100 50 L 75 50 A 25 25 0 0 0 25 50 A 25 25 0 0 0 75 50 Z'
+		)
+	})
+
 	it('clamps a radius that would exceed the box', () => {
 		// `val 100000` is the whole shorter side, and a radius of that would make the
 		// two corner arcs on one edge overlap and the path self-intersect.

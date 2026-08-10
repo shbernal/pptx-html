@@ -91,6 +91,51 @@ export const CORPUS: CorpusDeck[] = [
 		})
 	}),
 
+	deck('preset-geometry', 'primitive', 'the three presets beyond the rectangle family, one of them curved', (pptx) => {
+		// `render.test.ts` asserts the corpus draws every geometry it uses with no box
+		// standing in. That claim is only as wide as the corpus, and until this deck
+		// existed it reached `rect`, `roundRect`, `triangle`, `line` and a freeform —
+		// so the presets whose formulas are the easiest to get subtly wrong were the
+		// ones nothing exercised end to end. Their paths are pinned exactly in
+		// `test/unit/render-geometry.test.ts`; this is the half that runs them through
+		// a real deck, where an adjust value has to survive the loop to reach them.
+		// Every one states an adjust rather than taking the preset's default, so the
+		// deck pins that `a:avLst` survives the loop and reaches the formula. A deck
+		// of defaults would draw the same picture whether the adjust were read or
+		// dropped, which is the assertion quietly worth nothing.
+		const slide = pptx.addSlide()
+		slide.addShape('chevron', {
+			x: 0.5,
+			y: 0.5,
+			w: 3,
+			h: 1.2,
+			fill: { color: 'DDE3F0' },
+			shapeAdjust: { name: 'adj', value: 0.3 },
+			objectName: 'step',
+		})
+		slide.addShape('star5', {
+			x: 4,
+			y: 0.5,
+			w: 1.5,
+			h: 1.5,
+			fill: { color: 'F0C808' },
+			shapeAdjust: { name: 'adj', value: 0.3 },
+			objectName: 'rating',
+		})
+		// 180° → 90° is a three-quarter sweep, which crosses the large-arc threshold
+		// the other two shapes never reach.
+		slide.addShape('blockArc', {
+			x: 0.5,
+			y: 2.5,
+			w: 2.5,
+			h: 2.5,
+			fill: { color: '250F6B' },
+			angleRange: [180, 90],
+			arcThicknessRatio: 0.2,
+			objectName: 'gauge',
+		})
+	}),
+
 	deck('custgeom', 'primitive', 'freeform path geometry — the case the SVG vectorizer produces', (pptx) => {
 		pptx.addSlide().addShape(ShapeType.custGeom, {
 			x: 1,
