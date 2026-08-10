@@ -4,9 +4,13 @@
  * The scope is the site and the prose it renders, not the library: nothing under `src/`
  * reaches a reader of the site, and `test/` even less so.
  *
- * Everything here is `warn` on purpose. The aim is to see where the em dashes are, not to
- * fail a build over them, and 129 of them cannot be a gate on the day the gate is added.
- * Flip a rule to `error`, or run `charcheck --max-warnings 0`, once its surface is clean.
+ * Everything here is `error`. It was `warn` for exactly as long as it took to read the
+ * 129 findings and reword them: a gate is only honest once the surface behind it is
+ * clean, and a warning nobody has to act on is a warning everybody scrolls past.
+ *
+ * So this now blocks rather than reports. The commit that cleared the backlog is the
+ * same one that closed the gate, which is the only ordering that leaves no window where
+ * a dash could be reintroduced unnoticed.
  *
  * The characters are written as escapes rather than literally, so this file is not itself
  * a finding in the rule it defines.
@@ -33,7 +37,7 @@ const dashRule = (id, include, scope) => ({
 	id,
 	pattern: CLAUSE_DASH,
 	fix: strategies.clauseSeparator,
-	severity: 'warn',
+	severity: 'error',
 	message: REWORD,
 	include,
 	...(scope ? { scope } : {}),
@@ -51,9 +55,12 @@ export default {
 		// `.vitepress` explicitly: a dotted directory is only entered when one does.
 		dashRule('no-em-dash-in-site-strings', ['site/.vitepress/**/*.ts'], 'strings'),
 
-		// Build scripts. The noisiest rule, because it cannot separate the two kinds of
-		// string it finds: page prose that build-ledger.ts writes into the Evidence page,
-		// and error messages that only ever reach whoever broke the build.
+		// Build scripts, which hold two kinds of string this rule cannot tell apart: page
+		// prose that build-ledger.ts writes into the Evidence page, and error messages
+		// that only ever reach whoever broke the build. The scope is token-based, not an
+		// AST, so a `throw` argument looks exactly like a heading. The three error
+		// messages in docs-source.ts carry a `charcheck-disable-next-line` naming this
+		// rule; anything else it reports is prose a reader sees.
 		dashRule('no-em-dash-in-site-build-strings', ['site/scripts/**/*.ts'], 'strings'),
 
 		// Components: template text, allowlisted attributes and script literals. `<style>`

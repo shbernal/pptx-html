@@ -220,7 +220,7 @@ function pointsValue(props: ParagraphRow['props'], prop: EditableParaProp): numb
 						</button>
 					</div>
 					<p v-if="isScheme(run)" class="pxh-scheme">
-						This run states a <strong>scheme</strong> colour — a reference that re-resolves against the theme.
+						This run states a <strong>scheme</strong> colour: a reference that re-resolves against the theme.
 						Setting a value here replaces the reference with a fixed one. That is a legal edit; it is just not
 						the same fact.
 					</p>

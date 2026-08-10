@@ -93,7 +93,7 @@ function page(ledger: Ledger): string {
 		'',
 		'Fidelity notes across the whole corpus, by **disposition** (what happened to the',
 		'construct) × **cause** (why). Both axes are upstream `FidelityNote` values, not a',
-		'local restatement of them — one vocabulary, so the differ and this page cannot',
+		'local restatement of them: one vocabulary, so the differ and this page cannot',
 		'drift apart.',
 		'',
 		'The cause is also the triage: `unread` and `unwritable` name a specific',
@@ -124,7 +124,7 @@ function scope(rows: CoverageRow[]): string {
 		'',
 		'This table is not a pass/fail list, and reading it as one gets it backwards.',
 		'"How many round-trips are green" says nothing while the supported subset is',
-		'small — a converter that models three constructs and warns about everything else',
+		'small: a converter that models three constructs and warns about everything else',
 		'would be entirely green. What moves is the *shape* of the loss: notes leaving',
 		'`dropped`, causes leaving `unread`, slides leaving the carried lane.',
 		'',
@@ -185,8 +185,8 @@ function unmatchableSection(ledger: Ledger): string {
 			'## Notes the differ cannot match',
 			'',
 			'**None.** Every fidelity note in the corpus names a construct the differ has a',
-			'matcher for. A note it does not know is inert — it looks like honesty while',
-			'excusing nothing — so the oracle holds this at zero.',
+			'matcher for. A note it does not know is inert (it looks like honesty while',
+			'excusing nothing), so the oracle holds this at zero.',
 		].join('\n')
 	}
 	return [

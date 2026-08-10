@@ -4,13 +4,13 @@ pageClass: pxh-home
 editLink: false
 aside: false
 title: 'Edit a PowerPoint deck as a web page'
-description: 'pptx-html reads a .pptx into a slide model, renders it as editable HTML, reads the edit back and writes the deck out again — losslessly.'
+description: 'pptx-html reads a .pptx into a slide model, renders it as editable HTML, reads the edit back and writes the deck out again, losslessly.'
 ---
 
 <script setup>
 // `withBase` because the site is served from `/pptx-html/` on GitHub Pages.
 // VitePress rewrites markdown links for that automatically, which is why every
-// link inside prose below is written as markdown — it is also what
+// link inside prose below is written as markdown; it is also what
 // `ignoreDeadLinks: false` checks. The card grids are hand-written HTML, so they
 // have to say it themselves.
 import { withBase } from 'vitepress'
@@ -33,7 +33,7 @@ import { withBase } from 'vitepress'
 `pptx-html` moves slides between HTML and PPTX by driving
 [`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx). It reads a
 `.pptx` into a slide model, renders that model as HTML, reads the edited HTML back,
-and writes a `.pptx` out again — so a deck can be edited by anything that can edit
+and writes a `.pptx` out again, so a deck can be edited by anything that can edit
 a web page, and still be a deck afterwards.
 
 <pre class="pxh-loop">.pptx  ──import──►  IR  ──render──►  HTML   (what a human sees / edits)
@@ -76,7 +76,7 @@ before diffing. [The property, and the harness that gates it →](/docs/round-tr
 	</div>
 	<div class="pxh-tile is-ruled-out" style="--pxh-tile-tint: #c4405f">
 		<h3>Approximated</h3>
-		<p>The state that does not exist here: content that comes out looking about right and has no way back. It is why the raster fallback was removed rather than kept as an escape hatch — a slide flattened into a picture can never re-enter the loop — and why this site shows no pictures of slides.</p>
+		<p>The state that does not exist here: content that comes out looking about right and has no way back. It is why the raster fallback was removed rather than kept as an escape hatch (a slide flattened into a picture can never re-enter the loop) and why this site shows no pictures of slides.</p>
 	</div>
 </div>
 
@@ -100,7 +100,7 @@ it says so.
 <ul class="pxh-facts">
 	<li>
 		<b>Input domain</b>
-		<span>Decks written by <code>@shbernal/ts-pptx</code>, which is what the generated corpus is made of — and what the two decks moving above are written by. Decks authored in PowerPoint are a deliberate second tier and are <strong>not yet gated</strong>.</span>
+		<span>Decks written by <code>@shbernal/ts-pptx</code>, which is what the generated corpus is made of, and what the two decks moving above are written by. Decks authored in PowerPoint are a deliberate second tier and are <strong>not yet gated</strong>.</span>
 	</li>
 	<li>
 		<b>Environment</b>

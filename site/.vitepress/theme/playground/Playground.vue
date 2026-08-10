@@ -153,7 +153,7 @@ function onDrop(event: DragEvent): void {
 <template>
 	<div class="pxh-playground">
 		<p class="pxh-privacy">
-			Everything below runs in this tab. No deck is uploaded, and there is no server in the loop — the same four
+			Everything below runs in this tab. No deck is uploaded, and there is no server in the loop: the same four
 			functions a consumer calls are running in your browser.
 		</p>
 
@@ -213,7 +213,7 @@ function onDrop(event: DragEvent): void {
 			<h3>3 · The document, and what may be edited in it</h3>
 			<p class="pxh-hint">
 				The preview is the real rendered document. Run text is <code>contenteditable</code>, so you can type
-				straight into a slide — the panel beside it writes to the same spans. Both are read back by the same
+				straight into a slide: the panel beside it writes to the same spans. Both are read back by the same
 				<code>parseDeck</code> call. Clearing a property returns the run to inheriting it.
 			</p>
 
@@ -255,11 +255,11 @@ function onDrop(event: DragEvent): void {
 
 			<details v-if="session.renderWarnings.length > 0 || session.parsed.warnings.length > 0" class="pxh-warnings">
 				<summary>
-					{{ session.renderWarnings.length + session.parsed.warnings.length }} warning(s) — shown, not swallowed
+					{{ session.renderWarnings.length + session.parsed.warnings.length }} warning(s): shown, not swallowed
 				</summary>
 				<ul>
-					<li v-for="warning in session.renderWarnings" :key="warning"><code>renderDeck</code> — {{ warning }}</li>
-					<li v-for="warning in session.parsed.warnings" :key="warning"><code>parseDeck</code> — {{ warning }}</li>
+					<li v-for="warning in session.renderWarnings" :key="warning"><code>renderDeck</code>: {{ warning }}</li>
+					<li v-for="warning in session.parsed.warnings" :key="warning"><code>parseDeck</code>: {{ warning }}</li>
 				</ul>
 			</details>
 
@@ -272,7 +272,7 @@ function onDrop(event: DragEvent): void {
 				</button>
 			</div>
 			<p class="pxh-hint">
-				Open both in PowerPoint. The only difference should be the words you changed — that comparison is the
+				Open both in PowerPoint. The only difference should be the words you changed: that comparison is the
 				claim; one file on its own is just a file.
 			</p>
 		</section>

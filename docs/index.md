@@ -15,7 +15,7 @@ doc_type: 'overview'
 the **HTML ⇄ ts-pptx** link, in both directions. It does not emit OOXML itself,
 and it does not generate the HTML.
 
-These pages are the design record — the *why*. The [README](../README.md) is the
+These pages are the design record: the *why*. The [README](../README.md) is the
 introduction, and [CONTRIBUTING](../CONTRIBUTING.md) is how to build, test and
 verify a change.
 
@@ -34,7 +34,7 @@ verify a change.
 ```
 
 Four legs, one loop, over a paint model that is embedded in the rendered document
-as a JSON island. The return path parses that island — never `getComputedStyle` —
+as a JSON island. The return path parses that island, never `getComputedStyle`,
 which is what lets the visible SVG approximate freely without any of that
 approximation reaching the emitted deck.
 

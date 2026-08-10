@@ -48,7 +48,7 @@ const warnings = computed(() => rows.value.flatMap((row) => row.warnings))
 <template>
 	<div class="pxh-marquee">
 		<p v-if="failure" class="pxh-marquee-failed">
-			The decks could not be rendered in this browser, so there is nothing here — nothing on this site stands in
+			The decks could not be rendered in this browser, so there is nothing here: nothing on this site stands in
 			for a slide it did not draw. <span>{{ failure }}</span>
 		</p>
 
@@ -106,9 +106,9 @@ const warnings = computed(() => rows.value.flatMap((row) => row.warnings))
 
 		<p v-if="rows.length > 0" class="pxh-marquee-note">
 			Sixteen slides, written by <code>@shbernal/ts-pptx</code> and drawn by <code>renderDeck</code> in this tab a
-			moment ago. Not screenshots — this site has none, and
+			moment ago. Not screenshots: this site has none, and
 			<a :href="withBase('/docs/decisions')">that is a rule, not an oversight</a>.
-			Each row's button hands you the <code>.pptx</code> its slides were drawn from — written in this tab, never
+			Each row's button hands you the <code>.pptx</code> its slides were drawn from: written in this tab, never
 			fetched. The companies and figures are invented.
 			<template v-if="warnings.length > 0">
 				<br />

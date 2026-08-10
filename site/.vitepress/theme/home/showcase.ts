@@ -115,7 +115,7 @@ export function cardStyles(stylesheet: string): string {
 	return `${stylesheet}
 :host { all: initial; display: block }
 /* The card's own frame carries the elevation, so the slide inside is flat and
-   fills it — the renderer sizes for a scrolling preview, not for a tile. */
+   fills it: the renderer sizes for a scrolling preview, not for a tile. */
 .pxh-slide { width: 100%; box-shadow: none }
 /* Notes, carried-slide notices and declared differences are the playground's
    job: they are prose beside a slide, and this row shows slide faces. The

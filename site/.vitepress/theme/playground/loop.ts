@@ -198,7 +198,7 @@ function reset(stages: Stage[]): void {
  * rather than the thing it actually says.
  */
 export function describe(error: unknown): string {
-	if (error instanceof IslandError) return `IslandError (${error.fault}) — ${error.message}`
+	if (error instanceof IslandError) return `IslandError (${error.fault}): ${error.message}`
 	if (error instanceof Error) return error.message
 	return String(error)
 }

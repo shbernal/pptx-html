@@ -30,7 +30,7 @@ const DOCS_DIR = resolve(repoRoot, 'docs')
 export const LEDGER = {
 	slug: 'fidelity',
 	title: 'Fidelity ledger',
-	description: 'What the loop models, carries and warns on, per corpus deck — measured, not asserted.',
+	description: 'What the loop models, carries and warns on, per corpus deck: measured, not asserted.',
 }
 
 /** Frontmatter the site renders: repo key → VitePress key. */

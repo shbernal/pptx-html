@@ -53,7 +53,7 @@ async function copy(): Promise<void> {
 			</h1>
 
 			<p class="pxh-lead">
-				And get the deck back — not an approximation of it. <code>pptx-html</code> reads a <code>.pptx</code> into a
+				And get the deck back: not an approximation of it. <code>pptx-html</code> reads a <code>.pptx</code> into a
 				slide model, renders it as HTML you can edit, reads the edit back and writes the deck out again. Four legs,
 				one loop, no screenshots anywhere.
 			</p>

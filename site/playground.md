@@ -9,7 +9,7 @@ pageClass: pxh-wide
 # Playground
 
 `importDeck → renderDeck → parseDeck → emitDeck`, running here, on this page, in
-your browser. Not a recording of a conversion and not a picture of a slide — the
+your browser. Not a recording of a conversion and not a picture of a slide: the
 same four functions a consumer calls, on bytes that never leave the tab.
 
 <ClientOnly>
@@ -30,7 +30,7 @@ surface changed and the island's value stood instead. It is reported per slide,
 because a deck where one slide was edited and eleven were not should not describe
 all twelve the same way.
 
-The panel beside the preview is the **editable surface** — run text, `bold`,
+The panel beside the preview is the **editable surface**: run text, `bold`,
 `italic`, `underline`, `strike`, `sizePt`, `color`, a paragraph's `align`,
 `bullet`, `marginLeftPt` and `indentPt`, and deleting a node. That list is not a
 subset chosen for the demo: it is `EDITABLE_SURFACE`, exported from the package,
@@ -47,15 +47,15 @@ has no way to say it.
 `bullet` is the drop-down that took an upstream change to exist. Until
 [ts-pptx#15](https://github.com/shbernal/ts-pptx/issues/15), the write API could
 say *this paragraph has a bullet* and *this paragraph has none* but not *this
-paragraph says nothing about its bullet* — the omitted option wrote the explicit
-"none" — so an **inherited** position would have produced the wrong one of the
+paragraph says nothing about its bullet* (the omitted option wrote the explicit
+"none"), so an **inherited** position would have produced the wrong one of the
 three, and the two look identical on screen. Rather than ship a control that lies
 in a way nothing on the page could show, there was no control at all until the
 option gained an `inherit` spelling.
 
-The two margin fields — `marginLeftPt` is where the body text starts,
-`indentPt` how far the first line sits from it — came with the same upstream
-change, and an empty field is the drop-downs' **inherited** in another shape: a
+The two margin fields (`marginLeftPt` is where the body text starts, `indentPt`
+how far the first line sits from it) came with the same upstream change, and an
+empty field is the drop-downs' **inherited** in another shape: a
 paragraph whose margin is cleared follows its list style again, which is not the
 same paragraph as one stating `0`. Until `bullet` gained its third state the
 bullet decided both attributes, so *suppress this bullet but keep the margin it
@@ -64,14 +64,14 @@ inherits* was not a deck the write API could produce.
 Its fourth position, *as the deck states it*, is disabled and is the same rule
 still doing its job. A paragraph can hold a numbered bullet, a picture bullet or a
 glyph with its own colour, and the write API cannot author every one of those
-back — so the panel says the deck states one and declines to replace it, instead
+back, so the panel says the deck states one and declines to replace it, instead
 of showing "none" beside a visible bullet or rounding a numbering scheme to a dot.
 Nothing is lost by leaving it alone: an untouched bullet is never rewritten.
 
 ## What it does not prove
 
 The round-trip oracle gates decks written by
-[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx) — the
+[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx); the
 samples above are that corpus. A deck you author in PowerPoint and drop here runs
 the same code, but it is the project's **second tier** and is not gated by CI. If
 one comes back with warnings or on a weaker lane, that is the documented state of

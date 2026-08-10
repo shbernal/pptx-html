@@ -381,7 +381,7 @@ function northwindTitle(pptx: TsPptx, c: Palette): void {
 	})
 
 	p.slide.addShape('rect', { x: 0.7, y: 1.5, w: 1.1, h: 0.07, fill: { color: c.accent2 }, objectName: 'kicker' })
-	label(p, 'CONFIDENTIAL — BOARD REVIEW', 0.7, 0.72, 6, 0.26, {
+	label(p, 'CONFIDENTIAL: BOARD REVIEW', 0.7, 0.72, 6, 0.26, {
 		size: 10.5,
 		color: c.onDarkMuted,
 		bold: true,
@@ -1184,7 +1184,7 @@ function meridianNext(pptx: TsPptx, c: Palette): void {
 
 	const steps: readonly { n: string; text: string }[] = [
 		{ n: '01', text: 'Sign off the three design principles as written' },
-		{ n: '02', text: 'Name the pathway owners — six people, by 14 March' },
+		{ n: '02', text: 'Name the pathway owners: six people, by 14 March' },
 		{ n: '03', text: 'Release the transition budget against the Q2 gate' },
 	]
 	steps.forEach((step, index) => {
@@ -1234,11 +1234,11 @@ async function bytesOf(pptx: TsPptx): Promise<Uint8Array> {
 export const SHOWCASE: readonly ShowcaseDeck[] = [
 	{
 		name: 'northwind',
-		title: 'Northwind Retail — Growth review',
+		title: 'Northwind Retail: Growth review',
 		blurb: 'Eight slides: waterfall, stacked share, a 2×2, a chevron roadmap and a ranked portfolio table.',
 		file: 'northwind-retail-growth-review.pptx',
 		build: async () => {
-			const pptx = newDeck('Northwind Retail — Growth review')
+			const pptx = newDeck('Northwind Retail: Growth review')
 			northwindTitle(pptx, INDIGO)
 			northwindSummary(pptx, INDIGO)
 			northwindBridge(pptx, INDIGO)
@@ -1252,11 +1252,11 @@ export const SHOWCASE: readonly ShowcaseDeck[] = [
 	},
 	{
 		name: 'meridian',
-		title: 'Meridian Health — Operating model',
+		title: 'Meridian Health: Operating model',
 		blurb: 'Eight slides: concentric rings, a donut, an area trend, a pathway flow and a per-cell heatmap.',
 		file: 'meridian-health-operating-model.pptx',
 		build: async () => {
-			const pptx = newDeck('Meridian Health — Operating model')
+			const pptx = newDeck('Meridian Health: Operating model')
 			meridianTitle(pptx, PLUM)
 			meridianPillars(pptx, PLUM)
 			meridianDonut(pptx, PLUM)
