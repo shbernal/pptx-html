@@ -1,7 +1,7 @@
 /**
  * {@link Fill} and {@link Stroke} → SVG paint.
  *
- * ## What `inherit` is drawn as, and why the two answers differ
+ * ## `inherit` paints nothing, on both arms
  *
  * `inherit` means **nothing this model can see states a paint at all**. It is
  * not a theme reference left unfollowed: the read model *does* resolve
@@ -11,20 +11,26 @@
  * for upstream to follow — so there is no value to look up and painting is a
  * decision rather than a lookup.
  *
- * - **An inherited line is not painted.** A shape that states no outline *and*
- *   has no `a:lnRef` to fall back through is one PowerPoint draws no outline
- *   for, so `none` here is not a guess in the way the fill below is. A hairline
- *   on every text box would add outlines the deck does not have.
- * - **An inherited fill is painted** ({@link INHERITED_FILL}, a flat neutral),
- *   and that choice is older than the measurement above and is not supported by
- *   it. It was made to stop transparency from erasing themed shapes — but themed
- *   shapes resolve to `solid` and never reach this arm. Across a 47-deck
- *   PowerPoint corpus every shape that did reach it was a placeholder (title,
- *   body, slide number, footer, date), none of which PowerPoint fills, so the
- *   neutral lays a grey rectangle behind exactly the text a reader is meant to
- *   read. Every element painted this way carries `data-pxh-approx`, so the guess
- *   is at least auditable in the DOM rather than passing for something the deck
- *   said.
+ * Both arms make the same one: draw nothing. A shape that states no outline and
+ * has no `a:lnRef` to fall through is one PowerPoint draws no outline for, and
+ * the same holds of its interior.
+ *
+ * The fill arm painted a flat neutral until it was measured. The reason given was
+ * that transparency would erase every themed shape — but themed shapes resolve to
+ * `solid` and never reach this arm. Across 47 PowerPoint-authored decks every
+ * shape that did reach it was a placeholder (title, body, slide number, footer,
+ * date), none of which PowerPoint fills, so the neutral laid a grey rectangle
+ * behind exactly the text a reader is meant to read, on nearly every slide with a
+ * title.
+ *
+ * `none` is not certainly right either: a placeholder's interior can come from
+ * the layout, which this model does not walk. It is the better guess, because an
+ * absent fill distorts a slide far less than an invented one, and because it is
+ * the only one of the two that adds nothing the deck did not say.
+ *
+ * The slide surface is the exception, and it is not decided here — a slide whose
+ * whole chain states no background is white rather than transparent, which
+ * `render/document.ts` handles where the surface is drawn.
  *
  * Neither choice touches the round trip: `Fill.inherit` and `Stroke.inherit`
  * travel through the island as themselves, and only the picture approximates.
@@ -32,8 +38,17 @@
 
 import type { Color, DashStyle, Fill, Gradient, Stroke } from '../ir/render'
 
-/** The flat neutral an inherited fill is drawn as. Documented, not derived. */
-export const INHERITED_FILL = '#d8dce6'
+/**
+ * What a line is drawn in when it states a width or a dash but no colour — the
+ * one thing `a:lnRef` would have supplied. Unlike an unstated fill this cannot be
+ * resolved by drawing nothing: the deck says there is a line, so something has to
+ * be visible, and the arm is marked approximate for it.
+ *
+ * Documented, not derived, and not observed: across 47 PowerPoint-authored decks
+ * all 172 painted lines (117 shape outlines, 55 table borders) state their own
+ * colour, so this is a defensive arm rather than a common one.
+ */
+const UNSTATED_LINE_COLOR = '#d8dce6'
 
 /** Points → EMU. Stroke widths and font sizes arrive in points; the canvas is EMU. */
 export const EMU_PER_POINT = 12_700
@@ -128,10 +143,13 @@ export function escapeAttr(value: string): string {
 
 export function fillPaint(fill: Fill, defs: Defs): Painted {
 	switch (fill.kind) {
+		// Two different facts, one drawing. `none` is an explicit `a:noFill`; `inherit`
+		// is the absence of any statement. They stay distinct in the IR and on the
+		// island — only the paint coincides, because "nothing stated" and "nothing
+		// wanted" look the same on a canvas.
 		case 'none':
-			return { attrs: 'fill="none"' }
 		case 'inherit':
-			return { attrs: `fill="${INHERITED_FILL}"`, approx: 'fill:inherit' }
+			return { attrs: 'fill="none"' }
 		case 'solid': {
 			const opacity = opacityOf(fill.color)
 			return {
@@ -165,15 +183,15 @@ export function strokePaint(stroke: Stroke, defs: Defs): Painted {
 	if (stroke.kind === 'none' || stroke.kind === 'inherit') return { attrs: 'stroke="none"' }
 
 	const parts: string[] = []
+	const approx: string[] = []
 	if (stroke.gradient !== undefined) parts.push(`stroke="${gradientDef(stroke.gradient, defs)}"`)
 	else if (stroke.color !== undefined) {
 		parts.push(`stroke="${cssColor(stroke.color)}"`)
 		const opacity = opacityOf(stroke.color)
 		if (opacity !== undefined) parts.push(`stroke-opacity="${opacity}"`)
 	} else {
-		// A line that states a width or a dash but no colour of its own still has to
-		// be drawn, and its colour is the one thing `a:lnRef` would have supplied.
-		parts.push(`stroke="${INHERITED_FILL}"`)
+		parts.push(`stroke="${UNSTATED_LINE_COLOR}"`)
+		approx.push('line:color')
 	}
 
 	const widthEmu = (stroke.widthPt ?? 1) * EMU_PER_POINT
@@ -182,12 +200,14 @@ export function strokePaint(stroke: Stroke, defs: Defs): Painted {
 	if (stroke.cap !== undefined) parts.push(`stroke-linecap="${SVG_CAP[stroke.cap]}"`)
 	if (stroke.dash !== undefined) parts.push(`stroke-dasharray="${dashArray(stroke.dash, widthEmu)}"`)
 
+	// Arrowheads are modeled (`head`/`tail`) and not drawn: SVG markers would need a
+	// marker def per (type, size, colour) triple, and an arrow at the wrong scale
+	// reads as a different connector.
+	if (stroke.head !== undefined || stroke.tail !== undefined) approx.push('line:ends')
+
 	return {
 		attrs: parts.join(' '),
-		// Arrowheads are modeled (`head`/`tail`) and not drawn: SVG markers would
-		// need a marker def per (type, size, colour) triple, and an arrow at the
-		// wrong scale reads as a different connector.
-		...(stroke.head !== undefined || stroke.tail !== undefined ? { approx: 'line:ends' } : {}),
+		...(approx.length === 0 ? {} : { approx: approx.join(' ') }),
 	}
 }
 

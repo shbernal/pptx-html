@@ -304,6 +304,25 @@ export const CORPUS: CorpusDeck[] = [
 		})
 	}),
 
+	deck(
+		'master-background',
+		'primitive',
+		'a slide whose whole chain states no background — the surface has to be white',
+		(pptx) => {
+			// The writer's built-in master authors a background, so reaching the unstated
+			// case takes a `defineSlideMaster` that omits one. That is not an exotic deck:
+			// it is what every custom master without an explicit `background` produces, and
+			// the renderer painted all of them a flat grey until this deck existed.
+			pptx.defineSlideMaster({
+				title: 'CORPUS_BARE_MASTER',
+				objects: [
+					{ placeholder: { options: { name: 'title', type: 'title', x: 0.5, y: 0.4, w: 9, h: 1 }, text: 'Title' } },
+				],
+			})
+			pptx.addSlide({ masterTitle: 'CORPUS_BARE_MASTER' }).addText('On an unstated surface', { placeholder: 'title' })
+		}
+	),
+
 	deck('chart', 'hard', 'a full reader with no writer for every form — expected to be carried', (pptx) => {
 		pptx.addSlide().addChart([{ name: 'Share', labels: ['EMEA', 'AMER', 'APAC'], values: [48, 31, 21] }], {
 			type: 'bar',

@@ -29,7 +29,7 @@ import type { RenderIr, RenderSlide } from '../ir/render'
 import { type AssetSource, hydrationScript, renderAssetBlock } from './assets'
 import { escapeForScript, INTEGRITY_ID, integrityOf, type Integrity, islandTextOf, ISLAND_ID } from './island'
 import { renderNode, type NodeContext } from './node'
-import { Defs, fillPaint } from './paint'
+import { Defs, fillPaint, type Painted } from './paint'
 import { escapeText } from './text'
 
 /**
@@ -65,13 +65,35 @@ body { margin: 0; background: #eceef2; font-family: system-ui, sans-serif }
 .pxh-text { font-family: Calibri, Carlito, "Segoe UI", system-ui, sans-serif }
 `
 
+/**
+ * The colour a slide surface takes when nothing in the slide → layout → master
+ * chain states a background. PowerPoint shows white there, so this is what the
+ * format defaults to rather than a guess at what the deck meant.
+ */
+const UNSTATED_SLIDE_BACKGROUND = '#ffffff'
+
+/**
+ * The slide surface, which is the one place an inherited fill is *not* drawn as
+ * nothing.
+ *
+ * `fillPaint` paints `Fill.inherit` transparent, and for a shape that is right:
+ * a shape nothing states a fill for is unfilled. A slide is not a shape. It is
+ * the surface everything else is drawn on, it always has one, and leaving it
+ * transparent would hand the deck whatever colour the embedding page happens to
+ * be — so a dark host page would silently invert the whole preview.
+ */
+function backgroundPaint(fill: RenderSlide['background']['fill'], defs: Defs): Painted {
+	if (fill.kind !== 'inherit') return fillPaint(fill, defs)
+	return { attrs: `fill="${UNSTATED_SLIDE_BACKGROUND}"`, approx: 'background:inherit' }
+}
+
 function renderSlide(slide: RenderSlide, size: RenderIr['size'], warnings: string[]): string {
 	const defs = new Defs()
 	const context: NodeContext = { defs, skipped: [] }
 
 	// Order is paint order: the background first, then nodes front-to-back in
 	// document order, which is the order the array is already in.
-	const background = fillPaint(slide.background.fill, defs)
+	const background = backgroundPaint(slide.background.fill, defs)
 	const nodes = slide.nodes.map((node) => renderNode(node, context)).join('')
 
 	for (const id of context.skipped) {

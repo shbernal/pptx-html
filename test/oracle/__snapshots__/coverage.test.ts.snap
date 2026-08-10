@@ -15,6 +15,7 @@ nested-group        primitive  slides=1 (1a/0c)  calls=1
 hyperlink           primitive  slides=2 (2a/0c)  calls=2
 line-cap            primitive  slides=1 (1a/0c)  calls=1
 bullet              primitive  slides=1 (1a/0c)  calls=2
+master-background   primitive  slides=1 (1a/0c)  calls=1
 chart               hard       slides=1 (1a/0c)  calls=1
 layout-placeholder  hard       slides=1 (1a/0c)  calls=2
 notes               hard       slides=1 (1a/0c)  calls=1
@@ -23,9 +24,9 @@ theme-color         hard       slides=1 (1a/0c)  calls=2
 
 # fidelity notes by disposition × cause (whole corpus)
              unread       unwritable   unsupported  
-dropped      19           31           3            
-flattened    0            18           4            
-approximated 18           0            4            
+dropped      20           33           4            
+flattened    0            19           6            
+approximated 19           0            4            
 
 # constructs named, by deck
 text-box            deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
@@ -41,6 +42,7 @@ nested-group        deck.docProps, master.background, master.txStyles, text.inde
 hyperlink           deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme
 line-cap            deck.docProps, master.background, master.txStyles, theme.fmtScheme
 bullet              deck.docProps, master.background, master.txStyles, text.bullet.picture, text.indent, theme.fmtScheme
+master-background   deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, text.indent, theme.fmtScheme
 chart               chart.workbook, deck.docProps, master.background, master.txStyles, theme.fmtScheme
 layout-placeholder  deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, text.indent, theme.fmtScheme
 notes               deck.docProps, master.background, master.txStyles, text.indent, theme.fmtScheme

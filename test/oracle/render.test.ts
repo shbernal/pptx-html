@@ -108,6 +108,21 @@ describe('what the picture admits to', () => {
 		}
 	})
 
+	it('draws an unstated fill as nothing and an unstated slide surface as white', async () => {
+		// Two arms of `Fill.inherit` that have to disagree, and did not until they were
+		// measured. A *shape* nothing states a fill for is unfilled, so painting one a
+		// colour puts a rectangle behind text the deck wanted bare. A *slide* is the
+		// surface everything sits on and always has one, so leaving it transparent
+		// hands the deck whatever the embedding page happens to be.
+		const { ir, bytes } = await importCorpus('master-background')
+		const { html } = await renderDeck(ir, { bytes })
+
+		expect(ir.slides[0]?.background.fill).toStrictEqual({ kind: 'inherit' })
+		expect(html).toContain('fill="#ffffff" data-pxh-approx="background:inherit"')
+		// The guess this replaced. Nothing may reintroduce a neutral for either arm.
+		expect(html.toLowerCase()).not.toContain('d8dce6')
+	})
+
 	it('renders a chart as a labelled placeholder and never as a lookalike', async () => {
 		const { ir, bytes } = await importCorpus('chart')
 		const { html } = await renderDeck(ir, { bytes })
