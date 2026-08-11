@@ -36,7 +36,7 @@
  * travel through the island as themselves, and only the picture approximates.
  */
 
-import type { Color, DashStyle, Fill, Gradient, Stroke } from '../ir/render'
+import type { Color, DashStyle, Fill, Gradient, LineEnd, Stroke } from '../ir/render'
 
 /**
  * What a line is drawn in when it states a width or a dash but no colour — the
@@ -184,13 +184,20 @@ export function strokePaint(stroke: Stroke, defs: Defs): Painted {
 
 	const parts: string[] = []
 	const approx: string[] = []
-	if (stroke.gradient !== undefined) parts.push(`stroke="${gradientDef(stroke.gradient, defs)}"`)
+	let markerPaint: string
+	let markerOpacity: number | undefined
+	if (stroke.gradient !== undefined) {
+		markerPaint = gradientDef(stroke.gradient, defs)
+		parts.push(`stroke="${markerPaint}"`)
+	}
 	else if (stroke.color !== undefined) {
-		parts.push(`stroke="${cssColor(stroke.color)}"`)
-		const opacity = opacityOf(stroke.color)
-		if (opacity !== undefined) parts.push(`stroke-opacity="${opacity}"`)
+		markerPaint = cssColor(stroke.color)
+		markerOpacity = opacityOf(stroke.color)
+		parts.push(`stroke="${markerPaint}"`)
+		if (markerOpacity !== undefined) parts.push(`stroke-opacity="${markerOpacity}"`)
 	} else {
-		parts.push(`stroke="${UNSTATED_LINE_COLOR}"`)
+		markerPaint = UNSTATED_LINE_COLOR
+		parts.push(`stroke="${markerPaint}"`)
 		approx.push('line:color')
 	}
 
@@ -200,15 +207,60 @@ export function strokePaint(stroke: Stroke, defs: Defs): Painted {
 	if (stroke.cap !== undefined) parts.push(`stroke-linecap="${SVG_CAP[stroke.cap]}"`)
 	if (stroke.dash !== undefined) parts.push(`stroke-dasharray="${dashArray(stroke.dash, widthEmu)}"`)
 
-	// Arrowheads are modeled (`head`/`tail`) and not drawn: SVG markers would need a
-	// marker def per (type, size, colour) triple, and an arrow at the wrong scale
-	// reads as a different connector.
-	if (stroke.head !== undefined || stroke.tail !== undefined) approx.push('line:ends')
+	const head = lineEndDef(stroke.head, markerPaint, markerOpacity, defs)
+	if (head !== undefined) parts.push(`marker-start="${head}"`)
+	const tail = lineEndDef(stroke.tail, markerPaint, markerOpacity, defs)
+	if (tail !== undefined) parts.push(`marker-end="${tail}"`)
 
 	return {
 		attrs: parts.join(' '),
 		...(approx.length === 0 ? {} : { approx: approx.join(' ') }),
 	}
+}
+
+/** Small/medium/large line-end classes as factors of the medium marker. */
+function lineEndScale(size: LineEnd['width'] | LineEnd['length']): number {
+	if (size === 'sm') return 0.5
+	if (size === 'lg') return 1.5
+	return 1
+}
+
+/**
+ * One DrawingML line end as an SVG marker.
+ *
+ * Marker units are stroke widths, matching OOXML's own definition of `@w` and
+ * `@len` as sizes relative to the line. `auto-start-reverse` lets one rightward
+ * definition serve both `a:headEnd` and `a:tailEnd`; SVG reverses the start arm
+ * around the same tip without a second set of geometry.
+ */
+function lineEndDef(end: LineEnd | undefined, paint: string, opacity: number | undefined, defs: Defs): string | undefined {
+	if (end === undefined || end.type === 'none') return undefined
+
+	const markerWidth = 3 * lineEndScale(end.length)
+	const markerHeight = 2.5 * lineEndScale(end.width)
+	const alpha = opacity === undefined ? '' : ` opacity="${opacity}"`
+	return defs.add((id) => {
+		const marker =
+			`<marker id="${id}" viewBox="0 0 10 10" refX="10" refY="5" ` +
+			`markerWidth="${markerWidth}" markerHeight="${markerHeight}" markerUnits="strokeWidth" ` +
+			'orient="auto-start-reverse" overflow="visible">'
+		switch (end.type) {
+			case 'triangle':
+				return `${marker}<path d="M 0 0 L 10 5 L 0 10 Z" fill="${paint}"${alpha}/></marker>`
+			case 'stealth':
+				return `${marker}<path d="M 0 0 L 10 5 L 0 10 L 3 5 Z" fill="${paint}"${alpha}/></marker>`
+			case 'diamond':
+				return `${marker}<path d="M 0 5 L 5 0 L 10 5 L 5 10 Z" fill="${paint}"${alpha}/></marker>`
+			case 'oval':
+				return `${marker}<ellipse cx="5" cy="5" rx="5" ry="4" fill="${paint}"${alpha}/></marker>`
+			case 'arrow':
+				return `${marker}<path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="${paint}" stroke-width="3"${alpha}/></marker>`
+			case 'none':
+				// Guarded before the def is allocated; retained for exhaustiveness across
+				// the callback boundary, where TypeScript does not preserve that narrowing.
+				return `${marker}</marker>`
+		}
+	})
 }
 
 const SVG_CAP: Record<'flat' | 'rnd' | 'sq', string> = { flat: 'butt', rnd: 'round', sq: 'square' }

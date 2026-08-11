@@ -58,6 +58,55 @@ describe('presets', () => {
 		expect(wide.d).toBe('M 0 0 L 150 0 L 200 50 L 150 100 L 0 100 L 50 50 Z')
 	})
 
+	it('draws the five presets counted in the browser-preview evidence', () => {
+		const draw = (preset: string) => pathOf({ kind: 'preset', preset, adjustValues: {} }, 1000, 500)
+		for (const preset of ['round2DiagRect', 'rightArrowCallout', 'rightArrow', 'round2SameRect', 'wedgeRectCallout']) {
+			expect([preset, draw(preset).fallback]).toStrictEqual([preset, undefined])
+		}
+
+		expect(draw('rightArrow').d).toBe('M 0 125 L 750 125 L 750 0 L 1000 250 L 750 500 L 750 375 L 0 375 Z')
+		expect(draw('rightArrowCallout').d).toBe(
+			'M 0 0 L 649.77 0 L 649.77 187.5 L 875 187.5 L 875 125 L 1000 250 ' +
+				'L 875 375 L 875 312.5 L 649.77 312.5 L 649.77 500 L 0 500 Z'
+		)
+	})
+
+	it('honours both radius handles on the two-corner rectangle presets', () => {
+		const diag = pathOf(
+			{ kind: 'preset', preset: 'round2DiagRect', adjustValues: { adj1: 'val 20000', adj2: 'val 10000' } },
+			1000,
+			500
+		)
+		expect(diag.d).toBe(
+			'M 100 0 L 950 0 A 50 50 0 0 1 1000 50 L 1000 400 A 100 100 0 0 1 900 500 ' +
+				'L 50 500 A 50 50 0 0 1 0 450 L 0 100 A 100 100 0 0 1 100 0 Z'
+		)
+
+		const same = pathOf(
+			{ kind: 'preset', preset: 'round2SameRect', adjustValues: { adj1: 'val 20000', adj2: 'val 10000' } },
+			1000,
+			500
+		)
+		expect(same.d).toBe(
+			'M 100 0 L 900 0 A 100 100 0 0 1 1000 100 L 1000 450 A 50 50 0 0 1 950 500 ' +
+				'L 50 500 A 50 50 0 0 1 0 450 L 0 100 A 100 100 0 0 1 100 0 Z'
+		)
+	})
+
+	it('collapses a wedge callout handle inside the rectangle onto its edges', () => {
+		// DR-18-0013 corrects the electronic addendum here. Its original guides put
+		// an inward notch at the handle; PowerPoint draws the full rectangle.
+		const result = pathOf(
+			{ kind: 'preset', preset: 'wedgeRectCallout', adjustValues: { adj1: 'val 0', adj2: 'val 0' } },
+			120,
+			60
+		)
+		expect(result.d).toBe(
+			'M 0 0 L 20 0 L 20 0 L 50 0 L 120 0 L 120 10 L 120 10 L 120 25 L 120 60 ' +
+				'L 50 60 L 20 60 L 20 60 L 0 60 L 0 25 L 0 30 L 0 10 Z'
+		)
+	})
+
 	it('draws a five-pointed star whose points reach every edge of the box', () => {
 		// `hf`/`vf` (105146 and 110557) exist to stretch the pentagon's circumscribed
 		// circle until the outer points sit exactly on the box. Asserted as a property

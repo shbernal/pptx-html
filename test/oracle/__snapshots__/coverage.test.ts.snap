@@ -4,7 +4,7 @@ exports[`coverage > matches the recorded support baseline 1`] = `
 "# deck coverage — slides (authored/carried), calls
 text-box            primitive  slides=1 (1a/0c)  calls=1
 autoshape           primitive  slides=1 (1a/0c)  calls=1
-preset-geometry     primitive  slides=1 (1a/0c)  calls=3
+preset-geometry     primitive  slides=1 (1a/0c)  calls=8
 custgeom            primitive  slides=1 (1a/0c)  calls=1
 table               primitive  slides=1 (1a/0c)  calls=1
 cell-fill           primitive  slides=1 (1a/0c)  calls=1

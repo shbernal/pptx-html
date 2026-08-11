@@ -101,7 +101,7 @@ export const CORPUS: CorpusDeck[] = [
 		})
 	}),
 
-	deck('preset-geometry', 'primitive', 'the three presets beyond the rectangle family, one of them curved', (pptx) => {
+	deck('preset-geometry', 'primitive', 'the eight presets chosen from measured preview and deck evidence', (pptx) => {
 		// `render.test.ts` asserts the corpus draws every geometry it uses with no box
 		// standing in. That claim is only as wide as the corpus, and until this deck
 		// existed it reached `rect`, `roundRect`, `triangle`, `line` and a freeform —
@@ -143,6 +143,71 @@ export const CORPUS: CorpusDeck[] = [
 			angleRange: [180, 90],
 			arcThicknessRatio: 0.2,
 			objectName: 'gauge',
+		})
+		// The next five are the exact unresolved set counted from slide-ui's 98
+		// built browser previews. As above, non-default handles make this exercise
+		// the import path as well as the local formula.
+		slide.addShape('round2DiagRect', {
+			x: 6,
+			y: 0.5,
+			w: 2,
+			h: 1,
+			fill: { color: 'DDE3F0' },
+			shapeAdjust: [
+				{ name: 'adj1', value: 0.2 },
+				{ name: 'adj2', value: 0.1 },
+			],
+			objectName: 'diagonal-corners',
+		})
+		slide.addShape('round2SameRect', {
+			x: 8.5,
+			y: 0.5,
+			w: 2,
+			h: 1,
+			fill: { color: 'DDE3F0' },
+			shapeAdjust: [
+				{ name: 'adj1', value: 0.2 },
+				{ name: 'adj2', value: 0.1 },
+			],
+			objectName: 'same-side-corners',
+		})
+		slide.addShape('rightArrow', {
+			x: 11,
+			y: 0.5,
+			w: 1.8,
+			h: 1,
+			fill: { color: 'F0C808' },
+			shapeAdjust: [
+				{ name: 'adj1', value: 0.7 },
+				{ name: 'adj2', value: 0.35 },
+			],
+			objectName: 'terminal',
+		})
+		slide.addShape('rightArrowCallout', {
+			x: 6,
+			y: 2,
+			w: 3,
+			h: 1,
+			fill: { color: '9B1B30' },
+			shapeAdjust: [
+				{ name: 'adj1', value: 0.5 },
+				{ name: 'adj2', value: 0.14 },
+				{ name: 'adj3', value: 0.15 },
+				{ name: 'adj4', value: 0.87 },
+			],
+			objectName: 'callout-step',
+		})
+		slide.addShape('wedgeRectCallout', {
+			x: 9.5,
+			y: 2,
+			w: 2.5,
+			h: 1.3,
+			fill: { color: 'DDE3F0' },
+			shapeAdjust: [
+				{ name: 'adj1', value: -0.4 },
+				{ name: 'adj2', value: 0.8 },
+			],
+			objectName: 'belief',
 		})
 	}),
 

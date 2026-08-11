@@ -159,12 +159,14 @@ function rect(w: number, h: number): string {
  * shape *correctly*, and a wrong outline is worse than an obvious box, because
  * only one of the two looks like an error.
  *
- * Which is also why the last three were chosen by counting rather than by taste.
- * Across 47 PowerPoint-authored decks the nine above already resolve 670 of 682
- * preset instances; the whole remainder is `chevron` ×9, `star5` ×2 and
- * `blockArc` ×1. Adding the twenty-odd shapes that felt worth having would have
- * been twenty-odd formulas that each have to be right, drawing shapes no deck in
- * evidence contains.
+ * Which is also why additions are chosen by counting rather than by taste.
+ * Across 47 PowerPoint-authored decks the original nine resolved 670 of 682
+ * preset instances; the whole remainder was `chevron` ×9, `star5` ×2 and
+ * `blockArc` ×1. A later census of slide-ui's 98 generated browser previews
+ * supplied the next evidence set: `round2DiagRect` ×6, `rightArrowCallout` ×4,
+ * `rightArrow` ×2, `round2SameRect` ×2 and `wedgeRectCallout` ×2. Entries outside
+ * those measured sets still fall back visibly instead of turning an appealing
+ * but unevidenced list into dozens of formulas that each have to be right.
  */
 const PRESETS: Record<string, (w: number, h: number, adj: Record<string, string>) => string> = {
 	rect,
@@ -206,11 +208,128 @@ const PRESETS: Record<string, (w: number, h: number, adj: Record<string, string>
 		const inset = Math.min((adjust(adj, 'adj', 25_000) / GUIDE_SCALE) * Math.min(w, h), w)
 		return `M ${inset} 0 L ${w} 0 L ${w - inset} ${h} L 0 ${h} Z`
 	},
+	round2DiagRect: (w, h, adj) => {
+		// `adj1` rounds top-left + bottom-right; `adj2` rounds the opposite
+		// diagonal. The default second radius is zero, so those two corners remain
+		// square unless the deck states otherwise.
+		const r1 = (pin(0, adjust(adj, 'adj1', 16_667), 50_000) / GUIDE_SCALE) * Math.min(w, h)
+		const r2 = (pin(0, adjust(adj, 'adj2', 0), 50_000) / GUIDE_SCALE) * Math.min(w, h)
+		return [
+			`M ${r1} 0`,
+			`L ${w - r2} 0`,
+			`A ${r2} ${r2} 0 0 1 ${w} ${r2}`,
+			`L ${w} ${h - r1}`,
+			`A ${r1} ${r1} 0 0 1 ${w - r1} ${h}`,
+			`L ${r2} ${h}`,
+			`A ${r2} ${r2} 0 0 1 0 ${h - r2}`,
+			`L 0 ${r1}`,
+			`A ${r1} ${r1} 0 0 1 ${r1} 0`,
+			'Z',
+		].join(' ')
+	},
+	round2SameRect: (w, h, adj) => {
+		// One handle controls both top corners and the other both bottom corners.
+		// PowerPoint's default is the useful "rounded header" case: rounded above,
+		// square below.
+		const top = (pin(0, adjust(adj, 'adj1', 16_667), 50_000) / GUIDE_SCALE) * Math.min(w, h)
+		const bottom = (pin(0, adjust(adj, 'adj2', 0), 50_000) / GUIDE_SCALE) * Math.min(w, h)
+		return [
+			`M ${top} 0`,
+			`L ${w - top} 0`,
+			`A ${top} ${top} 0 0 1 ${w} ${top}`,
+			`L ${w} ${h - bottom}`,
+			`A ${bottom} ${bottom} 0 0 1 ${w - bottom} ${h}`,
+			`L ${bottom} ${h}`,
+			`A ${bottom} ${bottom} 0 0 1 0 ${h - bottom}`,
+			`L 0 ${top}`,
+			`A ${top} ${top} 0 0 1 ${top} 0`,
+			'Z',
+		].join(' ')
+	},
 	// The notch and the point are the same inset, which is why one adjust states
 	// both. `maxAdj` pins it to `w`, so the two never cross into a bowtie.
 	chevron: (w, h, adj) => {
 		const x1 = Math.min((adjust(adj, 'adj', 50_000) / GUIDE_SCALE) * Math.min(w, h), w)
 		return `M 0 0 L ${w - x1} 0 L ${w} ${h / 2} L ${w - x1} ${h} L 0 ${h} L ${x1} ${h / 2} Z`
+	},
+	rightArrow: (w, h, adj) => {
+		const shaft = pin(0, adjust(adj, 'adj1', 50_000), 100_000)
+		const maxHead = Math.min(w, h) === 0 ? 0 : (GUIDE_SCALE * w) / Math.min(w, h)
+		const head = pin(0, adjust(adj, 'adj2', 50_000), maxHead)
+		const x1 = w - (Math.min(w, h) * head) / GUIDE_SCALE
+		const dy = (h * shaft) / (2 * GUIDE_SCALE)
+		return `M 0 ${h / 2 - dy} L ${x1} ${h / 2 - dy} L ${x1} 0 L ${w} ${h / 2} L ${x1} ${h} L ${x1} ${h / 2 + dy} L 0 ${h / 2 + dy} Z`
+	},
+	rightArrowCallout: (w, h, adj) => {
+		const ss = Math.min(w, h)
+		const maxAdj2 = ss === 0 ? 0 : (50_000 * h) / ss
+		const a2 = pin(0, adjust(adj, 'adj2', 25_000), maxAdj2)
+		const a1 = pin(0, adjust(adj, 'adj1', 25_000), 2 * a2)
+		const maxAdj3 = ss === 0 ? 0 : (GUIDE_SCALE * w) / ss
+		const a3 = pin(0, adjust(adj, 'adj3', 25_000), maxAdj3)
+		const maxAdj4 = w === 0 ? 0 : GUIDE_SCALE - (a3 * ss) / w
+		const a4 = pin(0, adjust(adj, 'adj4', 64_977), maxAdj4)
+		const dy1 = (ss * a2) / GUIDE_SCALE
+		const dy2 = (ss * a1) / (2 * GUIDE_SCALE)
+		const [y1, y2, y3, y4] = [h / 2 - dy1, h / 2 - dy2, h / 2 + dy2, h / 2 + dy1]
+		const x3 = w - (ss * a3) / GUIDE_SCALE
+		const x2 = (w * a4) / GUIDE_SCALE
+		return [
+			'M 0 0',
+			`L ${x2} 0`,
+			`L ${x2} ${y2}`,
+			`L ${x3} ${y2}`,
+			`L ${x3} ${y1}`,
+			`L ${w} ${h / 2}`,
+			`L ${x3} ${y4}`,
+			`L ${x3} ${y3}`,
+			`L ${x2} ${y3}`,
+			`L ${x2} ${h}`,
+			`L 0 ${h}`,
+			'Z',
+		].join(' ')
+	},
+	wedgeRectCallout: (w, h, adj) => {
+		const dxPos = (w * adjust(adj, 'adj1', -20_833)) / GUIDE_SCALE
+		const dyPos = (h * adjust(adj, 'adj2', 62_500)) / GUIDE_SCALE
+		const xPos = w / 2 + dxPos
+		const yPos = h / 2 + dyPos
+		const dq = w === 0 ? 0 : (dxPos * h) / w
+		const dz = Math.abs(dyPos) - Math.abs(dq)
+		const [x1, x2] = dxPos > 0 ? [(w * 7) / 12, (w * 10) / 12] : [(w * 2) / 12, (w * 5) / 12]
+		const [y1, y2] = dyPos > 0 ? [(h * 7) / 12, (h * 10) / 12] : [(h * 2) / 12, (h * 5) / 12]
+
+		// DR-18-0013 corrects four edge guides in the published electronic
+		// addendum. Without these clamps a handle dragged *inside* the rectangle
+		// cuts a notch into it; PowerPoint instead collapses that wedge to the edge.
+		const xl = Math.min(dz > 0 ? 0 : dxPos > 0 ? 0 : xPos, 0)
+		const xt = dz > 0 ? (dyPos > 0 ? x1 : xPos) : x1
+		const xr = Math.max(dz > 0 ? w : dxPos > 0 ? xPos : w, w)
+		const xb = dz > 0 ? (dyPos > 0 ? xPos : x1) : x1
+		const yl = dz > 0 ? y1 : dxPos > 0 ? y1 : yPos
+		const yt = Math.min(dz > 0 ? (dyPos > 0 ? 0 : yPos) : 0, 0)
+		const yr = dz > 0 ? y1 : dxPos > 0 ? yPos : y1
+		const yb = Math.max(dz > 0 ? (dyPos > 0 ? yPos : h) : h, h)
+
+		return [
+			'M 0 0',
+			`L ${x1} 0`,
+			`L ${xt} ${yt}`,
+			`L ${x2} 0`,
+			`L ${w} 0`,
+			`L ${w} ${y1}`,
+			`L ${xr} ${yr}`,
+			`L ${w} ${y2}`,
+			`L ${w} ${h}`,
+			`L ${x2} ${h}`,
+			`L ${xb} ${yb}`,
+			`L ${x1} ${h}`,
+			`L 0 ${h}`,
+			`L 0 ${y2}`,
+			`L ${xl} ${yl}`,
+			`L 0 ${y1}`,
+			'Z',
+		].join(' ')
 	},
 	star5: (w, h, adj) => {
 		// `hf`/`vf` are in `a:avLst` beside `adj`, so a deck may state them — but

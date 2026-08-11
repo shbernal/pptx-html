@@ -96,3 +96,36 @@ describe('the renderer is read-only', () => {
 		expect(SAMPLE_IR).toStrictEqual(untouched)
 	})
 })
+
+describe('line ends', () => {
+	it('draws modeled arrowheads as stroke-relative SVG markers', async () => {
+		// The fixture connector carries a medium triangle tail. Its marker belongs in
+		// the slide-local defs and the path names it; neither arm may retain the old
+		// approximation marker once the line end is actually drawn.
+		const { html } = await renderDeck(SAMPLE_IR, NO_ASSETS)
+		expect(html).toContain('markerUnits="strokeWidth"')
+		expect(html).toContain('orient="auto-start-reverse"')
+		expect(html).toMatch(/marker-end="url\(#pxh-p\d+\)"/)
+		expect(html).not.toContain('line:ends')
+	})
+
+	it('has distinct marker geometry for every modeled line-end type', async () => {
+		const expected = {
+			triangle: 'M 0 0 L 10 5 L 0 10 Z',
+			stealth: 'M 0 0 L 10 5 L 0 10 L 3 5 Z',
+			diamond: 'M 0 5 L 5 0 L 10 5 L 5 10 Z',
+			oval: '<ellipse cx="5" cy="5" rx="5" ry="4"',
+			arrow: 'M 0 0 L 10 5 L 0 10',
+		} as const
+		for (const [type, geometry] of Object.entries(expected)) {
+			const ir: RenderIr = JSON.parse(JSON.stringify(SAMPLE_IR))
+			const connector = ir.slides[0]?.nodes.find((node) => node.kind === 'connector')
+			if (connector?.kind !== 'connector' || connector.stroke.kind !== 'line')
+				throw new Error('fixture connector changed')
+			connector.stroke.tail = { type: type as keyof typeof expected, width: 'lg', length: 'sm' }
+			const { html } = await renderDeck(ir, NO_ASSETS)
+			expect([type, html.includes(geometry)]).toStrictEqual([type, true])
+			expect(html).toContain('markerWidth="1.5" markerHeight="3.75"')
+		}
+	})
+})

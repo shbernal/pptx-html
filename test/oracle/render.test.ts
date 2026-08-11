@@ -109,6 +109,13 @@ describe('what the picture admits to', () => {
 		}
 	})
 
+	it('draws the connector corpus arrowhead rather than declaring its line end approximate', async () => {
+		const { ir, bytes } = await importCorpus('connector')
+		const { html } = await renderDeck(ir, { bytes })
+		expect(html).toContain('marker-end="url(#pxh-p0)"')
+		expect(html).not.toContain('line:ends')
+	})
+
 	it('draws an unstated fill as nothing and an unstated slide surface as white', async () => {
 		// Two arms of `Fill.inherit` that have to disagree, and did not until they were
 		// measured. A *shape* nothing states a fill for is unfilled, so painting one a
