@@ -403,6 +403,25 @@ describe('media identity is shared with the contract model', () => {
 		// The manifest carries identity, never bytes — the island is JSON.
 		expect(Object.keys(manifest ?? {})).toEqual(['name', 'contentType', 'byteLength', 'sha256'])
 	})
+
+	it('points a vector picture at its SVG, not at the raster fallback beside it', async () => {
+		// The failure this pins is silent, which is why it is worth a test of its own:
+		// an SVG picture resolves to a real part either way, so nothing warns and
+		// nothing drops. It just paints the fallback — and upstream writes that
+		// fallback as a 1×1 transparent PNG, so a deck of icons renders as a deck of
+		// blank boxes that claims to be complete.
+		const ir = await importCorpus('picture-svg')
+		const glyph = flatten(ir.slides[0]?.nodes ?? []).find((node) => node.kind === 'picture')
+		expect(glyph?.kind).toBe('picture')
+		if (glyph?.kind !== 'picture') return
+
+		const manifest = ir.assets.find((asset) => asset.name === glyph.asset.$asset)
+		expect(manifest?.contentType).toBe('image/svg+xml')
+
+		// And the fallback is still carried, so a consumer that cannot draw SVG has
+		// something to fall back *to*. Dropping it would trade one loss for another.
+		expect(ir.assets.map((asset) => asset.contentType)).toContain('image/png')
+	})
 })
 
 describe('links resolve to identities, not part names', () => {

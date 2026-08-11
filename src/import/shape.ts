@@ -163,8 +163,28 @@ function groupNodeOf(group: GroupShape, scope: ImportScope): RenderNode {
 	}
 }
 
+/**
+ * The vector part wins when a picture has one.
+ *
+ * A PowerPoint SVG picture is two parts, not one: the art hangs off the
+ * `asvg:svgBlip` extension and `a:blip/@r:embed` holds a raster fallback for
+ * readers that cannot draw vectors. `@shbernal/ts-pptx` writes that fallback as
+ * a **1×1 transparent PNG**, so taking `imagePartName` alone paints every icon
+ * in a deck as one invisible pixel — with no warning, because a picture that
+ * resolves to a real part looks resolved. Upstream's own `pictureCall` states
+ * this rule for the contract model; this is the same rule on the paint side, so
+ * the two models do not disagree about what a picture shows.
+ *
+ * It also picks up the SVG-only form, where `imagePartName` is legitimately
+ * `null` (PowerPoint's Insert → Icons, and a plain SVG insert). Those used to
+ * take the `dropped` arm below and render as nothing at all.
+ */
+function artPartOf(picture: Picture): string | null {
+	return picture.svgPartName ?? picture.imagePartName
+}
+
 function pictureNodeOf(picture: Picture, scope: ImportScope): RenderNode {
-	const asset = scope.assets.refFor(picture.imagePartName)
+	const asset = scope.assets.refFor(artPartOf(picture))
 	if (asset === null) {
 		note(
 			scope,

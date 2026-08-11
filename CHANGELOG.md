@@ -13,6 +13,36 @@ model is expected to move.
 
 Nothing yet.
 
+## [0.1.2] — 2026-08-11
+
+### Fixed
+
+- **An SVG picture is drawn as its SVG, not as the raster fallback beside it.**
+  A vector picture is two parts in OOXML: the art hangs off the `asvg:svgBlip`
+  extension, and `a:blip/@r:embed` holds a fallback for readers that cannot draw
+  vectors. The importer took the fallback — and `@shbernal/ts-pptx` writes that
+  fallback as a *1×1 transparent PNG*, so every icon in a deck rendered as one
+  invisible pixel. Nothing warned, because a picture that resolves to a real part
+  looks resolved: the SVG parts arrived in the asset manifest and no node
+  referenced them. Found by the first outside consumer, on a deck where 28 of 49
+  slides lost every glyph.
+
+  The same change picks up the **SVG-only** form, where `a:blip/@r:embed` is
+  legitimately absent (PowerPoint's Insert → Icons, and a plain SVG insert).
+  Those pictures previously took the `dropped` arm and rendered as nothing at
+  all.
+
+  The raster fallback is still carried in the manifest, so a consumer that cannot
+  draw SVG still has something to fall back to.
+
+### Added
+
+- **`picture-svg` joins the corpus** as a primitive-tier deck. The gap above was
+  not a subtle mapping error; it was a construct the corpus did not contain, and
+  a ledger cannot report on a construct nobody generates. The fidelity ledger now
+  carries upstream's `image.svg` note, which states that the vector part is
+  carried and the source's own fallback is regenerated rather than kept.
+
 ## [0.1.1] — 2026-08-10
 
 The library is unchanged from 0.1.0. What changed is how it reaches you.
@@ -98,6 +128,7 @@ First public release.
 - ESM only, Node `>=24`. `@shbernal/ts-pptx` `^3.2.0` is the one runtime
   dependency.
 
-[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.1.1...HEAD
+[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/shbernal/pptx-html/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/shbernal/pptx-html/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/shbernal/pptx-html/releases/tag/v0.1.0

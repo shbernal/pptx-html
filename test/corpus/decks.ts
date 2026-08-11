@@ -27,6 +27,16 @@ import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
 const PIXEL_PNG =
 	'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
+/**
+ * A one-shape SVG. Unlike {@link PIXEL_PNG} its content *is* relevant, but only in
+ * that it must be real vector art: `addImage` writes an SVG as two parts — a 1×1
+ * transparent PNG in `a:blip/@r:embed` for readers that cannot draw vectors, and
+ * the SVG itself behind the `asvg:svgBlip` extension — and the two are only
+ * distinguishable if one of them is the drawing and the other is not.
+ */
+const GLYPH_SVG =
+	'image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjYiIGZpbGw9IiMyNTBGNkIiLz48L3N2Zz4='
+
 export type CorpusTier = 'primitive' | 'hard'
 
 export interface CorpusDeck {
@@ -189,6 +199,10 @@ export const CORPUS: CorpusDeck[] = [
 
 	deck('picture', 'primitive', 'embedded media — the case hash-addressed assets must survive', (pptx) => {
 		pptx.addSlide().addImage({ data: PIXEL_PNG, x: 1, y: 1, w: 2, h: 2, objectName: 'photo' })
+	}),
+
+	deck('picture-svg', 'primitive', 'a vector picture, which is two parts and only one of them is the art', (pptx) => {
+		pptx.addSlide().addImage({ data: GLYPH_SVG, x: 1, y: 1, w: 2, h: 2, objectName: 'glyph' })
 	}),
 
 	deck('connector', 'primitive', 'a line with routing and an arrowhead, not a shape', (pptx) => {
