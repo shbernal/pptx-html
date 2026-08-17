@@ -1,3 +1,29 @@
+# The two commit-msg gates that are not about this project live in
+# shbernal/lefthook-rules, so every repo runs one definition instead of its own
+# drifting copy. `no-ai-attribution` rejects agent attribution trailers;
+# `no-shell-quoting-leak` rejects a here-string delimiter that a shell left in
+# the message, which on this machine arrives as a bare `@` on the first line.
+#
+# Lefthook fetches the remote on `install`, not on `run`, and caches it under
+# `.git/info/lefthook-remotes/`. That is why package.json carries a `prepare`
+# script: without one, a fresh clone parses this block and enforces nothing.
+# Verify after cloning, `git commit` should list all three commit-msg jobs.
+#
+# `ref:` is a tag, never a branch. A branch would let any push to the rules repo
+# change what this repo runs. `refetch_frequency` is what lets a fix reach here
+# at all: without it the cached copy is permanent.
+#
+# A sync failure is not fatal. Lefthook prints "Couldn't sync ... Will continue
+# anyway" and still exits 0, so an offline install does not break `prepare`. It
+# does leave the rules unenforced until the next successful fetch.
+remotes:
+  - git_url: https://github.com/shbernal/lefthook-rules
+    ref: v1
+    configs:
+      - rules/no-ai-attribution.yml
+      - rules/no-shell-quoting-leak.yml
+    refetch_frequency: 24h
+
 pre-commit:
   # Sequential, not parallel. biome runs with `--write` and `stage_fixed: true`, so it
   # rewrites files and re-stages them; charcheck reads the staged content out of the
@@ -27,6 +53,8 @@ pre-commit:
       run: pnpm exec charcheck --staged
 
 commit-msg:
+  # The two jobs from `remotes:` merge into this list, and the local job below
+  # runs first. Three jobs report on every commit message.
   jobs:
     # `{1}` is the message file git passes. Comment lines and anything below the
     # scissors are ignored, and messages git wrote itself (merge, revert, fixup,

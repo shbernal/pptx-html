@@ -2,13 +2,21 @@
 # declare a workspace: this repo is a single package and defines no `packages:`
 # globs, so nothing outside it is ever linked in.
 #
-# lefthook's postinstall is denied on purpose, and there is deliberately no
-# `prepare: lefthook install` script. That postinstall syncs git hooks, and when
-# `core.hooksPath` is set globally it writes *into that global directory* —
-# renaming the existing `pre-commit` to `pre-commit.old` and replacing it with a
-# wrapper hardcoded to this repo's `node_modules`, which would then fire for
-# every repo on the machine. `lefthook run` needs no installed hooks, so hook
-# wiring is left to whatever the environment already provides.
+# lefthook's postinstall is denied, and the `prepare` script installs the hooks
+# instead. The postinstall runs `lefthook install -f`, and that `-f` is the part
+# worth refusing: it overwrites whatever hook already sits in the target
+# directory and renames it to `.old`. `prepare` calls plain `lefthook install`,
+# which writes this repo's `.git/hooks` and stops if anything is in the way.
+#
+# Denying the build costs nothing else. The binary is not built by that script,
+# it arrives prebuilt as the `lefthook-<os>-<arch>` optional dependency, so
+# `pnpm exec lefthook` works with this set to `false`.
+#
+# This entry used to say there was deliberately no `prepare` script, because a
+# machine-wide `core.hooksPath` made `-f` write into the shared hooks directory
+# and disarm every other repo. That global path was removed on 2026-08-17 and
+# hooks are per-repo again, so the `prepare` script is both safe and required:
+# `remotes:` in lefthook.yml is only fetched by `lefthook install`.
 #
 # esbuild arrives under vitepress. It ships one prebuilt binary per platform as an
 # optional dependency, and pnpm installs the matching one; its postinstall only

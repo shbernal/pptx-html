@@ -68,6 +68,7 @@
 		"lint:chars": "charcheck",
 		"lint:chars:fix": "charcheck --fix",
 		"example": "node examples/round-trip.mjs",
+		"prepare": "lefthook install",
 		"prepack": "pnpm run build",
 		"prepublishOnly": "pnpm run typecheck && pnpm run check && pnpm run test:oracle"
 	},
