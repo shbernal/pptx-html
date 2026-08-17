@@ -62,4 +62,8 @@ allowBuilds:
 # a same-day bump installable rather than a note about one.
 minimumReleaseAgeExclude:
   - '@shbernal/ts-pptx'
-  - charcheck@0.1.0
+  # Was pinned to `charcheck@0.1.0`, which is the pinned form the paragraph above
+  # says does not work. It went unnoticed while 0.1.0 was the installed version
+  # and old enough to clear the gate on its own. The 0.2.5 bump is what a stale
+  # pin would have blocked, so it is by name now.
+  - 'charcheck'
