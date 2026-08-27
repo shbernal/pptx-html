@@ -59,7 +59,7 @@ environment already provides.
 ```bash
 pnpm run build        # tsdown → ESM dist/
 pnpm run typecheck    # tsc --noEmit, over src/ and site/; needs `build` first
-pnpm run check        # biome: lint + format + import sorting
+pnpm run check        # oxlint + oxfmt: lint, format and import sorting
 pnpm run check:fix
 
 pnpm run test:unit    # node, no DOM, fast
@@ -252,7 +252,8 @@ Two things are load-bearing and easy to break while tidying:
 The workflow re-checks that the tag matches `package.json` and that the changelog
 has a section for the version, then runs `pnpm run test` — the browser layer
 included — and the example before publishing. `prepack` builds and
-`prepublishOnly` runs typecheck, biome and the oracle at the moment of publishing,
+`prepublishOnly` runs typecheck, the lint/format check and the oracle at the moment
+of publishing,
 exactly as they would from a laptop, so the two paths cannot drift apart.
 
 ### Before you tag
@@ -298,5 +299,5 @@ Conventional-commit subjects (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`),
 scoped where it helps (`feat(parse):`). Write the subject as what the change does
 for a reader of the repo, not as a plan step.
 
-`pnpm run check` must be clean; a `lefthook` pre-commit job runs
-`biome check --write` on staged files if hooks are wired in your environment.
+`pnpm run check` must be clean; `lefthook` pre-commit jobs run `oxlint --fix` and
+then `oxfmt` on staged files if hooks are wired in your environment.

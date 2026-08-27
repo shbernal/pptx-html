@@ -25,19 +25,36 @@ remotes:
     refetch_frequency: 24h
 
 pre-commit:
-  # Sequential, not parallel. biome runs with `--write` and `stage_fixed: true`, so it
-  # rewrites files and re-stages them; charcheck reads the staged content out of the
-  # index. Run those two at once and charcheck is reading an index that biome is still
-  # writing, on the `.ts` files both of them target. The jobs cost about a second
-  # together, which is not worth a race.
+  # Sequential, not parallel, and the order is the whole reason. oxlint --fix and
+  # oxfmt both rewrite files with `stage_fixed: true`, so they re-stage what they
+  # touch; charcheck reads the staged content back out of the index. Run them at
+  # once and charcheck is reading an index the other two are still writing, on the
+  # `.ts` files all three target. The jobs cost about a second together, which is
+  # not worth a race.
+  #
+  # oxlint runs before oxfmt for the same reason `biome check` linted before it
+  # formatted: a lint fix rewrites code, and formatting has to get the last word on
+  # what that rewrite looks like.
   piped: true
   jobs:
-    # `biome check` is lint + format + import sorting in one pass. Per-directory
-    # scope (src/ is linted but never formatted) lives in biome.jsonc, so the
-    # staged files can be passed in wholesale here.
-    - name: biome
-      glob: '*.{ts,mts,json,jsonc}'
-      run: pnpm exec biome check --write --no-errors-on-unmatched {staged_files}
+    # Narrower glob than the formatter's below: oxlint reads JS/TS only and exits 1
+    # with "No files found to lint" when handed a list with none in it, so a commit
+    # touching only `.json` has to skip this job rather than run it empty. lefthook
+    # skips a job whose `glob` matches nothing, which is what does that.
+    - name: oxlint
+      glob: '*.{ts,mts,js,mjs,cjs}'
+      run: pnpm exec oxlint --fix {staged_files}
+      stage_fixed: true
+
+    # `--no-error-on-unmatched-pattern` is load-bearing here, and only here.
+    # `src/` is in the formatter's `ignorePatterns`, and that holds even for a path
+    # passed explicitly — so a commit touching only `src/` hands oxfmt a file list
+    # it excludes entirely, which is exit 2 and a blocked commit without the flag.
+    # Per-directory scope lives in `.oxfmtrc.json`, so staged files are passed in
+    # wholesale.
+    - name: oxfmt
+      glob: '*.{ts,mts,js,mjs,cjs,json,jsonc}'
+      run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
 
     # No `glob` and no `{staged_files}`: charcheck selects the staged files itself and

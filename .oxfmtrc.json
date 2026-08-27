@@ -1,0 +1,66 @@
+{
+	// Only the settings that differ from oxfmt's defaults, which are Prettier's.
+	// Every value here is the one `biome.jsonc` carried, so the formatted result is
+	// the same shape it has always been; `oxfmt --migrate biome` produced them and
+	// the defaults it also emitted are dropped rather than restated.
+	//
+	// oxfmt is 0.x, so these stay written down rather than inherited. A default that
+	// moves under us would otherwise reformat the tree in a commit about something
+	// else.
+	"useTabs": true,
+	"printWidth": 120,
+	"singleQuote": true,
+	"semi": false,
+	"trailingComma": "es5",
+
+	// Two oxfmt behaviours biome had no equivalent for, both set to what this repo
+	// was already getting.
+	//
+	// `sortPackageJson` is on by default and reorders the manifest's keys and the
+	// `keywords` array. That is a rewrite rather than a formatting pass, biome never
+	// did it, and `keywords` is in an order its author chose. Off.
+	//
+	// `sortImports` is off by default and is the one thing biome's `assist` was
+	// doing that a plain formatter does not: `biome check` ran the import organizer
+	// everywhere except `src/`. On, which restores that — and `src/` is ignored
+	// outright below, so the directory biome exempted stays exempt here for free.
+	// `newlinesBetween` is oxfmt's own default and the only place its sorter
+	// disagreed with biome's: it blank-lines between import groups, which biome
+	// never did, and turning it on would have touched 34 files with nothing to say.
+	// The ordering itself already agreed on every file in the repo.
+	"sortPackageJson": false,
+	"sortImports": { "newlinesBetween": false },
+
+	// `.gitignore` is read by default, so `dist`, `coverage`, `.tmp`, `site/docs`
+	// and the installed skill are already out without being named here. That also
+	// disposes of the reason biome's file list carried a comment: `.claude/skills`
+	// is a junction, biome followed it, could not dereference it, and warned on
+	// every run about a link that was working correctly. It is `.gitignore`d, so
+	// oxfmt never looks.
+	"ignorePatterns": [
+		// `src/` is deliberately not formatted, and this is the one biome expressed
+		// as a formatter-disabled override rather than as an exclusion. Most of it
+		// was ported byte-for-byte from the original browser engine (the extractor is
+		// a stringified `eval` payload), so reformatting would rewrite verbatim code
+		// wholesale and bury the real diffs. Prettier never covered `src/` either.
+		// Linting still applies — that boundary lives in `.oxlintrc.json`, which does
+		// not share this list.
+		"src",
+
+		// Tracked config for a runtime that writes the rest of the directory itself.
+		".claude",
+
+		// Written by `npx skills add`, two-space indented. Formatting it to tabs
+		// would be undone by the next install, so the check would fail on a file
+		// nobody edits by hand.
+		"skills-lock.json",
+
+		// oxfmt formats Markdown and Vue SFCs; biome was never pointed at either, so
+		// both are held out to keep this swap a swap. Prose is charcheck's beat, and
+		// `docs/` is the tracked design record — reflowing it is a decision to take
+		// on its own, in a commit that is about the docs, not a side effect of
+		// changing formatters. Same for `site/`'s four SFCs.
+		"**/*.md",
+		"**/*.vue"
+	]
+}

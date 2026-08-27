@@ -107,7 +107,7 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
-      # `prepublishOnly` runs typecheck, biome and the oracle, so those are
+      # `prepublishOnly` runs typecheck, lint/format and the oracle, so those are
       # covered at the moment of publishing and are not repeated here. What it
       # cannot reach is the browser layer, and that is the gap this closes: the
       # heuristic lane needs real Chromium, and a release is exactly when a

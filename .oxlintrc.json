@@ -1,0 +1,57 @@
+{
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+
+	// biome's `recommended` preset becomes oxlint's `correctness` category, which is
+	// the same tier by intent: code that is outright wrong or useless. Promoted to
+	// `error` deliberately — oxlint reports at `warn` and exits 0 by default, so
+	// leaving it alone would turn the CI lint step into a step that cannot fail.
+	//
+	// The wider categories were measured rather than guessed, over `src`, `test`,
+	// `site` and `examples`, and are off on purpose:
+	//
+	//   suspicious   +53   perf  +24   pedantic  +424   restriction  +1357
+	//   style      +8200
+	//
+	// Of `suspicious` and `perf`, 31 findings land outside `src/heuristic/`, and
+	// half of those are `no-await-in-loop` on sequential deck processing that has to
+	// stay sequential. None of the five is what biome's recommended preset was
+	// enforcing, so switching them on here would smuggle a new gate into a commit
+	// that is meant to swap one tool for another. Worth revisiting on its own.
+	"categories": {
+		"correctness": "error"
+	},
+
+	// No `ignorePatterns`. oxlint reads `.gitignore`, which already covers `dist`,
+	// `coverage`, `.tmp`, `site/docs` and the installed skill — including
+	// `.claude/skills`, the junction biome followed, could not dereference, and
+	// warned about on every single run. The rest of biome's exclusions were about
+	// files it formatted rather than linted, and those live in `.oxfmtrc.json`.
+
+	"overrides": [
+		{
+			// The heuristic lane is a byte-for-byte port of the original browser
+			// engine. Its host-side modules are now typed, but the code itself is
+			// still the ported code, and `extractor.ts` is a stringified `eval`
+			// payload that cannot be checked where it runs at all. Relax the rules
+			// that fight it. None of these flags a defect here; enforcing them would
+			// rewrite verbatim code wholesale and bury the real diffs.
+			//
+			// This is the same exemption biome carried, re-expressed in oxlint's rule
+			// names, and it is exactly load-bearing: these three rules account for all
+			// 11 findings in the directory and for none anywhere else.
+			//
+			// Scoped to this directory only. The loop — `index.ts`, `ir/`, `import/`,
+			// `render/`, `parse/`, `emit/`, `loop.ts` — keeps the full category, which
+			// is the point of the lane living behind its own boundary.
+			"files": ["src/heuristic/**/*.ts"],
+			"rules": {
+				// Unused catch bindings and unread parameters, kept as written.
+				"no-unused-vars": "off",
+				// Over-escaped character classes in the ported regexes.
+				"no-useless-escape": "off",
+				// `...(x || {})` spreads the port uses throughout.
+				"unicorn/no-useless-fallback-in-spread": "off"
+			}
+		}
+	]
+}
