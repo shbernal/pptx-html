@@ -137,15 +137,27 @@ describe('lanes', () => {
 		expect(result.report.undeclared).toEqual([])
 	})
 
-	it('the carry lane declares its gallery cost rather than hiding it', async () => {
-		// The lane's note must actually be doing work: strip it and the same
-		// run has to fail. A note that changes nothing is decoration.
+	it('the carry lane pays no gallery cost, and declares none', async () => {
+		// This assertion is the inverse of the one it replaces. The lane used to
+		// hand back a `master.default` note covering the layout gallery entry
+		// `importSlide` added, and this test pinned that the note was doing work:
+		// strip it and the run had to fail, because a note that changes nothing is
+		// decoration. ts-pptx 3.5.0 stopped copying chrome the destination already
+		// holds, and this lane templates its destination from the source — so the
+		// cost is gone and the note became exactly that decoration.
+		//
+		// Checked across the whole corpus before the note was removed, not on this
+		// deck alone: it matched no difference on any of the 27 decks.
 		const result = await roundTrip(await corpusBytes(CORPUS[0]), carryLoop)
-		expect(result.notes).toHaveLength(1)
-		expect(result.report.declared.length).toBeGreaterThan(0)
+		expect(result.notes).toEqual([])
+		expect(result.report.declared).toEqual([])
 
+		// The load-bearing half. `undeclared` is the only field a gate may read, and
+		// it is now clean with *no* notes excluding anything — so a regression that
+		// brings the duplicate master back fails here, rather than being absorbed by
+		// a note kept around to cover it.
 		const undeclaredRun = diffDeckIr(result.input.canonical, result.output.canonical, [])
-		expect(undeclaredRun.undeclared.length).toBeGreaterThan(0)
+		expect(undeclaredRun.undeclared).toEqual([])
 	})
 })
 

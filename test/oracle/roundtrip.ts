@@ -190,43 +190,29 @@ export const resaveLoop: Loop = async (input) => ({ bytes: await input.pres.save
  * `appendSlides`: the latter takes a serializable `SlideSource` and can be fed
  * from bytes embedded in HTML, but it costs placeholder inheritance and
  * re-resolves `schemeClr` against the destination theme.
+ *
+ * **This lane used to declare a cost and no longer does.** `importSlide`'s
+ * `theme: 'copy'` default brought the slide's own layout → master → theme
+ * subgraph across unconditionally, so the destination ended up holding the
+ * source's master beside its own and the layout gallery gained an entry nothing
+ * bound to — declared here as a `master.default` note. As of `@shbernal/ts-pptx`
+ * 3.5.0 the import reuses chrome the destination already holds, and this lane
+ * templates the destination *from the source*, so there is nothing left to
+ * duplicate. Verified rather than assumed: across the whole corpus the note
+ * matched no difference on any deck, and dropping it moves `undeclared` on none
+ * of them.
+ *
+ * The note is gone rather than kept, because a note that excludes nothing is the
+ * decoration the lane test exists to catch — and a stale one is worse than none,
+ * since it claims a loss the loop no longer takes. The test below now pins the
+ * clean run, so a regression that reintroduces the duplicate arrives as an
+ * `undeclared` difference instead of being absorbed by a note left behind to
+ * cover it.
  */
 export const carryLoop: Loop = async (input) => {
 	const destination = await Presentation.fromTemplate(input.bytes)
 	for (let index = 0; index < input.pres.slides.length; index++) {
 		destination.importSlide(input.pres, index, { importNotes: true })
 	}
-	return { bytes: await destination.save(), notes: [CARRY_GALLERY_NOTE] }
-}
-
-/**
- * The one cost the carry lane declares: the destination's layout gallery gains
- * an entry.
- *
- * `importSlide`'s default (`theme: 'copy'`) brings the slide's own
- * layout → master → theme subgraph across, which is *why* the slide renders
- * byte-for-byte as authored — and it means the destination ends up with the
- * source's master alongside its own. Nothing binds to the extra entry; it is
- * visible in PowerPoint's layout picker.
- *
- * The alternative would be `theme: 'preserve'`, which rebinds to the
- * destination's master and adds no entry — but it rewrites the slide XML to bake
- * in what the rebind would break, and a lane whose whole purpose is
- * byte-identical carriage cannot rewrite the slide. So this is the right trade,
- * declared rather than hidden.
- *
- * `master.default` is upstream's construct for "the gallery carries one extra
- * entry nothing binds to", which is exactly this shape; its own `detail`
- * describes a different origin (the writer seeding a blank `DEFAULT`), so the
- * detail here is ours. Reusing the key rather than coining a synonym is what
- * upstream asks for, and it is what makes the note match a difference at all.
- */
-const CARRY_GALLERY_NOTE: FidelityNote = {
-	slideNumber: null,
-	shapeName: null,
-	construct: 'master.default',
-	disposition: 'approximated',
-	cause: 'unsupported',
-	detail:
-		"importSlide copies the source slide's own layout and master so the slide stays byte-identical, so the destination's layout gallery gains an entry nothing binds to",
+	return { bytes: await destination.save() }
 }

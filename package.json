@@ -73,7 +73,7 @@
 		"prepublishOnly": "pnpm run typecheck && pnpm run check && pnpm run test:oracle"
 	},
 	"dependencies": {
-		"@shbernal/ts-pptx": "^3.2.0"
+		"@shbernal/ts-pptx": "^3.5.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.8",

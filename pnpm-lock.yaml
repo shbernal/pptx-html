@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@shbernal/ts-pptx':
-        specifier: ^3.2.0
-        version: 3.2.0
+        specifier: ^3.5.0
+        version: 3.5.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.8
@@ -741,8 +741,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@shbernal/ts-pptx@3.2.0':
-    resolution: {integrity: sha512-RK/1Zurg+L0PRckAIM2NuJHSlIOKmTrnDxRvTbpdtffFn23VWPAGpuFvqa2W3x8BBm6bzIkbKBEcpYfwcu3f6A==}
+  '@shbernal/ts-pptx@3.5.0':
+    resolution: {integrity: sha512-vDyuhJ82/PURyED+Vjl8qVrF3Fg5dsl7rywJTxwCoR4gHpb1L+REWVO56Si7uoM9C6MMw21r/YZm13PE+yvnnQ==}
     engines: {node: '>=24'}
     peerDependencies:
       mathml2omml: ^0.5.0
@@ -1072,10 +1072,9 @@ packages:
   '@vueuse/shared@12.8.2':
     resolution: {integrity: sha512-dznP38YzxZoNloI0qpEfpkms8knDtaoQ6Y/sfS0L7Yki4zh40LFHEhur0odJC6xTHG5dxWVPiUWBXn+wCG2s5w==}
 
-  '@xmldom/xmldom@0.9.10':
-    resolution: {integrity: sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw==}
+  '@xmldom/xmldom@0.9.12':
+    resolution: {integrity: sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A==}
     engines: {node: '>=14.6'}
-    deprecated: this version has critical issues, please update to the latest version
 
   '@yuku-codegen/binding-android-arm64@0.8.4':
     resolution: {integrity: sha512-rsYkGl2kOkDRsh1mxriYnk1qBS78vjlBJ3+T2XwtwKwqOliy2n+2Ae0EDxJ/uX1DZLm3KkBZarGO5isEnmHchA==}
@@ -2425,9 +2424,9 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.4':
     optional: true
 
-  '@shbernal/ts-pptx@3.2.0':
+  '@shbernal/ts-pptx@3.5.0':
     dependencies:
-      '@xmldom/xmldom': 0.9.10
+      '@xmldom/xmldom': 0.9.12
       fflate: 0.8.3
       opentype.js: 2.0.0
 
@@ -2749,7 +2748,7 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-  '@xmldom/xmldom@0.9.10': {}
+  '@xmldom/xmldom@0.9.12': {}
 
   '@yuku-codegen/binding-android-arm64@0.8.4':
     optional: true
