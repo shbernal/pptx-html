@@ -115,8 +115,9 @@ function collectWarnings(model: SlideModel, size: SlideSize): string[] {
 	const warnings: string[] = []
 	const tolerance = 0.03
 	for (const item of model.items) {
+		// No `!p` guard: `read.ts` refuses an item whose position is not four finite
+		// numbers, so every item that reaches here has one.
 		const p = item.position
-		if (!p) continue
 		const over: string[] = []
 		if (p.x < -tolerance) over.push('left')
 		if (p.y < -tolerance) over.push('top')

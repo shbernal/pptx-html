@@ -72,7 +72,10 @@ describe('lanes', () => {
 		const result = await roundTrip(await corpusBytes(entry), scriptLoop)
 
 		const fitOf = (view: (typeof result)['input']): unknown[] =>
-			view.ir.slides.flatMap((slide) => slide.calls.map((call) => (call.args[1] as { fit?: unknown })?.fit))
+			// `| undefined` in the cast, not just the `?.` after it: an options bag is
+			// the second argument of *some* calls, and asserting one onto every call
+			// would have made the optional chain read as pointless.
+			view.ir.slides.flatMap((slide) => slide.calls.map((call) => (call.args[1] as { fit?: unknown } | undefined)?.fit))
 		// The object form and the string form are two states, not one value at two
 		// precisions: ECMA-376 §21.1.2.1.3 defaults each attribute only when it is
 		// *omitted*, and PowerPoint recomputes an unbaked scale on the next edit while

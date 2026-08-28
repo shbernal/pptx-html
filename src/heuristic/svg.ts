@@ -186,24 +186,40 @@ function makeMapper(vb: ViewBox, box: Rect, preserve: string | null) {
 
 function segsToPoints(segs: GeomSeg[], map: (x: number, y: number) => [number, number]): FreeformPoint[] {
 	const pts: FreeformPoint[] = []
+	// A switch, where this was an if-chain ending in `seg.cmd === 'close'`. That
+	// last test could never be false, and neither way out of it was safe on its
+	// own: naming the kind let a sixth one fall off the chain and go undrawn,
+	// while a bare `else` would have turned it into a close. The switch has no
+	// `default`, so `typescript/switch-exhaustiveness-check` fails the build on a
+	// sixth kind instead — which is the guarantee the chain was reaching for.
 	for (const seg of segs) {
-		if (seg.cmd === 'move') {
-			const [x, y] = map(seg.x, seg.y)
-			pts.push({ x, y, moveTo: true })
-		} else if (seg.cmd === 'line') {
-			const [x, y] = map(seg.x, seg.y)
-			pts.push({ x, y })
-		} else if (seg.cmd === 'cubic') {
-			const [x1, y1] = map(seg.x1, seg.y1)
-			const [x2, y2] = map(seg.x2, seg.y2)
-			const [x, y] = map(seg.x, seg.y)
-			pts.push({ x, y, curve: { type: 'cubic', x1, y1, x2, y2 } })
-		} else if (seg.cmd === 'quad') {
-			const [x1, y1] = map(seg.x1, seg.y1)
-			const [x, y] = map(seg.x, seg.y)
-			pts.push({ x, y, curve: { type: 'quadratic', x1, y1 } })
-		} else if (seg.cmd === 'close') {
-			pts.push({ close: true })
+		switch (seg.cmd) {
+			case 'move': {
+				const [x, y] = map(seg.x, seg.y)
+				pts.push({ x, y, moveTo: true })
+				break
+			}
+			case 'line': {
+				const [x, y] = map(seg.x, seg.y)
+				pts.push({ x, y })
+				break
+			}
+			case 'cubic': {
+				const [x1, y1] = map(seg.x1, seg.y1)
+				const [x2, y2] = map(seg.x2, seg.y2)
+				const [x, y] = map(seg.x, seg.y)
+				pts.push({ x, y, curve: { type: 'cubic', x1, y1, x2, y2 } })
+				break
+			}
+			case 'quad': {
+				const [x1, y1] = map(seg.x1, seg.y1)
+				const [x, y] = map(seg.x, seg.y)
+				pts.push({ x, y, curve: { type: 'quadratic', x1, y1 } })
+				break
+			}
+			case 'close':
+				pts.push({ close: true })
+				break
 		}
 	}
 	return pts
@@ -221,8 +237,10 @@ function svgItemToPaths(item: Extract<Item, { type: 'image' }>): PathItem[] | nu
 	try {
 		const doc = new DOMParser().parseFromString(markup, 'image/svg+xml')
 		if (doc.querySelector('parsererror')) return null
+		// No `root &&`: an XML parse always produces a root element, a failed one
+		// included — that is the `parsererror` the line above looks for.
 		const root = doc.documentElement
-		svg = root && root.tagName.toLowerCase() === 'svg' ? (root as unknown as SVGSVGElement) : null
+		svg = root.tagName.toLowerCase() === 'svg' ? (root as unknown as SVGSVGElement) : null
 	} catch {
 		return null
 	}
@@ -257,6 +275,11 @@ function svgItemToPaths(item: Extract<Item, { type: 'image' }>): PathItem[] | nu
 		for (let c = el.firstElementChild; c; c = c.nextElementSibling) visit(c)
 	}
 	for (let c = svg.firstElementChild; c; c = c.nextElementSibling) visit(c)
+	// `unsupported` is still `false` to the compiler here: TypeScript does not
+	// re-widen a narrowed `let` after a call that could assign to it from a
+	// closure, and `visit` is exactly that. The flag is real and this read is the
+	// only thing it is for.
+	// oxlint-disable-next-line typescript/no-unnecessary-condition
 	if (unsupported || !drawables.length) return null
 
 	const paths: PathItem[] = []

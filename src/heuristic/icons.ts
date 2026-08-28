@@ -70,13 +70,19 @@ function loadMainScript(src: string): Promise<void> {
 }
 
 async function ensureMainIconify(headHTML: string): Promise<boolean> {
+	// `Window.customElements` is declared as always present and is not: the
+	// registry is missing outside a secure context and in older engines, which is
+	// the whole reason this function tests for it. Named once, at the type it
+	// really has, rather than guarded three times against a type that says the
+	// guard is pointless.
+	const registry = window.customElements as CustomElementRegistry | undefined
 	try {
-		if (window.customElements?.get('iconify-icon')) return true
+		if (registry?.get('iconify-icon')) return true
 		const src = findIconifyScriptSrc(headHTML)
-		if (!src || !window.customElements) return false
+		if (!src || !registry) return false
 		await Promise.race([loadMainScript(src), wait(8000)])
-		await Promise.race([window.customElements.whenDefined('iconify-icon'), wait(8000)])
-		return !!window.customElements.get('iconify-icon')
+		await Promise.race([registry.whenDefined('iconify-icon'), wait(8000)])
+		return !!registry.get('iconify-icon')
 	} catch {
 		return false
 	}
@@ -123,8 +129,10 @@ function protoFromSvgString(svgText: string | null): SVGElement | null {
 	if (!svgText) return null
 	try {
 		const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml')
+		// No `!root`: an XML parse always produces a root element, a failed one
+		// included — which is the `parsererror` the rest of this line looks for.
 		const root = doc.documentElement
-		if (!root || root.tagName.toLowerCase() !== 'svg' || root.querySelector('parsererror')) return null
+		if (root.tagName.toLowerCase() !== 'svg' || root.querySelector('parsererror')) return null
 		return normalizeIconSvg(root.cloneNode(true) as SVGElement)
 	} catch {
 		return null

@@ -54,9 +54,12 @@ export async function addModelToSlide(
 	lang: string
 ): Promise<string[]> {
 	const issues: string[] = []
+	// `Background` has two arms, so the `else` below is already the image one and
+	// does not test for it a second time. What it does test is the source, which
+	// `read.ts` admits as any string, the empty one included.
 	if (model.background.type === 'color') {
 		slide.background = { color: model.background.value || 'FFFFFF' }
-	} else if (model.background.type === 'image' && model.background.src) {
+	} else if (model.background.src) {
 		try {
 			slide.background = { color: model.background.fallback || 'FFFFFF' }
 			slide.addImage({ ...imageRef(model.background.src), x: 0, y: 0, w: slideSize.width, h: slideSize.height, sizing: { type: 'cover', w: slideSize.width, h: slideSize.height } })
@@ -66,8 +69,11 @@ export async function addModelToSlide(
 	}
 
 	for (const item of sortedItems(model.items)) {
+		// `read.ts` drops an item whose position is not four finite numbers, and
+		// says so in a warning, so there is no `!p` to test here — only a rectangle
+		// too small to draw into, which is a shape the boundary lets through.
 		const p = item.position
-		if (!p || p.w <= 0 || p.h < 0) continue
+		if (p.w <= 0 || p.h < 0) continue
 		// Render each item defensively: one bad graphic (e.g. an icon SVG that
 		// fails to rasterize) must never abort the rest of the slide. Failures are
 		// reported as warnings instead of silently swallowing the whole slide.
@@ -124,7 +130,13 @@ export async function addModelToSlide(
 				// a language keeps it.
 				const rows = item.rows.map((row) => row.map((cell) => ({ ...cell, options: { lang, ...cell.options } })))
 				slide.addTable(rows, opts)
-			} else if (item.type === 'list' || item.type === 'text') {
+			} else {
+				// A plain `else`, not a last test for `'text' | 'list'`: every other type
+				// is spoken for above, so `item` is a `TextItem` here and those two arms
+				// are all that is left. It is also the stronger spelling — a seventh item
+				// type lands in this branch and fails to compile against `item.text`,
+				// where naming the two would have let it fall off the chain and go
+				// undrawn without a word.
 				slide.addText(item.text, textOptions(item, p, slideSize, lang))
 			}
 		} catch (err) {
@@ -138,8 +150,8 @@ export async function addModelToSlide(
 
 function textOptions(item: TextItem, p: Rect, slideSize: SlideSize, lang: string): Record<string, unknown> {
 	const s = item.style || {}
-	const maxW = slideSize && Number.isFinite(slideSize.width) ? Math.max(0.05, slideSize.width - p.x) : null
-	const maxH = slideSize && Number.isFinite(slideSize.height) ? Math.max(0.05, slideSize.height - p.y) : null
+	const maxW = Number.isFinite(slideSize.width) ? Math.max(0.05, slideSize.width - p.x) : null
+	const maxH = Number.isFinite(slideSize.height) ? Math.max(0.05, slideSize.height - p.y) : null
 	const isHeading = /^h[1-6]$/i.test(item.tag || '')
 	const constrain = !!s.constrainTextBox
 	const textW = constrain ? p.w : p.w * (item.noWrap ? 1.65 : isHeading ? 1.0 : 1.14)

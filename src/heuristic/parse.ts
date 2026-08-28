@@ -13,8 +13,12 @@ export interface ParsedDeckHtml {
 }
 
 export function parseDeckHtml(fullHtml: unknown): ParsedDeckHtml {
+	// `head` and `documentElement` are read without a guard, the way `body` is
+	// below. The HTML parser builds all three whatever it is handed, the empty
+	// string included, so the guards that used to be here could not fire — and
+	// guarding two of the three said the opposite about the one that was not.
 	const doc = new DOMParser().parseFromString(String(fullHtml || ''), 'text/html')
-	const rawHead = doc.head ? doc.head.innerHTML : ''
+	const rawHead = doc.head.innerHTML
 	const headHTML = rawHead
 		.replace(/<script[\s\S]*?<\/script>/gi, (script) => (/iconify|tailwind|material/i.test(script) ? script : ''))
 		.replace(/<link[^>]+fonts\.googleapis\.com[^>]*>/gi, '')
@@ -29,7 +33,7 @@ export function parseDeckHtml(fullHtml: unknown): ParsedDeckHtml {
 				return el.outerHTML
 			})
 	}
-	const lang = doc.documentElement?.getAttribute('lang') || 'en'
+	const lang = doc.documentElement.getAttribute('lang') || 'en'
 	return { headHTML, slides, lang }
 }
 

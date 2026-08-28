@@ -120,8 +120,12 @@ export async function settleFrame(frame: SlideFrame): Promise<void> {
 	)
 	try {
 		// `doc.fonts` is what may be absent; `ready` is a promise, and testing a
-		// promise for truthiness answers yes whatever it resolves to.
-		if (doc.fonts) await Promise.race([doc.fonts.ready, wait(3000)])
+		// promise for truthiness answers yes whatever it resolves to. `Document.fonts`
+		// is declared as always present, so the cast is what lets the test be written
+		// at all — the CSS Font Loading API is optional and older engines ship without
+		// it.
+		const fonts = doc.fonts as FontFaceSet | undefined
+		if (fonts) await Promise.race([fonts.ready, wait(3000)])
 	} catch {
 		/* fonts API unavailable */
 	}

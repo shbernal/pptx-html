@@ -71,7 +71,7 @@ async function renderRow(deck: ShowcaseDeck): Promise<ShowcaseRow> {
 	const rendered = await renderDeck(imported.render, { assets: 'ref' })
 
 	const document = new DOMParser().parseFromString(rendered.html, 'text/html')
-	const stylesheet = [...document.querySelectorAll('style')].map((style) => style.textContent ?? '').join('\n')
+	const stylesheet = [...document.querySelectorAll('style')].map((style) => style.textContent).join('\n')
 	const slides = [...document.querySelectorAll('section.pxh-slide')].map((section, index) => ({
 		key: `${deck.name}-${index + 1}`,
 		number: index + 1,

@@ -127,21 +127,32 @@
 		// to the `describe` they belong to. Hoisting those would spread a fixture's
 		// setup away from the tests that read it.
 		"unicorn/consistent-function-scoping": "off",
-		// 22 hits, and the rule is right about the one that was used to dismiss it.
-		// This was recorded as the rule disagreeing with the compiler: it reported
-		// `element.textContent ?? ''` in `src/parse/surface.ts` as a dead branch, and
-		// `Node.textContent` is `string | null`. But `Element` redeclares it as a
-		// getter returning `string` (only `Document` and `DocumentType` read null),
-		// and that was an `Element`. Checked against this repo's own `tsc`, which
-		// accepts the value as a `string` with no guard. The `??` is gone.
+		// Was 22, all read, and the reading is the reason it is on. They came in three
+		// kinds and only one of them was a defect the rule could name:
 		//
-		// Still off, and now for an honest reason: the remaining 22 have never been
-		// read, most of them in `src/heuristic/`, where a "condition that can never
-		// fire" is often a guard against a browser value the DOM types over-promise.
-		// Each needs a judgement, which is its own unit of work rather than a flag
-		// flip. Turning the rule on before that reading happens breaks `pnpm run
-		// lint` with 22 findings nobody has an opinion about.
-		"typescript/no-unnecessary-condition": "off"
+		// Dead because a boundary already ran. `src/heuristic/read.ts` refuses an item
+		// without four finite numbers of position and a discriminant from a closed
+		// set, so `slide.ts` and `engine.ts` were re-testing what could no longer be
+		// false. Deleting those guards is what makes `read.ts` the only place that
+		// decides, instead of the first of several that half-decide.
+		//
+		// Dead because the type was right. A `DOMParser` document always has a root,
+		// a head and a body, so `doc.head ? … : ''` beside an unguarded `doc.body`
+		// was one file disagreeing with itself.
+		//
+		// Alive, and the type was lying. `Document.fonts` and `Window.customElements`
+		// are declared as always present and are absent in older engines and outside a
+		// secure context; `constructor` is declared on every object and missing from
+		// the `Object.create(null)` one a test goes looking for. None of those became
+		// a deletion. Each is now written at the type it really has — a widening cast
+		// — so the guard states its own reason and the rule agrees with it. That is
+		// the outcome worth having: the rule does not remove browser defensiveness, it
+		// makes the undefendable kind visible.
+		//
+		// One suppression survives, in `src/heuristic/svg.ts`, where a `let` is
+		// assigned from a closure and TypeScript will not re-widen it. That is a
+		// compiler limitation rather than a judgement, and it says so at the line.
+		"typescript/no-unnecessary-condition": "error"
 	},
 
 	"overrides": [
@@ -162,6 +173,20 @@
 				"typescript/no-unsafe-call": "error",
 				"typescript/no-unsafe-member-access": "error",
 				"typescript/no-unsafe-return": "error"
+			}
+		},
+		{
+			// `extractor.ts` is the package's one `@ts-nocheck`, and a type-aware rule
+			// has nothing to say about a file whose types are declared unchecked. The
+			// finding it produced was real — `model.background` is assigned an object
+			// literal at every branch, so testing it for truthiness cannot fail — and
+			// acting on it would have meant editing the one file kept byte-for-byte
+			// against the original browser engine, to satisfy an inference nothing else
+			// in the file is allowed to rely on. `read.ts` is where that output is
+			// checked, and it is checked there properly.
+			"files": ["src/heuristic/extractor.ts"],
+			"rules": {
+				"typescript/no-unnecessary-condition": "off"
 			}
 		},
 		{

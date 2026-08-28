@@ -59,7 +59,11 @@ function walk(value: unknown, path: string, offenders: string[]): void {
 		return
 	}
 	if (Object.getPrototypeOf(value) !== Object.prototype) {
-		offenders.push(`${path}: ${value.constructor?.name ?? 'exotic object'}`)
+		// The cast is the honest type. `constructor` is declared as always present,
+		// and the one object that has none is `Object.create(null)` — which is inside
+		// this branch, because a null prototype is not `Object.prototype`.
+		const ctor = (value as { constructor?: { name?: string } }).constructor
+		offenders.push(`${path}: ${ctor?.name ?? 'exotic object'}`)
 		return
 	}
 	for (const [key, entry] of Object.entries(value)) walk(entry, `${path}.${key}`, offenders)
