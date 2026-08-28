@@ -552,6 +552,7 @@ export interface ResolvedRunProperties {
 	fontFace?: string
 	sizePt?: number
 	bold?: boolean
+	italic?: boolean
 	color?: Color
 }
 

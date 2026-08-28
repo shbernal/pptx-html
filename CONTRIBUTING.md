@@ -12,7 +12,7 @@ pnpm install
 ```
 
 The writer dependency, `@shbernal/ts-pptx`, is a **released version from npm**
-(`^3.2.0`). It was pinned to a git sha for as long as the fixes this repo depends
+(`^3.6.0`). It was pinned to a git sha for as long as the fixes this repo depends
 on were unreleased; that is over, and the range is what a published `pptx-html`
 has to carry anyway — a git URL in `dependencies` travels to consumers and would
 make every installer build the writer from source, which `prepublishOnly` does not

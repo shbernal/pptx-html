@@ -80,29 +80,17 @@ export function colorOf(token: string | null, resolved: ResolvedColor | null): C
 }
 
 /**
- * A gradient stop, whose colour arrives pre-split by the read model.
+ * A gradient stop, whose colour arrives as the same two-part split a solid fill
+ * gives — the raw `a:schemeClr` token and a {@link ResolvedColor} carrying the
+ * transform list — so {@link colorOf} decodes it with no special case.
  *
- * Workaround for ts-pptx#26 - https://github.com/shbernal/ts-pptx/issues/26
- *
- * `transforms` is empty because the reader has none to give, not because the
- * deck stated none. `GradientStop` exposes `position`, `color`, `schemeColor`,
- * `effectiveHex` and `alpha`, with no transform list, so a stop that was
- * `lumMod`-darkened arrives indistinguishable from one that was not.
- *
- * Remove when a stop's colour comes back as a `ResolvedColor` (or gains a
- * `transforms` field), and map that list through the way `resolvedOf` does above.
+ * `null` when the stop names a colour model the reader does not resolve, which is
+ * the one case there is nothing to paint and nothing to reference.
  */
 function stopOf(stop: ReadGradientStop): GradientStop | null {
-	const hex = stop.effectiveHex ?? stop.color
-	if (hex === null) return null
-	const color: Color =
-		stop.schemeColor === null
-			? { kind: 'srgb', hex }
-			: { kind: 'scheme', slot: stop.schemeColor as SchemeToken, transforms: [], effectiveHex: hex }
-	return {
-		position: stop.position ?? 0,
-		color: stop.alpha === undefined ? color : { ...color, alpha: stop.alpha },
-	}
+	const color = colorOf(stop.schemeColor, stop.resolvedColor)
+	if (color === undefined) return null
+	return { position: stop.position ?? 0, color }
 }
 
 export function gradientOf(fill: GradientFill, scope: ImportScope): Gradient | null {
@@ -353,33 +341,15 @@ export function strokeOf(source: StrokeSource, scope: ImportScope): Stroke {
 
 /**
  * A table cell edge. Its own decode because `CellBorder` is a different shape
- * from a shape's line accessors: the colour arrives already resolved to a hex
- * rather than as a {@link ResolvedColor}.
- *
- * Workaround for ts-pptx#26 - https://github.com/shbernal/ts-pptx/issues/26
- *
- * Same shape as the gradient stop above, one construct along. `transforms` is
- * empty because `CellBorder` gives a resolved `color` and a `schemeColor` token
- * and nothing between them, not because the edge stated no transform.
- *
- * Remove when the edge's colour comes back as a `ResolvedColor`, and map its
- * transform list through.
+ * from a shape's line accessors — `noFill` is an edge-only state, and a bare
+ * width with no colour is how a cell says "inherit" — but the colour itself is
+ * the same {@link ResolvedColor} split, so {@link colorOf} reads it.
  */
 export function cellBorderOf(border: CellBorder | null, scope: ImportScope): Stroke {
 	if (border === null) return { kind: 'inherit' }
 	if (border.noFill) return { kind: 'none' }
 
-	const color: Color | undefined =
-		border.schemeColor !== null
-			? {
-					kind: 'scheme',
-					slot: border.schemeColor as SchemeToken,
-					transforms: [],
-					effectiveHex: border.color ?? '000000',
-				}
-			: border.color !== null
-				? { kind: 'srgb', hex: border.color }
-				: undefined
+	const color = colorOf(border.schemeColor, border.resolvedColor)
 	const dash = dashOf(border.dash, scope, 'table.cell.borders.dash')
 
 	if (color === undefined && dash === undefined && border.widthPt === null) return { kind: 'inherit' }

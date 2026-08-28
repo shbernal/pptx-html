@@ -151,6 +151,43 @@ describe('a colour keeps its theme reference', () => {
 		const card = (await nodeNamed('autoshape', 'card')) as ShapeNode
 		expect(card.fill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: 'DDE3F0' } })
 	})
+
+	it('keeps a gradient stop’s transform list rather than the hex it flattens to', async () => {
+		// Before ts-pptx 3.6.0 (upstream #26) a stop reported a token and a painted hex
+		// and nothing between them, so this list was empty for every stop in the corpus
+		// — and an empty list is the same shape as "the deck stated no transform". The
+		// two are only distinguishable once one stop has a transform and its neighbour
+		// does not.
+		const faded = (await nodeNamed('color-transform', 'faded')) as ShapeNode
+		if (faded.fill.kind !== 'gradient') throw new Error('the faded shape lost its gradient')
+		expect(faded.fill.gradient.stops[0]?.color).toStrictEqual({
+			kind: 'scheme',
+			slot: 'accent1',
+			transforms: [{ name: 'alpha', value: '60000' }],
+			effectiveHex: '250F6B',
+			alpha: 0.6,
+		})
+		expect(faded.fill.gradient.stops[1]?.color).toStrictEqual({
+			kind: 'scheme',
+			slot: 'accent2',
+			transforms: [],
+			effectiveHex: '9B1B30',
+		})
+	})
+
+	it('keeps a cell edge’s opacity, which the flattened colour dropped outright', async () => {
+		// The other half of upstream #26, one construct along and a worse loss: a
+		// `CellBorder` gave a resolved hex with no alpha beside it, so a 35 %
+		// transparent rule was imported fully opaque and drawn as one.
+		const ruled = await nodeNamed('color-transform', 'ruled')
+		if (ruled.kind !== 'table') throw new Error('the ruled node lost its table')
+		expect(ruled.rows[0]?.cells[0]?.borders.top).toStrictEqual({
+			kind: 'line',
+			widthPt: 2,
+			color: { kind: 'srgb', hex: '250F6B', alpha: 0.65 },
+			dash: 'solid',
+		})
+	})
 })
 
 describe('absent means inherited', () => {
@@ -164,6 +201,17 @@ describe('absent means inherited', () => {
 		expect(run?.props).toStrictEqual({})
 		expect(run?.resolved.sizePt).toBe(44)
 		expect(run?.resolved.fontFace).toBe('Calibri Light')
+	})
+
+	it('resolves an italic the run inherits without writing it into props', async () => {
+		// `resolvedItalic` arrived in ts-pptx 3.6.0 (upstream #27). Until then italic
+		// was the one property on the run with no resolved counterpart, so a run that
+		// takes its slant from the master was painted upright — and because `props`
+		// stayed empty either way, the deck round-tripped while the preview lied.
+		const body = (await nodeNamed('layout-placeholder', 'body')) as ShapeNode
+		const run = body.text?.paragraphs[0]?.runs[0]
+		expect(run?.props).toStrictEqual({})
+		expect(run?.resolved.italic).toBe(true)
 	})
 
 	it('keeps a stated property in props and mirrors it into resolved', async () => {

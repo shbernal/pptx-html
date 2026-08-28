@@ -11,7 +11,35 @@ model is expected to move.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A gradient stop and a table cell's edge keep their colour's transform list.**
+  Both arrived pre-flattened — a scheme token and a painted hex with nothing
+  between them — so `transforms: []` meant "the reader had nothing to say", which
+  is the same shape as "the deck stated none". A `lumMod`-darkened stop was
+  indistinguishable from one that was not, and re-authoring either against a
+  different theme silently stopped tracking it. The cell edge lost more than the
+  list: its colour carried no `alpha`, so a transparent rule was imported opaque
+  and drawn as one. Both now decode through the same `colorOf` a solid fill uses,
+  on `ResolvedColor`s that arrived in `@shbernal/ts-pptx` 3.6.0
+  ([ts-pptx#26](https://github.com/shbernal/ts-pptx/issues/26)).
+
+- **An inherited italic is painted.** `italic` was the one run property with no
+  resolved counterpart, so a run taking its slant from a master's `a:defRPr i="1"`
+  rendered upright. Paint-only — `props` is what emit reads, so the deck always
+  round-tripped, which is exactly why nothing caught it. `Run.resolvedItalic`
+  ([ts-pptx#27](https://github.com/shbernal/ts-pptx/issues/27)) closes it, and
+  `ResolvedRunProperties` now carries `italic` beside `bold`.
+
 ### Added
+
+- **`color-transform` joins the corpus** as a primitive-tier deck, holding both
+  halves of the flattening above: a themed gradient stop with a transform beside
+  one without, and a table whose rules state an opacity. `transparency` is the one
+  colour transform the write API can author, which is what makes the distinction
+  reachable from a generated deck at all. `layout-placeholder`'s master now states
+  italic for body level 1, so the corpus contains a run whose slant is written down
+  nowhere but the master.
 
 - **`cloneIr(ir)`** — a deep copy of a `RenderIr`, exported beside `emuOf` and
   `inchesOf`. It exists because the two spellings the repo was using are not

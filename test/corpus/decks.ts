@@ -309,6 +309,52 @@ export const CORPUS = [
 		})
 	}),
 
+	deck(
+		'color-transform',
+		'primitive',
+		'a colour that carries a transform — the list is the reference, the hex is one theme',
+		(pptx) => {
+			// Two constructs whose colour used to arrive pre-flattened, both reachable
+			// only since ts-pptx 3.6.0 (https://github.com/shbernal/ts-pptx/issues/26):
+			// a gradient stop and a table cell's edge now report a `ResolvedColor` — base
+			// hex, transform list, effective hex — the same object a solid fill gives.
+			//
+			// `transparency` is the one transform the write API can author (`a:alpha`),
+			// which is what makes the distinction testable from a generated deck: an empty
+			// transform list now means the deck stated none, where before it meant the
+			// reader had nothing to say. The stop kept its alpha as a flat field and lost
+			// the list; the cell edge lost the alpha as well.
+			pptx.theme = { colorScheme: { accent1: '250F6B', accent2: '9B1B30' } }
+			const slide = pptx.addSlide()
+			slide.addShape('rect', {
+				x: 0.5,
+				y: 0.5,
+				w: 8,
+				h: 2,
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'accent1', transparency: 40 },
+							{ position: 100, color: 'accent2' },
+						],
+					},
+				},
+				objectName: 'faded',
+			})
+			slide.addTable([[{ text: 'Region' }, { text: 'Share' }]], {
+				x: 0.5,
+				y: 3,
+				w: 6,
+				colW: [3, 3],
+				border: { type: 'solid', color: '250F6B', width: 2, transparency: 35 },
+				objectName: 'ruled',
+			})
+		}
+	),
+
 	deck('group', 'primitive', 'nested shape identity — a note about a child must still match', (pptx) => {
 		pptx
 			.addSlide()
@@ -692,6 +738,12 @@ export const CORPUS = [
 		pptx.defineSlideMaster({
 			title: 'CORPUS_MASTER',
 			background: { color: 'FFFFFF' },
+			// Body level 1 states italic and nothing on the slide restates it, so the
+			// only place the run's slant is written down is the master. `Run.italic` is
+			// `null` and `Run.resolvedItalic` is `true` — an accessor that arrived in
+			// ts-pptx 3.6.0 (https://github.com/shbernal/ts-pptx/issues/27); before it
+			// the run was painted upright with nothing reporting the loss.
+			textStyles: { body: [{ italic: true }] },
 			objects: [
 				{ placeholder: { options: { name: 'title', type: 'title', x: 0.5, y: 0.4, w: 9, h: 1 }, text: 'Title' } },
 				{ placeholder: { options: { name: 'body', type: 'body', x: 0.5, y: 1.6, w: 9, h: 3 }, text: 'Body' } },

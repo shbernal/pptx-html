@@ -25,7 +25,7 @@ and the routing between them.
   workspace; run its commands from the repository root.
 - Use `pnpm`. Node `>=24`. Keep source in `src/`, tests in `test/`. Treat `dist/`
   as generated build output.
-- **`@shbernal/ts-pptx` is a released npm version (`^3.2.0`), no longer a git sha.**
+- **`@shbernal/ts-pptx` is a released npm version (`^3.6.0`), no longer a git sha.**
   Bumping it is three commands, not one — the skill reinstall is part of it →
   [CONTRIBUTING](./CONTRIBUTING.md#setup).
 - **Skills live in `.agents/skills/`**, runtime agnostic, with each runtime's own

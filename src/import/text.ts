@@ -302,6 +302,7 @@ function resolvedRunPropsOf(run: ReadRun): ResolvedRunProperties {
 		...(run.resolvedFontFace === null ? {} : { fontFace: run.resolvedFontFace }),
 		...(run.resolvedSizePt === null ? {} : { sizePt: run.resolvedSizePt }),
 		...(run.resolvedBold === null ? {} : { bold: run.resolvedBold }),
+		...(run.resolvedItalic === null ? {} : { italic: run.resolvedItalic }),
 		// Painted, so the token is deliberately gone: `props.color` is where the
 		// theme reference survives, and this is the pixel it currently resolves to.
 		...(resolved === null

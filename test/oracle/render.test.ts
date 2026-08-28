@@ -131,6 +131,21 @@ describe('what the picture admits to', () => {
 		expect(html.toLowerCase()).not.toContain('d8dce6')
 	})
 
+	it('paints an italic the run inherits, and an opacity the cell rule states', async () => {
+		// Two paint-only losses that no round trip could have caught: `props` is what
+		// emit reads, so both decks came back byte-correct while the preview drew them
+		// wrong. Upright text and an opaque rule, until ts-pptx 3.6.0 gave the reader
+		// `resolvedItalic` (#27) and a cell edge's full `ResolvedColor` (#26).
+		const placeholder = await importCorpus('layout-placeholder')
+		const italic = await renderDeck(placeholder.ir, { bytes: placeholder.bytes })
+		expect(italic.html).toContain('font-style:italic')
+
+		const transform = await importCorpus('color-transform')
+		const faded = await renderDeck(transform.ir, { bytes: transform.bytes })
+		expect(faded.html).toContain('stroke-opacity="0.65"')
+		expect(faded.html).toContain('stop-opacity="0.6"')
+	})
+
 	it('paints a baked shrink and leaves an unbaked one at full size', async () => {
 		// The distinction the renderer used to collapse. `fontScale` and
 		// `lnSpcReduction` are numbers the file states, so honouring them is reading
