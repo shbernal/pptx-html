@@ -191,7 +191,12 @@ spec — this package drives a writer, it does not emit XML. Check in this order
      inside a package. Do not add a separate ZIP dependency.
 2. **The `ooxml` MCP** (ECMA-376 schema/spec) — for raw XML questions only. Note
    that [there is no raw OOXML work in `src/`](./docs/decisions.md), so this is
-   almost always for understanding, not for writing.
+   almost always for understanding, not for writing. It is `mcp-server-ooxml`
+   run locally over stdio, as in `ts-pptx`: the schema graph ships inside the
+   package, so it needs no account and no network and answers deterministically.
+   It carries the schema and nothing else — no spec prose, no OPC part or
+   content-type catalogue, no Microsoft-proprietary behaviour — so those go to
+   step 3.
 3. **Web search** — last resort.
 
 Do not vendor large spec text into the repo.
