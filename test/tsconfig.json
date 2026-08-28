@@ -1,11 +1,27 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
-	// A one-line re-export of `../tsconfig.test.json`, which is what `pnpm run
-	// typecheck` invokes. It exists so that tools resolving a tsconfig by walking
-	// up from a file find the test project's options rather than the source
-	// project's, which excludes `test/` and would leave them on defaults.
-	// Type-aware linting is the one that cares: without this, every
+	// Not for `tsc`: `pnpm run typecheck` names `../tsconfig.test.json` and never
+	// reads this file. It exists so that tools resolving a tsconfig by walking up
+	// from a file find the test project's options rather than the source project's,
+	// which excludes `test/` and would leave them on defaults. Two of them care.
+	//
+	// Type-aware linting is the first: without this, every
 	// `noUncheckedIndexedAccess` guard in a test reads as a condition that can
 	// never fire.
-	"extends": "../tsconfig.test.json"
+	//
+	// esbuild is the second, and is why `target` is stated below rather than
+	// inherited. The site's playground imports `test/corpus/decks.ts` by relative
+	// path so it can offer the oracle's own decks, VitePress bundles an esbuild
+	// that does not know the `es2024` target `../tsconfig.base.json` sets, and
+	// esbuild reads whatever tsconfig sits nearest the files it compiles — so every
+	// `pnpm run site:build` printed `Unrecognized target environment "es2024"`
+	// against a file the site never asked to be built that way. `site/tsconfig.json`
+	// solves the same problem for everything inside `site/` and explains the
+	// constraint at length; this is the other side of the boundary the corpus import
+	// crosses. It is the only option overridden here, so the test tree keeps one set
+	// of rules and `tsc` still checks it against `es2024`.
+	"extends": "../tsconfig.test.json",
+	"compilerOptions": {
+		"target": "es2022"
+	}
 }
