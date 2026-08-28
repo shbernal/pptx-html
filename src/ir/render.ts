@@ -80,8 +80,18 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  */
 export const IR_VERSION = 7
 
-/** English Metric Units per inch. The one conversion constant in the model. */
+/** English Metric Units per inch. */
 export const EMU_PER_INCH = 914_400
+
+/**
+ * English Metric Units per point. Stroke widths and font sizes arrive in points;
+ * the model's canvas is EMU.
+ *
+ * Here rather than in the renderer that uses it most, for the same reason
+ * `EMU_PER_INCH` is here: these two are the model's stated unit, and a consumer
+ * reading the model needs both to make sense of a `widthPt` beside a `Box`.
+ */
+export const EMU_PER_POINT = 12_700
 
 /** EMU → inches. For the legacy boundary and for human-readable output only. */
 export function inchesOf(emu: number): number {

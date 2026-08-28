@@ -28,7 +28,8 @@
 
 import { IR_VERSION, type RenderIr } from '../ir/render'
 import { project } from '../ir/surface'
-import { ASSETS_ID, type Integrity, INTEGRITY_ID, islandTextOf, ISLAND_ID, sha256Hex } from '../render/island'
+import { sha256Hex } from '../hash'
+import { ASSETS_ID, type Integrity, INTEGRITY_ID, islandTextOf, ISLAND_ID } from '../render/island'
 
 /** Why a document that *has* an island cannot be read from it. */
 export type IslandFault = 'malformed' | 'version' | 'tampered'

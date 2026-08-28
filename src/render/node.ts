@@ -94,7 +94,7 @@ function placeholderBox(box: Box, standsFor: string): string {
 	const label = escapeAttr(standsFor)
 	return (
 		`<rect x="0" y="0" width="${box.w}" height="${box.h}" fill="#f4f5f8" stroke="#9aa1b1" ` +
-		`stroke-width="12700" stroke-dasharray="76200 38100"/>` +
+		`stroke-width="${EMU_PER_POINT}" stroke-dasharray="${6 * EMU_PER_POINT} ${3 * EMU_PER_POINT}"/>` +
 		`<g transform="scale(${EMU_PER_POINT})">` +
 		`<foreignObject x="0" y="0" width="${points(box.w)}" height="${points(box.h)}">` +
 		`<div xmlns="http://www.w3.org/1999/xhtml" style="height:100%;display:flex;align-items:center;` +

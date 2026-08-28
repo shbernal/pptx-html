@@ -46,7 +46,13 @@ import type {
 	RunProperties,
 	TextBody,
 } from '../ir/render'
-import { EDITABLE_PARA_PROPS, EDITABLE_RUN_PROPS, type EditableParaProp, type EditableRunProp } from '../ir/surface'
+import {
+	EDITABLE_PARA_PROPS,
+	EDITABLE_RUN_PROPS,
+	type EditableParaProp,
+	type EditableRunProp,
+	sameSurfaceValue,
+} from '../ir/surface'
 
 /** The write-API option each surface property is spelled as. */
 const OPTION_OF: Record<EditableRunProp, string> = {
@@ -312,10 +318,10 @@ function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null
 			for (const key of EDITABLE_PARA_PROPS) {
 				const wasSet = paragraph.props[key]
 				const isSet = paragraphNow.props[key]
-				// Structurally, like the run loop below. `bullet` is an object, and both
-				// sides arrive through a clone or a JSON parse, so `===` would report a
-				// bullet nobody touched as edited on every round trip.
-				if (JSON.stringify(wasSet ?? null) === JSON.stringify(isSet ?? null)) continue
+				// The same equality `reconcile` decides a slide's lane with. Structural
+				// rather than `===`, because `bullet` is an object and both sides arrive
+				// through a clone or a JSON parse.
+				if (sameSurfaceValue(wasSet, isSet)) continue
 				paraEdit.props[key] = isSet === undefined ? PARA_INHERITED_OF[key] : paraOptionValue(key, isSet)
 			}
 			pinMarginsBesideBullet(paraEdit, paragraphNow.props)
@@ -331,7 +337,7 @@ function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null
 			for (const key of EDITABLE_RUN_PROPS) {
 				const wasSet = run.props[key]
 				const isSet = now.props[key]
-				if (JSON.stringify(wasSet ?? null) === JSON.stringify(isSet ?? null)) continue
+				if (sameSurfaceValue(wasSet, isSet)) continue
 				edit.props[key] = isSet === undefined ? undefined : optionValue(key, isSet)
 			}
 			if (edit.text !== undefined || Object.keys(edit.props).length > 0) {

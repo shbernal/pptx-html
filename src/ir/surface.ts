@@ -323,6 +323,30 @@ export function editableParaProps(
 // ---------------------------------------------------------------------------
 
 /**
+ * Value equality for two surface values.
+ *
+ * The one decision behind "did this document change", and it is made once
+ * because both callers make it about the same values: `reconcile` uses it to
+ * decide whether a slide is `exact` or `reconciled`, and `editsBetween` uses it
+ * to decide whether a property becomes an edit at all. Two spellings of it would
+ * be two answers to that question.
+ *
+ * `JSON.stringify` is exact here rather than approximate: every surface value is
+ * a boolean, a number, a string, a {@link Color} or a {@link Bullet}, all of
+ * which are JSON-safe by the IR's own contract, and both sides are produced by
+ * the same projection with the same key order. `===` alone would report a bullet
+ * nobody touched as edited on every round trip, because both sides arrive through
+ * a clone or a JSON parse.
+ *
+ * `undefined` and `null` are normalised together, inside rather than at each call
+ * site: an absent property and one holding `null` are the same statement here,
+ * and the callers reached that conclusion separately before this did.
+ */
+export function sameSurfaceValue(a: unknown, b: unknown): boolean {
+	return a === b || JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
+}
+
+/**
  * The IR with every editable value stripped — the half that is *not* allowed to
  * change.
  *

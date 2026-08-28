@@ -31,6 +31,7 @@
  * *marked* ({@link PathResult.fallback}) rather than quietly boxed.
  */
 
+import { ANGLE_UNITS_PER_DEGREE } from '@shbernal/ts-pptx'
 import type { Geometry, GeometryCommand, GeometryPath } from '../ir/render'
 
 export interface PathResult {
@@ -68,11 +69,12 @@ function adjust(values: Record<string, string>, name: string, fallback: number):
 /** Guide values are hundred-thousandths, so `16667` is 16.667 %. */
 const GUIDE_SCALE = 100_000
 
-/** OOXML states angles in 60,000ths of a degree, so a right angle is `5400000`. */
-const ANGLE_UNIT = 60_000
-
+// OOXML states angles in 60,000ths of a degree, so a right angle is `5400000`.
+// `ANGLE_UNITS_PER_DEGREE` is upstream's name for that number: an internal-only
+// conversion, so it comes from the library that owns the format rather than
+// being written down a second time here. See `src/constants.ts`.
 function radians(angle: number): number {
-	return ((angle / ANGLE_UNIT) * Math.PI) / 180
+	return ((angle / ANGLE_UNITS_PER_DEGREE) * Math.PI) / 180
 }
 
 /** The `pin x y z` guide formula: `y`, held inside `[x, z]`. */

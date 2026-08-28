@@ -27,7 +27,8 @@
  * image, and it is told so by name.
  */
 
-import { sha256OfBytes } from '../import/assets'
+import { bytesOfBase64 } from '../base64'
+import { sha256OfBytes } from '../hash'
 import type { AssetManifestEntry } from '../ir/render'
 
 /**
@@ -47,14 +48,6 @@ export interface ResolvedAssets {
 	warnings: string[]
 }
 
-/** Base64 → bytes, without Node's `Buffer`. The mirror of the renderer's encoder. */
-function bytesOfBase64(encoded: string): Uint8Array {
-	const binary = atob(encoded)
-	const bytes = new Uint8Array(binary.length)
-	for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index)
-	return bytes
-}
-
 /**
  * A resolver over the document's own inline block, or `null` when there is none.
  *
@@ -70,6 +63,15 @@ export function inlineAssetResolver(blockText: string | null): AssetResolver | n
 		return data === undefined ? undefined : bytesOfBase64(data)
 	}
 }
+
+/**
+ * One manifest entry, resolved or not. A union rather than a nullable digest so
+ * that "these bytes arrived" and "they hash to this" are one fact: there is no
+ * state where a resolver returned bytes and the digest is missing.
+ */
+type Resolution =
+	| { entry: AssetManifestEntry; resolved: undefined }
+	| { entry: AssetManifestEntry; resolved: Uint8Array; digest: string }
 
 export interface ResolveOptions {
 	/** The caller's own source of bytes. Consulted first. */
@@ -94,9 +96,22 @@ export async function resolveAssets(
 	const missing: string[] = []
 	const warnings: string[] = []
 
-	for (const entry of manifest) {
-		const resolved = (await options.resolver?.(entry)) ?? (await inline?.(entry))
-		if (resolved === undefined) {
+	// Resolve and hash every entry at once, then *decide* in manifest order.
+	// Nothing about resolving one entry depends on another, but the verdict does:
+	// a caller whose deck has two bad assets should be told about the first one in
+	// the manifest, every run, rather than about whichever resolver happened to
+	// settle first.
+	const resolutions = await Promise.all(
+		manifest.map(async (entry): Promise<Resolution> => {
+			const resolved = (await options.resolver?.(entry)) ?? (await inline?.(entry))
+			if (resolved === undefined) return { entry, resolved: undefined }
+			return { entry, resolved, digest: await sha256OfBytes(resolved) }
+		})
+	)
+
+	for (const resolution of resolutions) {
+		const entry = resolution.entry
+		if (resolution.resolved === undefined) {
 			missing.push(entry.name)
 			warnings.push(
 				`asset ${JSON.stringify(entry.name)} (${entry.contentType}, ${entry.byteLength} bytes) could not be resolved; the deck will be emitted without it`
@@ -104,12 +119,12 @@ export async function resolveAssets(
 			continue
 		}
 
+		const { resolved, digest } = resolution
 		if (resolved.byteLength !== entry.byteLength) {
 			throw new Error(
 				`asset ${JSON.stringify(entry.name)} resolved to ${resolved.byteLength} bytes and the manifest states ${entry.byteLength}; this is a different file, not a damaged one`
 			)
 		}
-		const digest = await sha256OfBytes(resolved)
 		if (digest !== entry.sha256) {
 			throw new Error(
 				`asset ${JSON.stringify(entry.name)} does not match its manifest hash (${entry.sha256.slice(0, 12)}… vs ${digest.slice(0, 12)}…)`

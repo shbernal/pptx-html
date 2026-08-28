@@ -36,7 +36,7 @@
  * travel through the island as themselves, and only the picture approximates.
  */
 
-import type { Color, DashStyle, Fill, Gradient, LineEnd, Stroke } from '../ir/render'
+import { type Color, type DashStyle, EMU_PER_POINT, type Fill, type Gradient, type LineEnd, type Stroke } from '../ir/render'
 
 /**
  * What a line is drawn in when it states a width or a dash but no colour — the
@@ -50,8 +50,9 @@ import type { Color, DashStyle, Fill, Gradient, LineEnd, Stroke } from '../ir/re
  */
 const UNSTATED_LINE_COLOR = '#d8dce6'
 
-/** Points → EMU. Stroke widths and font sizes arrive in points; the canvas is EMU. */
-export const EMU_PER_POINT = 12_700
+// Re-exported so the renderer's own modules and its tests keep one import site
+// for it; the definition is the model's, beside `EMU_PER_INCH`.
+export { EMU_PER_POINT }
 
 /**
  * Collects the `<defs>` a slide's paint needs, and hands out ids for them.

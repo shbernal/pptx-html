@@ -24,10 +24,10 @@
  * and are not defects to chase.
  */
 
-import TsPptx from '@shbernal/ts-pptx'
+import TsPptx, { EMU_PER_INCH } from '@shbernal/ts-pptx'
 import { type LayoutHandle, Presentation } from '@shbernal/ts-pptx/read'
 import { type AssetIr, type CallIr, type DeckIr, type IrValue, isAssetRef, type SlideIr } from '@shbernal/ts-pptx/script'
-import { EMU_PER_IN } from '../constants'
+import { base64Of } from '../base64'
 
 /**
  * Replay a `DeckIr` against a template package.
@@ -90,8 +90,8 @@ function generatorFor(ir: DeckIr): TsPptx {
 	const pptx = new TsPptx()
 	pptx.defineLayout({
 		name: 'source',
-		width: ir.slideSize.widthEmu / EMU_PER_IN,
-		height: ir.slideSize.heightEmu / EMU_PER_IN,
+		width: ir.slideSize.widthEmu / EMU_PER_INCH,
+		height: ir.slideSize.heightEmu / EMU_PER_INCH,
 	})
 	pptx.layout = 'source'
 	return pptx
@@ -156,21 +156,11 @@ function hydrate(value: IrValue, assets: ReadonlyMap<string, AssetIr>): unknown 
 	if (isAssetRef(value)) {
 		const asset = assets.get(value.$asset)
 		if (!asset) throw new Error(`the IR references asset ${value.$asset}, which it does not carry`)
-		return `data:${asset.contentType};base64,${base64(asset.bytes)}`
+		return `data:${asset.contentType};base64,${base64Of(asset.bytes)}`
 	}
 	if (Array.isArray(value)) return value.map((entry) => hydrate(entry, assets))
 	if (value !== null && typeof value === 'object') {
 		return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, hydrate(entry, assets)]))
 	}
 	return value
-}
-
-/** Node and the browser disagree about `Buffer`; this needs neither. */
-function base64(bytes: Uint8Array): string {
-	const CHUNK = 0x8000
-	let binary = ''
-	for (let offset = 0; offset < bytes.length; offset += CHUNK) {
-		binary += String.fromCharCode(...bytes.subarray(offset, offset + CHUNK))
-	}
-	return btoa(binary)
 }

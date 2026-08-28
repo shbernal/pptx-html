@@ -21,6 +21,11 @@ model is expected to move.
   same guarantee, and the one that keeps working if that contract ever moves is
   `structuredClone`.
 
+- **`EMU_PER_POINT`** joins `EMU_PER_INCH` on the public surface. Both are the
+  model's stated units, and a consumer reading a `widthPt` beside a `Box` needs
+  the second one to make sense of the pair. It was already in the package, one
+  directory down in the renderer.
+
 ## [0.1.2] — 2026-08-11
 
 ### Fixed

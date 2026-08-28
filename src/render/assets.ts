@@ -24,8 +24,9 @@
  * keeps the round-trip but loses the pictures.
  */
 
+import { base64Of } from '../base64'
 import type { AssetManifestEntry } from '../ir/render'
-import { ASSETS_ID } from './island'
+import { ASSETS_ID, escapeForScript, ISLAND_ID } from './island'
 
 /**
  * Where {@link renderAssetBlock} gets bytes for a manifest name.
@@ -34,24 +35,6 @@ import { ASSETS_ID } from './island'
  * has — `AssetIndex.bytesFor` from the import path satisfies it directly.
  */
 export type AssetSource = (name: string) => Uint8Array | undefined
-
-/**
- * Base64 for bytes, without Node's `Buffer`.
- *
- * `btoa` is the one encoder present in both runtimes, and it takes a string of
- * code units below 256. The chunking is not an optimisation: spreading a
- * multi-megabyte array into `String.fromCharCode(...)` in one call overflows the
- * argument-list limit and throws, which would make large images fail exactly
- * where they matter most.
- */
-function base64Of(bytes: Uint8Array): string {
-	const CHUNK = 0x8000
-	let binary = ''
-	for (let offset = 0; offset < bytes.length; offset += CHUNK) {
-		binary += String.fromCharCode(...bytes.subarray(offset, offset + CHUNK))
-	}
-	return btoa(binary)
-}
 
 /** Bytes past which `'ref'` is worth suggesting. Base64 adds a third on top of this. */
 export const ASSET_SIZE_WARN_BYTES = 10_000_000
@@ -95,10 +78,13 @@ export function renderAssetBlock(manifest: readonly AssetManifestEntry[], bytes:
 		)
 	}
 
-	// Same escaping rule as the island, for the same reason: a `<` inside base64
-	// is impossible, but a manifest *name* comes from a package partname and is
-	// not under this file's control.
-	const json = JSON.stringify(encoded).replaceAll('<', '\\u003c')
+	// The island's rule, *called* rather than retyped, for the same reason: a `<`
+	// inside base64 is impossible, but a manifest *name* comes from a package
+	// partname and is not under this file's control. `src/parse/island.ts` scans
+	// these blocks with a string scanner, which is safe only because every `<` in
+	// every block this package writes is escaped — so the day `escapeForScript`
+	// has to disarm something else, this gets it too.
+	const json = escapeForScript(JSON.stringify(encoded))
 	return { html: `<script type="application/json" id="${ASSETS_ID}">${json}</script>`, warnings }
 }
 
@@ -120,7 +106,7 @@ export function hydrationScript(): string {
 var block=document.getElementById(${JSON.stringify(ASSETS_ID)});
 if(!block)return;
 var assets=JSON.parse(block.textContent||'{}');
-var manifest=JSON.parse((document.getElementById(${JSON.stringify('pxh-ir')})||{textContent:'{}'}).textContent||'{}').assets||[];
+var manifest=JSON.parse((document.getElementById(${JSON.stringify(ISLAND_ID)})||{textContent:'{}'}).textContent||'{}').assets||[];
 var typeByName={};
 manifest.forEach(function(entry){typeByName[entry.name]=entry.contentType});
 var urls={};

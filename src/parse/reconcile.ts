@@ -38,6 +38,7 @@ import {
 	type ProjectedParagraph,
 	type ProjectedRun,
 	project,
+	sameSurfaceValue,
 } from '../ir/surface'
 import type { SurfaceReading } from './surface'
 
@@ -208,24 +209,12 @@ function applyProps<Target extends RunProperties | ParagraphProperties, Key exte
 		// Structurally, not by reference. `color` is an object, and the projection
 		// arrived through a clone or a JSON parse, so `!==` is true for every run
 		// that states one — which would report an untouched deck as fully edited.
-		if (!same(target[key], value)) {
+		if (!sameSurfaceValue(target[key], value)) {
 			Object.assign(target, { [key]: value })
 			edits++
 		}
 	}
 	return edits
-}
-
-/**
- * Value equality for surface values.
- *
- * `JSON.stringify` is exact here rather than approximate: every surface value is
- * a boolean, a number, a string or a {@link Color}, all of which are JSON-safe by
- * the IR's own contract, and both sides are produced by the same projection with
- * the same key order.
- */
-function same(a: unknown, b: unknown): boolean {
-	return a === b || JSON.stringify(a) === JSON.stringify(b)
 }
 
 /** `s4.sp7/0/1` → 4. `null` when the address is not one this model would produce. */

@@ -36,6 +36,7 @@
  */
 
 import type { RenderIr } from '../ir/render'
+import { sha256Hex } from '../hash'
 import { project } from '../ir/surface'
 
 /** The island block's `id`. The parser looks the model up by exactly this. */
@@ -114,12 +115,6 @@ export function islandTextOf(ir: RenderIr): string {
  */
 export function escapeForScript(json: string): string {
 	return json.replaceAll('<', '\\u003c')
-}
-
-/** Lowercase hex SHA-256 of a string's UTF-8 bytes. */
-export async function sha256Hex(text: string): Promise<string> {
-	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
-	return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
 /**

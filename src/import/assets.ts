@@ -16,8 +16,13 @@
  * workaround for a missing accessor.
  */
 
-import type { AssetIr, AssetRef, DeckIr } from '@shbernal/ts-pptx/script'
+import type { AssetRef, DeckIr } from '@shbernal/ts-pptx/script'
 import type { OpcPackage } from '@shbernal/ts-pptx/read'
+// The hash that *defines* {@link AssetManifestEntry.sha256}. It lives in
+// `src/hash.ts` rather than here because the return path verifies resolved bytes
+// against that field, and two implementations of the manifest hash would be two
+// things that must agree and nothing that makes them.
+import { sha256OfBytes } from '../hash'
 import type { AssetManifestEntry } from '../ir/render'
 
 export interface AssetIndex {
@@ -27,22 +32,6 @@ export interface AssetIndex {
 	refFor(partName: string | null): AssetRef | null
 	/** The bytes behind a reference, for a caller that has to write them out. */
 	bytesFor(ref: AssetRef): Uint8Array | undefined
-}
-
-/**
- * Lowercase hex SHA-256 of raw bytes. `crypto.subtle` is present in Node and in
- * the browser.
- *
- * Exported because it *defines* {@link AssetManifestEntry.sha256}, and the return
- * path verifies resolved bytes against that field. Two implementations of "the
- * manifest hash" is two things that must agree and nothing that makes them —
- * and the failure would be a document that reports every asset as tampered with.
- */
-export async function sha256OfBytes(bytes: Uint8Array): Promise<string> {
-	// A fresh copy: `digest` wants an ArrayBuffer, and a part's `bytes` may be a
-	// view onto a larger buffer, whose tail would otherwise be hashed too.
-	const digest = await crypto.subtle.digest('SHA-256', Uint8Array.from(bytes))
-	return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
 /** Is this part media a picture node or a picture fill could point at? */
@@ -79,17 +68,26 @@ function uniqueName(candidate: string, taken: ReadonlyMap<string, unknown>): str
  * already filed says so.
  */
 export async function buildAssetIndex(opc: OpcPackage, deck: DeckIr): Promise<AssetIndex> {
-	const carriedByHash = new Map<string, AssetIr>()
-	for (const asset of deck.assets) carriedByHash.set(await sha256OfBytes(asset.bytes), asset)
+	// Hashing one asset does not depend on hashing the next, so both passes hash
+	// the whole set at once. The *naming* below does depend on order, and gets it:
+	// `Promise.all` resolves in input order, so the manifest stays byte-identical
+	// across runs — which is what `test/oracle/determinism.test.ts` gates.
+	const carriedByHash = new Map(
+		await Promise.all(deck.assets.map(async (asset) => [await sha256OfBytes(asset.bytes), asset] as const))
+	)
 
 	const manifest: AssetManifestEntry[] = []
 	const refByPart = new Map<string, AssetRef>()
 	const bytesByName = new Map<string, Uint8Array>()
 	const nameByHash = new Map<string, string>()
 
-	for (const [partName, part] of opc.parts) {
-		if (!isMediaPart(part.contentType)) continue
-		const hash = await sha256OfBytes(part.bytes)
+	const media = await Promise.all(
+		[...opc.parts]
+			.filter(([, part]) => isMediaPart(part.contentType))
+			.map(async ([partName, part]) => ({ partName, part, hash: await sha256OfBytes(part.bytes) }))
+	)
+
+	for (const { partName, part, hash } of media) {
 		const seen = nameByHash.get(hash)
 		if (seen !== undefined) {
 			// Same bytes as a part already indexed: one asset, two references.

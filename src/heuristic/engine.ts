@@ -21,7 +21,9 @@
  */
 
 import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
-import { DEFAULT_FONT, EMU_PER_IN } from '../constants'
+import { bytesOfBase64 } from '../base64'
+import { DEFAULT_FONT } from '../constants'
+import { EMU_PER_INCH } from '../ir/render'
 import { createHiddenFrame, settleFrame } from './frame'
 import { defaultResolveIcon, type IconResolver, inlineDeckIcons } from './icons'
 import type { SlideModel, SlideSize } from './model'
@@ -104,8 +106,8 @@ export interface ConvertResult {
 
 function getPptSize(pptx: PptxDeck): SlideSize {
 	return {
-		width: pptx.presLayout ? pptx.presLayout.width / EMU_PER_IN : 10,
-		height: pptx.presLayout ? pptx.presLayout.height / EMU_PER_IN : 5.625,
+		width: pptx.presLayout ? pptx.presLayout.width / EMU_PER_INCH : 10,
+		height: pptx.presLayout ? pptx.presLayout.height / EMU_PER_INCH : 5.625,
 	}
 }
 
@@ -142,15 +144,7 @@ function pptxBlobOf(chunks: Uint8Array[]): Blob {
 }
 
 function base64ToPptxBlob(base64: string): Blob {
-	const bytes = atob(base64)
-	const chunks: Uint8Array[] = []
-	for (let i = 0; i < bytes.length; i += 32768) {
-		const slice = bytes.slice(i, i + 32768)
-		const arr = new Uint8Array(slice.length)
-		for (let j = 0; j < slice.length; j++) arr[j] = slice.charCodeAt(j)
-		chunks.push(arr)
-	}
-	return pptxBlobOf(chunks)
+	return pptxBlobOf([bytesOfBase64(base64)])
 }
 
 function downloadBlob(blob: Blob, fileName?: string): void {
