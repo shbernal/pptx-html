@@ -127,11 +127,20 @@
 		// to the `describe` they belong to. Hoisting those would spread a fixture's
 		// setup away from the tests that read it.
 		"unicorn/consistent-function-scoping": "off",
-		// 24 hits, and the rule disagrees with the compiler. It reports
-		// `element.textContent ?? ''` in `src/parse/surface.ts` as a dead branch, but
-		// `Node.textContent` is `string | null` in the same lib `tsc` reads. A gate
-		// that calls a necessary guard unnecessary teaches people to delete correct
-		// code, which is worse than no gate.
+		// 22 hits, and the rule is right about the one that was used to dismiss it.
+		// This was recorded as the rule disagreeing with the compiler: it reported
+		// `element.textContent ?? ''` in `src/parse/surface.ts` as a dead branch, and
+		// `Node.textContent` is `string | null`. But `Element` redeclares it as a
+		// getter returning `string` (only `Document` and `DocumentType` read null),
+		// and that was an `Element`. Checked against this repo's own `tsc`, which
+		// accepts the value as a `string` with no guard. The `??` is gone.
+		//
+		// Still off, and now for an honest reason: the remaining 22 have never been
+		// read, most of them in `src/heuristic/`, where a "condition that can never
+		// fire" is often a guard against a browser value the DOM types over-promise.
+		// Each needs a judgement, which is its own unit of work rather than a flag
+		// flip. Turning the rule on before that reading happens breaks `pnpm run
+		// lint` with 22 findings nobody has an opinion about.
 		"typescript/no-unnecessary-condition": "off"
 	},
 

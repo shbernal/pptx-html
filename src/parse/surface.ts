@@ -418,7 +418,12 @@ function readRun(root: ParentNode, run: ProjectedRun, claimed: Set<string>, anom
 		node: run.node,
 		paragraph: run.paragraph,
 		run: run.run,
-		text: element.textContent ?? '',
+		// No `?? ''`. `Node.textContent` is `string | null`, but `Element` redeclares
+		// it as a getter returning `string` (only `Document` and `DocumentType` read
+		// null), and this is an `Element`. The guard that used to be here was a dead
+		// branch, and the belief that it was not is why
+		// `typescript/no-unnecessary-condition` spent a while switched off.
+		text: element.textContent,
 		props: readProps(element.getAttribute('data-pxh-props'), address, anomalies),
 	}
 }
