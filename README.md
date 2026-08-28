@@ -1,6 +1,6 @@
 # pptx-html
 
-**Edit a PowerPoint deck as a web page, and get the deck back — not an
+**Edit a PowerPoint deck as a web page, and get the deck back. Not an
 approximation of it.**
 
 `pptx-html` moves slides between HTML and PPTX by driving
@@ -18,8 +18,8 @@ both files. No server, no upload, and no picture of a slide anywhere on the page
 Two problems, one shape.
 
 **Decks are trapped in a desktop application.** HTML renders in a browser
-instantly; PPTX does not. If you want to preview a deck on the web — or let
-someone edit it there — you have to leave the format, and everything that
+instantly; PPTX does not. If you want to preview a deck on the web, or let
+someone edit it there, you have to leave the format, and everything that
 converts a deck to HTML converts it *away*: the result looks about right and
 cannot become a deck again.
 
@@ -47,28 +47,28 @@ whole design is arranged around:
 
 Equality is normalized, not byte-for-byte: zip entry order, timestamps,
 relationship ids and element ids all vary legally, and both sides are
-canonicalized before diffing. This is not an aspiration in a design doc — a
+canonicalized before diffing. This is not an aspiration in a design doc: a
 generated corpus of 26 decks runs the full loop on every CI build, and the
 per-construct fidelity ledger is snapshotted so it cannot move silently. That
 ledger is [published](https://shbernal.github.io/pptx-html/docs/fidelity),
 generated from the oracle's own reporter, with every row linking to the deck
 running in the browser.
 
-## Modeled, carried, or warned — never approximated
+## Modeled, carried, or warned: never approximated
 
 HTML/CSS and PPTX are different formats and neither is a superset of the other.
 Box layout, text flow, filters and blend modes have no exact OOXML equivalent,
-and PowerPoint's own model — placeholders, theme colours, freeform geometry — has
-no exact CSS equivalent. That does not make the output a guess. Every element
-lands in exactly one of three states:
+and PowerPoint's own model has no exact CSS equivalent either: placeholders,
+theme colours, freeform geometry. That does not make the output a guess. Every
+element lands in exactly one of three states:
 
-- **Modeled** — the IR represents it, and it survives the loop exactly.
-- **Carried** — the IR does not model it, so its XML moves across untouched. No
+- **Modeled.** The IR represents it, and it survives the loop exactly.
+- **Carried.** The IR does not model it, so its XML moves across untouched. No
   approximation, and no loss.
-- **Warned** — it can be neither modeled nor carried, and the conversion says so.
+- **Warned.** It can be neither modeled nor carried, and the conversion says so.
   A visible failure, never a silent one.
 
-What this rules out is the fourth state — *approximated*: content that comes out
+What this rules out is the fourth state, *approximated*: content that comes out
 looking about right but has no way back. It is why the `html2canvas` raster
 fallback was removed rather than kept as an escape hatch. A slide flattened into a
 picture is the one output that can never re-enter the loop, so producing a file
@@ -81,8 +81,8 @@ pnpm add pptx-html
 ```
 
 The writer, [`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx),
-comes with it as an ordinary dependency (`^3.2.0`) — nothing is built from source,
-and a clone installs the same way → [CONTRIBUTING](./CONTRIBUTING.md#setup).
+comes with it as an ordinary dependency. Nothing is built from source, and a clone
+installs the same way → [CONTRIBUTING](./CONTRIBUTING.md#setup).
 
 ## What it looks like
 
@@ -98,7 +98,7 @@ const { bytes } = await emitDeck(parsed, { source: pptxBytes }) // → .pptx
 ```
 
 `renderDeck` writes the model into the document as a JSON island beside the
-visible SVG, and `parseDeck` reads *that* — never `getComputedStyle`. It reports
+visible SVG, and `parseDeck` reads *that*, never `getComputedStyle`. It reports
 per slide which lane it took (`exact`, `reconciled`, `drifted`, `heuristic`) and
 throws rather than guessing when a document's integrity hashes do not match.
 
@@ -124,11 +124,11 @@ await convertSlide(headHTML, slideHTML, opts) // → { model, warnings }
 All four legs of the loop are implemented and exported, and the round-trip oracle
 gates CI. What that guarantee currently covers:
 
-- **Input domain.** Decks written by `@shbernal/ts-pptx` — that is what the
+- **Input domain.** Decks written by `@shbernal/ts-pptx`, which is what the
   generated corpus is made of. Decks authored in PowerPoint are a deliberate
   second tier and are not yet gated.
 - **Environment.** The loop is host-agnostic and runs in Node and the browser
-  alike. The heuristic lane is **browser only** — it needs a real DOM (iframe,
+  alike. The heuristic lane is **browser only**: it needs a real DOM (iframe,
   `getComputedStyle`, `getBoundingClientRect`, canvas, fonts), and its tests run
   in headless Chromium, not jsdom.
 - **Distribution.** Published to npm as `pptx-html`. ESM only, Node `>=24`.
@@ -139,24 +139,24 @@ something is not covered, it says so.
 
 ## Scope
 
-- **In scope:** a documented subset of HTML/CSS aimed at slide layouts —
+- **In scope:** a documented subset of HTML/CSS aimed at slide layouts:
   sectioned slides, common utility-class styling, iconify icons, gradients,
   tables, lists. Extend it by adding fixtures.
 - **Out of scope:** rendering arbitrary web pages. This is not a browser.
 
 ## Further reading
 
-- [examples/round-trip.mjs](./examples/round-trip.mjs) — the loop end to end and
+- [examples/round-trip.mjs](./examples/round-trip.mjs), the loop end to end and
   runnable: `pnpm run build && pnpm run example`. It edits a run, writes the deck
   back out, and re-imports it to show the edit arrived.
-- [docs/](./docs/index.md) — the design record: [Invariant R and the
+- [docs/](./docs/index.md), the design record: [Invariant R and the
   oracle](./docs/round-trip.md), [architecture](./docs/architecture.md), and
   [decisions that must not be undone](./docs/decisions.md). Published at
   <https://shbernal.github.io/pptx-html/docs/>, alongside the playground and the
   fidelity ledger.
-- [CONTRIBUTING.md](./CONTRIBUTING.md) — install, build, the three test layers,
+- [CONTRIBUTING.md](./CONTRIBUTING.md): install, build, the three test layers,
   and what to run for which kind of change.
-- [CHANGELOG.md](./CHANGELOG.md) — what changed, per release.
+- [CHANGELOG.md](./CHANGELOG.md): what changed, per release.
 
 ## License
 
