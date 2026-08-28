@@ -23,6 +23,14 @@ model is expected to move.
   six lines and the renderer draws them, the two diagonals last, across the whole
   spanned region of a merged cell.
 
+- **The document's language reaches the emitted deck.** The heuristic lane parses
+  `<html lang>` and assigned it to `pptx.lang` and to `theme.lang`. The writer has
+  neither: both landed as own properties on the instance and nothing wrote them
+  into the package, so every deck came out `en-US` whatever the page said. `lang`
+  is a *run* option, so it now travels on each `addText` call and on each table
+  cell — a table-level one does not reach the cells, which is checked against the
+  emitted XML rather than read off the type.
+
 - **A gradient stop and a table cell's edge keep their colour's transform list.**
   Both arrived pre-flattened — a scheme token and a painted hex with nothing
   between them — so `transforms: []` meant "the reader had nothing to say", which

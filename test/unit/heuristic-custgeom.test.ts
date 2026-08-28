@@ -49,7 +49,7 @@ async function emit(items: PathItem[]) {
 	const pptx = new TsPptx()
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
-	const issues = await addModelToSlide({ ShapeType }, slide, model(items), SIZE)
+	const issues = await addModelToSlide({ ShapeType }, slide, model(items), SIZE, 'en')
 	const bytes = await pptx.toBytes()
 	return { issues, bytes }
 }

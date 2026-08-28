@@ -209,12 +209,13 @@ async function buildDeck(headHTML: string, slides: string[], lang: string, opts:
 	pptx.author = opts.author || 'pptx-html'
 	pptx.subject = opts.title || 'pptx-html PPTX export'
 	pptx.company = 'pptx-html'
-	pptx.lang = lang || 'en'
-	pptx.theme = {
-		headFontFace: DEFAULT_FONT.latin,
-		bodyFontFace: DEFAULT_FONT.latin,
-		lang: lang || 'en',
-	}
+	// No deck-level language is set here, and there is nothing to set: the writer
+	// declares `layout`/`author`/`company`/`subject`/`theme` and no `lang`, and
+	// `ThemeProps` has none either. Both spellings used to be assigned anyway —
+	// they landed as own properties on the instance and were never written into the
+	// package. `lang` is a *run* option, so the language reaches the deck the only
+	// way the writer can carry it: on every `addText` call, from `addModelToSlide`.
+	pptx.theme = { headFontFace: DEFAULT_FONT.latin, bodyFontFace: DEFAULT_FONT.latin }
 	const size = getPptSize(pptx)
 	const warnings: Warning[] = []
 	const shouldStop = () => !!opts.shouldStop?.()
@@ -242,7 +243,7 @@ async function buildDeck(headHTML: string, slides: string[], lang: string, opts:
 			// ts-pptx exposes `ShapeType` as a module export, not off the instance, so
 			// the emit layer's writer seam is supplied here rather than being read off
 			// `pptx` (which may be a mock from `opts.pptxFactory`).
-			const issues = await addModelToSlide({ ShapeType }, slide, rendered.model, size)
+			const issues = await addModelToSlide({ ShapeType }, slide, rendered.model, size, lang || 'en')
 			warnings.push(...issues.map((message) => ({ slide: index + 1, message })))
 		} catch (error) {
 			warnings.push({

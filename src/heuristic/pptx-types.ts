@@ -64,7 +64,9 @@ export interface PptxDeck {
 	author?: string
 	subject?: string
 	company?: string
-	lang?: string
+	// No `lang`. The writer has no deck-level one, so declaring it here would let a
+	// caller — and did let this lane — write a property that goes nowhere. The
+	// language travels as a run option; see `slide.ts`.
 	theme?: Record<string, unknown>
 	/** Slide dimensions in EMU, read back after `layout` is set. */
 	presLayout?: { width: number; height: number }

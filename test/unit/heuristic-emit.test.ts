@@ -44,7 +44,7 @@ async function emitToBytes(model: SlideModel) {
 	const pptx = new TsPptx()
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
-	const issues = await addModelToSlide({ ShapeType }, slide, model, SIZE)
+	const issues = await addModelToSlide({ ShapeType }, slide, model, SIZE, 'en')
 	const bytes = await pptx.toBytes()
 	return { issues, bytes }
 }

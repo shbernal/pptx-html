@@ -42,9 +42,6 @@ function writerWithoutToBytes() {
 		set theme(value: Record<string, unknown>) {
 			real.theme = value
 		},
-		// `lang` is deliberately absent: ts-pptx has no deck-level setter for it, so
-		// the engine's assignment lands on this object exactly as it lands on a real
-		// writer instance.
 		addSlide: () => real.addSlide(),
 		write: (opts: { outputType: 'base64' }) => real.write(opts),
 	}

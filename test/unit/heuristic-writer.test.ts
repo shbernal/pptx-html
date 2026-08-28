@@ -56,7 +56,7 @@ async function emitToBytes(model: SlideModel) {
 	const pptx = new TsPptx()
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
-	const issues = await addModelToSlide({ ShapeType }, slide, model, SIZE)
+	const issues = await addModelToSlide({ ShapeType }, slide, model, SIZE, 'en')
 	const bytes = await pptx.toBytes()
 	return { issues, bytes }
 }
@@ -81,6 +81,28 @@ describe('emit → ts-pptx → read round-trip', () => {
 			.shapes.map((shape: { text?: string }) => shape.text || '')
 			.join(' ')
 		expect(allText).toContain('Hello pptx-html')
+	})
+
+	it('puts the document language on the runs, which is the only place it fits', async () => {
+		// The lane parses `<html lang>` and used to assign it to `pptx.lang` and to
+		// `theme.lang`, neither of which the writer has: both landed as own properties
+		// on the instance and nothing wrote them into the package. `lang` is a *run*
+		// option, so this asserts on the slide XML — the read model exposes no run
+		// language to check instead, and "the assignment happened" is exactly the
+		// thing that was true before and still meant nothing.
+		const pptx = new TsPptx()
+		pptx.layout = 'LAYOUT_16x9'
+		const slide = pptx.addSlide()
+		await addModelToSlide({ ShapeType }, slide, domFreeModel(), SIZE, 'fr-CA')
+		const pres = await Presentation.load(await pptx.toBytes())
+		const slideXml = new TextDecoder().decode(first(pres.slides, 'slide').part.bytes)
+		expect(slideXml).toContain('lang="fr-CA"')
+		// And no run is still on the writer's default. The model has a text box and a
+		// table, and only checking that *some* run moved would pass with the table
+		// left behind — a table's cells do not take a table-level language. Matched on
+		// `…Pr lang=` rather than on the bare attribute, which `altLang="en-US"`
+		// contains as a substring on every run the writer emits.
+		expect(slideXml).not.toMatch(/Pr lang="en-US"/)
 	})
 
 	it('states the slide size the layout asked for', async () => {

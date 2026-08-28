@@ -40,7 +40,19 @@ function sortedItems(items: Item[]): Item[] {
 		.map((entry) => entry.item)
 }
 
-export async function addModelToSlide(pptx: PptxWriter, slide: PptxSlide, model: SlideModel, slideSize: SlideSize): Promise<string[]> {
+/**
+ * `lang` is a **run** option, not a deck one. The writer has no deck-level
+ * language — `PresentationCore` declares `layout`/`author`/`company`/`subject`/
+ * `theme` and no `lang`, and `ThemeProps` has none either — so `TextPropsOptions.lang`
+ * on each `addText` is the only place the document's `<html lang>` can land.
+ */
+export async function addModelToSlide(
+	pptx: PptxWriter,
+	slide: PptxSlide,
+	model: SlideModel,
+	slideSize: SlideSize,
+	lang: string
+): Promise<string[]> {
 	const issues: string[] = []
 	if (model.background.type === 'color') {
 		slide.background = { color: model.background.value || 'FFFFFF' }
@@ -105,9 +117,15 @@ export async function addModelToSlide(pptx: PptxWriter, slide: PptxSlide, model:
 				}
 				if (item.colW && item.colW.length) opts.colW = item.colW
 				if (item.rowH && item.rowH.length) opts.rowH = item.rowH
-				slide.addTable(item.rows, opts)
+				// A cell's runs take their language from the *cell*: `lang` is on the
+				// `TextBaseProps` the table options also extend, but a table-level one
+				// never reaches them (checked against the emitted XML, not read off the
+				// type). Spread under the extractor's own options so a cell that states
+				// a language keeps it.
+				const rows = item.rows.map((row) => row.map((cell) => ({ ...cell, options: { lang, ...cell.options } })))
+				slide.addTable(rows, opts)
 			} else if (item.type === 'list' || item.type === 'text') {
-				slide.addText(item.text, textOptions(item, p, slideSize))
+				slide.addText(item.text, textOptions(item, p, slideSize, lang))
 			}
 		} catch (err) {
 			const what = item.type === 'image' ? (/^data:image\/svg/i.test(item.src || '') ? 'icon/SVG graphic' : 'image') : item.type
@@ -118,7 +136,7 @@ export async function addModelToSlide(pptx: PptxWriter, slide: PptxSlide, model:
 	return issues
 }
 
-function textOptions(item: TextItem, p: Rect, slideSize: SlideSize): Record<string, unknown> {
+function textOptions(item: TextItem, p: Rect, slideSize: SlideSize, lang: string): Record<string, unknown> {
 	const s = item.style || {}
 	const maxW = slideSize && Number.isFinite(slideSize.width) ? Math.max(0.05, slideSize.width - p.x) : null
 	const maxH = slideSize && Number.isFinite(slideSize.height) ? Math.max(0.05, slideSize.height - p.y) : null
@@ -142,6 +160,7 @@ function textOptions(item: TextItem, p: Rect, slideSize: SlideSize): Record<stri
 		align: s.align || 'left',
 		valign: s.valign || 'top',
 		margin: s.margin || [0, 0, 0, 0],
+		lang,
 		fit: 'none',
 	}
 	if (s.lineSpacing) opts.lineSpacing = s.lineSpacing
