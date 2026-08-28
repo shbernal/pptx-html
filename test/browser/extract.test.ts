@@ -16,12 +16,15 @@ import bulletsHtml from '../fixtures/bullets.html?raw'
 import coverHtml from '../fixtures/cover.html?raw'
 import iconRowHtml from '../fixtures/icon-row.html?raw'
 import tableHtml from '../fixtures/table.html?raw'
+import { at, first } from '../support'
 import type { RawModel } from './helpers'
 import { runText, staticResolveIcon, summarizeModel } from './helpers'
 
 async function modelFor(deckHtml: string): Promise<RawModel> {
 	const parsed = parseDeckHtml(deckHtml)
-	const { model } = await convertSlide(parsed.headHTML, parsed.slides[0], { resolveIcon: staticResolveIcon })
+	const { model } = await convertSlide(parsed.headHTML, first(parsed.slides, 'slide'), {
+		resolveIcon: staticResolveIcon,
+	})
 	return model as unknown as RawModel
 }
 
@@ -76,7 +79,7 @@ describe('table slide', () => {
 		expect(rows.length).toBe(3)
 		expect(rows[0]).toEqual(['Workstream', 'Owner', 'Status'])
 		expect(rows[1]).toEqual(['Cloud migration', 'A. Dupont', 'On track'])
-		expect(rows[2][2]).toBe('At risk')
+		expect(at(rows, 2, 'row')[2]).toBe('At risk')
 
 		expect(summarizeModel(model)).toMatchSnapshot()
 	})

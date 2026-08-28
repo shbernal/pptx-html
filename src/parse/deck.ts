@@ -97,7 +97,13 @@ export async function parseDeck(source: string | ParentNode, options: ParseOptio
 		}
 	}
 
-	const assets = await resolveAssets(opened.ir.assets, { resolver: options.assets, inline: blocks.assets })
+	// Spread rather than assign: `resolver` is optional, and under
+	// `exactOptionalPropertyTypes` writing `undefined` into it is a different
+	// statement from leaving it out. Absence has one spelling here too.
+	const assets = await resolveAssets(opened.ir.assets, {
+		...(options.assets === undefined ? {} : { resolver: options.assets }),
+		inline: blocks.assets,
+	})
 	const warnings = [...assets.warnings]
 
 	const root = rootOf(source, options, warnings)

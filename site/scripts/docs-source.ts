@@ -133,6 +133,17 @@ function readPage(slug: string, slugs: string[]): DocPage {
 
 type Frontmatter = Map<string, string | string[]>
 
+/**
+ * A capture group's text. No pattern in this file makes its groups optional, so
+ * an absent one means the pattern and the code reading it have drifted apart.
+ * That is worth failing on rather than papering over with an empty string.
+ */
+function captured(match: RegExpExecArray, index: number): string {
+	const value = match[index]
+	if (value === undefined) throw new Error(`pattern matched ${JSON.stringify(match[0])} but has no capture ${index}`)
+	return value
+}
+
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/
 
 function parseFrontmatter(source: string, file: string): { data: Frontmatter; body: string; bodyLine: number } {
@@ -140,7 +151,7 @@ function parseFrontmatter(source: string, file: string): { data: Frontmatter; bo
 	if (!match) throw new Error(`${file}: no frontmatter block; every page in docs/ carries one.`)
 
 	const data: Frontmatter = new Map()
-	const lines = match[1].split(/\r?\n/)
+	const lines = captured(match, 1).split(/\r?\n/)
 	let key: string | undefined
 
 	for (const [i, line] of lines.entries()) {
@@ -152,15 +163,16 @@ function parseFrontmatter(source: string, file: string): { data: Frontmatter; bo
 		if (item) {
 			const list = key === undefined ? undefined : data.get(key)
 			if (!Array.isArray(list)) throw new Error(`${where}: list item does not follow a key with an empty value.`)
-			list.push(unquote(item[1]))
+			list.push(unquote(captured(item, 1)))
 			continue
 		}
 
 		const pair = /^([A-Za-z][\w-]*):\s*(.*)$/.exec(line)
 		if (!pair) throw new Error(`${where}: neither a "key: value" line nor a "  - item" line: ${JSON.stringify(line)}`)
-		key = pair[1]
+		key = captured(pair, 1)
 		if (data.has(key)) throw new Error(`${where}: duplicate frontmatter key "${key}".`)
-		data.set(key, pair[2] === '' ? [] : unquote(pair[2]))
+		const value = captured(pair, 2)
+		data.set(key, value === '' ? [] : unquote(value))
 	}
 
 	return { data, body: source.slice(match[0].length), bodyLine: lines.length + 3 }
@@ -221,7 +233,8 @@ function rewriteTarget(target: string, slugs: string[], where: string): string {
 	const hash = hashAt === -1 ? '' : target.slice(hashAt)
 
 	const sibling = SIBLING.exec(path)
-	if (sibling && slugs.includes(sibling[1])) return `./${sibling[1]}${hash}`
+	const siblingSlug = sibling === null ? null : captured(sibling, 1)
+	if (siblingSlug !== null && slugs.includes(siblingSlug)) return `./${siblingSlug}${hash}`
 
 	// The landing page stands in for the README. A leading `/` is what VitePress
 	// prefixes with `base`, so this stays correct under `/pptx-html/`.

@@ -41,11 +41,14 @@ export type IslandFault = 'malformed' | 'version' | 'tampered'
  * been altered", `malformed` is "this is not one of our documents after all".
  */
 export class IslandError extends Error {
-	constructor(
-		readonly fault: IslandFault,
-		message: string
-	) {
+	// Declared and assigned rather than written as a constructor parameter
+	// property: that syntax is TypeScript-only, and `erasableSyntaxOnly` keeps this
+	// package to what a type-stripping runtime can erase.
+	readonly fault: IslandFault
+
+	constructor(fault: IslandFault, message: string) {
 		super(message)
+		this.fault = fault
 		this.name = 'IslandError'
 	}
 }

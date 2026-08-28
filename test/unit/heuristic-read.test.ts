@@ -15,6 +15,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { coerceSlideModel } from '../../src/heuristic/read'
+import { first } from '../support'
 
 const RECT = { x: 1, y: 1, w: 2, h: 1 }
 
@@ -118,7 +119,7 @@ describe('the extractor boundary', () => {
 
 	it('defaults a missing z to 0 so paint order stays total', () => {
 		const read = coerceSlideModel(slide([{ type: 'shape', position: RECT }]))
-		expect(read.model.items[0].z).toBe(0)
+		expect(first(read.model.items, 'item').z).toBe(0)
 	})
 
 	it('keeps notes only when there are some', () => {

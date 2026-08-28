@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest'
 import { pathShapeOptions } from '../../src/heuristic/custgeom'
 import type { PathItem, SlideModel } from '../../src/heuristic/model'
 import { addModelToSlide } from '../../src/heuristic/slide'
+import { first, only } from '../support'
 
 const SIZE = { width: 13.333, height: 7.5 }
 
@@ -67,9 +68,7 @@ function freeforms(shapes: AnyShape[]): FreeformShape[] {
 
 /** The single freeform on a slide, asserted present so a miss fails loudly. */
 function onlyFreeform(shapes: AnyShape[]): FreeformShape {
-	const found = freeforms(shapes)
-	expect(found).toHaveLength(1)
-	return found[0] as FreeformShape
+	return only(freeforms(shapes), 'freeform shape')
 }
 
 describe('pathShapeOptions — fill / stroke mapping', () => {
@@ -97,7 +96,7 @@ describe('emit → ts-pptx → read round-trip (custGeom)', () => {
 	it('writes custom geometry (not preset) shapes ts-pptx can read back', async () => {
 		const { bytes } = await emit([triangle(), cubicStroke()])
 		const pres = await Presentation.load(bytes)
-		const customs = freeforms(pres.slides[0].shapes)
+		const customs = freeforms(first(pres.slides, 'slide').shapes)
 		expect(customs.length).toBe(2)
 		for (const shape of customs) {
 			expect(shape.presetGeometry).toBeNull()
@@ -107,24 +106,24 @@ describe('emit → ts-pptx → read round-trip (custGeom)', () => {
 	it('round-trips the triangle command sequence (moveTo / lnTo×2 / close)', async () => {
 		const { bytes } = await emit([triangle()])
 		const pres = await Presentation.load(bytes)
-		const shape = onlyFreeform(pres.slides[0].shapes)
-		const cmds = shape.customGeometry.paths[0].commands.map((command) => command.cmd)
+		const shape = onlyFreeform(first(pres.slides, 'slide').shapes)
+		const cmds = first(shape.customGeometry.paths, 'path').commands.map((command) => command.cmd)
 		expect(cmds).toEqual(['moveTo', 'lnTo', 'lnTo', 'close'])
 	})
 
 	it('preserves the cubic curve as a cubicBezTo segment', async () => {
 		const { bytes } = await emit([cubicStroke()])
 		const pres = await Presentation.load(bytes)
-		const shape = onlyFreeform(pres.slides[0].shapes)
-		const cmds = shape.customGeometry.paths[0].commands.map((command) => command.cmd)
+		const shape = onlyFreeform(first(pres.slides, 'slide').shapes)
+		const cmds = first(shape.customGeometry.paths, 'path').commands.map((command) => command.cmd)
 		expect(cmds).toEqual(['moveTo', 'cubicBezTo'])
 	})
 
 	it('scales path-unit coordinates to the shape box (triangle apex at half width, full height)', async () => {
 		const { bytes } = await emit([triangle()])
 		const pres = await Presentation.load(bytes)
-		const shape = onlyFreeform(pres.slides[0].shapes)
-		const path = shape.customGeometry.paths[0] as CustomGeometry['paths'][number]
+		const shape = onlyFreeform(first(pres.slides, 'slide').shapes)
+		const path = first(shape.customGeometry.paths, 'path')
 		// Apex point (box-inch 1,2 in a 2×2 box) → path-units (w/2, h).
 		// The command list is a union discriminated on `cmd`; only the line and move
 		// verbs carry a coordinate, so the narrowing is what makes `x`/`y` readable.

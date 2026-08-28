@@ -11,6 +11,7 @@ import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
 import type { SlideModel } from '../../src/heuristic/model'
 import { addModelToSlide } from '../../src/heuristic/slide'
+import { first } from '../support'
 
 const SIZE = { width: 13.333, height: 7.5 }
 
@@ -70,13 +71,15 @@ describe('emit → ts-pptx → read round-trip', () => {
 		const { bytes } = await emitToBytes(domFreeModel())
 		const pres = await Presentation.load(bytes)
 		expect(pres.slides.length).toBe(1)
-		expect(pres.slides[0].shapes.length).toBeGreaterThan(0)
+		expect(first(pres.slides, 'slide').shapes.length).toBeGreaterThan(0)
 	})
 
 	it('carries the heading text through to the OOXML', async () => {
 		const { bytes } = await emitToBytes(domFreeModel())
 		const pres = await Presentation.load(bytes)
-		const allText = pres.slides[0].shapes.map((shape: { text?: string }) => shape.text || '').join(' ')
+		const allText = first(pres.slides, 'slide')
+			.shapes.map((shape: { text?: string }) => shape.text || '')
+			.join(' ')
 		expect(allText).toContain('Hello pptx-html')
 	})
 

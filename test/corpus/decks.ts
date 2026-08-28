@@ -76,7 +76,10 @@ function deck(name: string, tier: CorpusTier, why: string, author: (pptx: TsPptx
 	}
 }
 
-export const CORPUS: CorpusDeck[] = [
+// `as const` rather than a `CorpusDeck[]` annotation: the corpus is a fixed list,
+// and saying so makes `CORPUS[0]` a read the compiler knows lands, instead of one
+// every caller has to guard under `noUncheckedIndexedAccess`.
+export const CORPUS = [
 	deck('text-box', 'primitive', 'runs, paragraph breaks and per-run character formatting', (pptx) => {
 		pptx.addSlide().addText(
 			[
@@ -728,7 +731,7 @@ export const CORPUS: CorpusDeck[] = [
 		slide.addShape('rect', { x: 1, y: 1, w: 3, h: 2, fill: { color: 'accent1' }, objectName: 'themed' })
 		slide.addText('Themed text', { x: 1, y: 3.2, w: 3, h: 0.6, color: 'accent2', objectName: 'themed-copy' })
 	}),
-]
+] as const satisfies readonly CorpusDeck[]
 
 export const PRIMITIVES: CorpusDeck[] = CORPUS.filter((entry) => entry.tier === 'primitive')
 export const HARD: CorpusDeck[] = CORPUS.filter((entry) => entry.tier === 'hard')

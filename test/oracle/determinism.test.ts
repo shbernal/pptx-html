@@ -1,6 +1,7 @@
 import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
 import { buildLabelledDeck, CORPUS, corpusBytes, labelledProducer } from '../corpus/decks'
+import { first } from '../support'
 import { htmlLoop } from './html-lane'
 import { type DeckView, viewDeck } from './roundtrip'
 
@@ -67,7 +68,7 @@ describe('importSlide ordering', () => {
 		// consequence of call order — which is exactly why it is worth pinning.
 		const source = await Presentation.load(await buildLabelledDeck(['carried-1', 'carried-2']))
 		const destination = await Presentation.fromTemplate(await buildLabelledDeck([]))
-		const layout = destination.layouts()[0]
+		const layout = first(destination.layouts(), 'layout')
 
 		destination.importSlide(source, 0)
 		await destination.appendSlides(labelledProducer(['authored']), { layout })

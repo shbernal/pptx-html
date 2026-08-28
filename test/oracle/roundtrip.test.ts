@@ -1,6 +1,7 @@
 import { diffDeckIr, type FidelityNote } from '@shbernal/ts-pptx/script'
 import { describe, expect, it } from 'vitest'
 import { CORPUS, corpusBytes } from '../corpus/decks'
+import { first } from '../support'
 import { htmlLoop } from './html-lane'
 import { assertRoundTrip, carryLoop, describeReport, resaveLoop, roundTrip, viewDeck } from './roundtrip'
 import { scriptLoop } from './script-lane'
@@ -169,6 +170,11 @@ describe('the harness itself', () => {
 		return (await viewDeck(await corpusBytes(entry))).canonical
 	}
 
+	/** The first slide of a fixture, asserted present so a mutation cannot target nothing. */
+	function firstSlide(deck: Awaited<ReturnType<typeof canonicalFixture>>) {
+		return first(deck.slides, 'slide')
+	}
+
 	it('a deck compares clean against itself', async () => {
 		const canonical = await canonicalFixture()
 		expect(diffDeckIr(canonical, canonical, []).undeclared).toEqual([])
@@ -177,7 +183,7 @@ describe('the harness itself', () => {
 	it('catches a changed option value', async () => {
 		const expected = await canonicalFixture()
 		const actual = structuredClone(expected)
-		const call = actual.slides[0].calls[0]
+		const call = first(firstSlide(actual).calls, 'call')
 		const options = call.args[call.args.length - 1] as Record<string, unknown>
 		options.w = 99
 		const report = diffDeckIr(expected, actual, [])
@@ -188,7 +194,7 @@ describe('the harness itself', () => {
 	it('catches a dropped call', async () => {
 		const expected = await canonicalFixture()
 		const actual = structuredClone(expected)
-		actual.slides[0].calls = []
+		firstSlide(actual).calls = []
 		const report = diffDeckIr(expected, actual, [])
 		expect(report.undeclared.length).toBeGreaterThan(0)
 		expect(report.undeclared.some((difference) => difference.kind === 'lost')).toBe(true)
@@ -200,7 +206,7 @@ describe('the harness itself', () => {
 		// compare clean, while resolving theme and colour map against the wrong chrome.
 		const expected = await canonicalFixture()
 		const actual = structuredClone(expected)
-		actual.slides[0].layoutName = 'NOT THE LAYOUT'
+		firstSlide(actual).layoutName = 'NOT THE LAYOUT'
 		expect(diffDeckIr(expected, actual, []).undeclared.length).toBeGreaterThan(0)
 	})
 
@@ -217,7 +223,7 @@ describe('the harness itself', () => {
 		// holding, every "clean" run in the suite means nothing.
 		const expected = await canonicalFixture()
 		const actual = structuredClone(expected)
-		const call = actual.slides[0].calls[0]
+		const call = first(firstSlide(actual).calls, 'call')
 		const options = call.args[call.args.length - 1] as Record<string, unknown>
 		// Only the width: a second changed field would be a second difference the
 		// single note below does not cover, and the assertion would fail for a
@@ -246,7 +252,7 @@ describe('the harness itself', () => {
 		// note about one shape must not silence another's defect.
 		const expected = await canonicalFixture()
 		const actual = structuredClone(expected)
-		const call = actual.slides[0].calls[0]
+		const call = first(firstSlide(actual).calls, 'call')
 		const options = call.args[call.args.length - 1] as Record<string, unknown>
 		options.line = { ...(options.line as Record<string, unknown>), width: 9 }
 

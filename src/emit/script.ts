@@ -47,12 +47,16 @@ export async function emitDeckIr(ir: DeckIr, template: Uint8Array, source?: Pres
 	// change ends the run. Getting this wrong reorders the deck.
 	let batch: SlideIr[] = []
 	const flush = async (): Promise<void> => {
-		if (batch.length === 0) return
 		const pending = batch
+		// Destructured rather than length-checked: `first` is the slide the layout
+		// binds to, and taking it here is what says an empty batch has nothing to
+		// bind, in a form the compiler can follow.
+		const [first] = pending
+		if (first === undefined) return
 		batch = []
 		const generator = generatorFor(ir)
 		for (const slide of pending) authorSlide(generator, slide, assets)
-		await destination.appendSlides(generator, { layout: layoutBinding(destination, pending[0]) })
+		await destination.appendSlides(generator, { layout: layoutBinding(destination, first) })
 	}
 
 	for (const slide of ir.slides) {

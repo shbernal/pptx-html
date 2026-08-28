@@ -12,12 +12,13 @@ import { describe, expect, it } from 'vitest'
 import { parseDeckHtml } from '../../src/heuristic/parse'
 import { convertDeck, convertSlide } from '../../src/index'
 import iconRowHtml from '../fixtures/icon-row.html?raw'
+import { first } from '../support'
 import type { RawModel } from './helpers'
 import { base64ToBytes, staticResolveIcon } from './helpers'
 
 async function modelFor(deckHtml: string, vectorizeSvg: boolean): Promise<RawModel> {
 	const parsed = parseDeckHtml(deckHtml)
-	const { model } = await convertSlide(parsed.headHTML, parsed.slides[0], {
+	const { model } = await convertSlide(parsed.headHTML, first(parsed.slides, 'slide'), {
 		resolveIcon: staticResolveIcon,
 		vectorizeSvg,
 	})
@@ -54,7 +55,7 @@ describe('vectorizeSvg — emit → ts-pptx read', () => {
 		// `AnyShape` also covers connectors and pictures, which carry no geometry, so
 		// the guard is what makes `customGeometry` readable — and a run where the
 		// icons stopped being autoshapes fails here rather than reading `undefined`.
-		const customs = pres.slides[0].shapes.filter(
+		const customs = first(pres.slides, 'slide').shapes.filter(
 			(shape): shape is AutoShape & { customGeometry: CustomGeometry } =>
 				isAutoShape(shape) && shape.customGeometry !== null
 		)

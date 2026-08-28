@@ -133,13 +133,18 @@ function arcTo(
 	// A positive sweep is clockwise in both systems, so it is SVG's sweep flag 1
 	// with no sign juggling — the same reasoning as `segmentOf`.
 	const flag = sweep >= 0 ? 1 : 0
-	const steps = Math.abs(sweep) >= FULL_TURN ? [sweep / 2, sweep / 2] : [sweep]
-	const large = Math.abs(steps[0]) > FULL_TURN / 2 ? 1 : 0
+	// The large-arc flag is a property of one step, not of the list, so it is read
+	// off the value the list was built from. Both halves of a split sweep are the
+	// same size, which is why one `step` answers for either shape of `steps`.
+	const split = Math.abs(sweep) >= FULL_TURN
+	const step = split ? sweep / 2 : sweep
+	const steps = split ? [step, step] : [step]
+	const large = Math.abs(step) > FULL_TURN / 2 ? 1 : 0
 
 	let angle = from
 	return steps
-		.map((step) => {
-			angle += step
+		.map((each) => {
+			angle += each
 			const end = at(rx, ry, angle)
 			return `A ${coord(rx)} ${coord(ry)} 0 ${large} ${flag} ${end.x} ${end.y}`
 		})

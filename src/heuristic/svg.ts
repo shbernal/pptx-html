@@ -68,7 +68,7 @@ function inheritedAttr(el: Element, name: string, stopAt: Element): string | nul
 function readStyleProp(style: string | null, prop: string): string | null {
 	if (!style) return null
 	const m = new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*([^;]+)', 'i').exec(style)
-	return m ? m[1].trim() : null
+	return m?.[1]?.trim() ?? null
 }
 
 const NAMED_COLORS: Record<string, string> = {
@@ -90,17 +90,17 @@ function normalizeColor(value: string | null): string | null {
 	if (v === 'none' || v === 'transparent') return 'none'
 	if (v === 'currentcolor') return null // should already be resolved by the extractor
 	if (v.startsWith('url(')) return null // gradient/pattern — caller treats as unsupported
-	let m = /^#([0-9a-f]{3})$/i.exec(v)
-	if (m) {
-		const [r, g, b] = m[1].split('')
-		return (r + r + g + g + b + b).toUpperCase()
-	}
-	m = /^#([0-9a-f]{6})$/i.exec(v)
-	if (m) return m[1].toUpperCase()
-	m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(v)
-	if (m) {
+	// Each branch reads its capture off the match rather than indexing into it, so
+	// the shorthand expansion and the channel mapping are total by construction
+	// instead of by trusting the pattern to have matched what it says it did.
+	const short = /^#([0-9a-f]{3})$/i.exec(v)?.[1]
+	if (short !== undefined) return short.replace(/./g, (digit) => digit + digit).toUpperCase()
+	const full = /^#([0-9a-f]{6})$/i.exec(v)?.[1]
+	if (full !== undefined) return full.toUpperCase()
+	const rgb = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(v)
+	if (rgb) {
 		const hex = (n: string) => Math.max(0, Math.min(255, Math.round(parseFloat(n)))).toString(16).padStart(2, '0')
-		return (hex(m[1]) + hex(m[2]) + hex(m[3])).toUpperCase()
+		return rgb.slice(1, 4).map(hex).join('').toUpperCase()
 	}
 	if (NAMED_COLORS[v]) return NAMED_COLORS[v]
 	return null
@@ -113,11 +113,26 @@ interface ViewBox {
 	h: number
 }
 
+/**
+ * A whitespace/comma-separated list read as exactly four finite numbers, or null
+ * when it is anything else. Returning a tuple rather than an array is the point:
+ * the four values are then readable without a bounds check each, and "the list
+ * was the right length" is stated once, where it is decided.
+ */
+function fourNumbers(text: string): [number, number, number, number] | null {
+	const parts = text.trim().split(/[\s,]+/).map(Number)
+	const [a, b, c, d] = parts
+	if (parts.length !== 4) return null
+	if (a === undefined || b === undefined || c === undefined || d === undefined) return null
+	if (!Number.isFinite(a) || !Number.isFinite(b) || !Number.isFinite(c) || !Number.isFinite(d)) return null
+	return [a, b, c, d]
+}
+
 function readViewBox(svg: SVGSVGElement): ViewBox | null {
 	const vb = svg.getAttribute('viewBox')
 	if (vb) {
-		const n = vb.trim().split(/[\s,]+/).map(Number)
-		if (n.length === 4 && n.every(Number.isFinite) && n[2] > 0 && n[3] > 0) {
+		const n = fourNumbers(vb)
+		if (n && n[2] > 0 && n[3] > 0) {
 			return { minX: n[0], minY: n[1], w: n[2], h: n[3] }
 		}
 	}

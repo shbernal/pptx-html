@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Background, heuristic } from '../../src/index'
 import { convertDeck, convertSlide, emitDeck, importDeck, parseDeck, project, renderDeck } from '../../src/index'
+import { first } from '../support'
 
 // Public-surface smoke test. What it is actually pinning is the *shape* of the
 // surface: four legs of one loop, plus a second entry point that infers, and two
@@ -38,7 +39,7 @@ describe('pptx-html public API', () => {
 		}
 		const modeled: Background = { source: 'master', fill: { kind: 'solid', color: { kind: 'srgb', hex: 'FFFFFF' } } }
 
-		expect(inferred.items[0].type).toBe('shape')
+		expect(first(inferred.items, 'item').type).toBe('shape')
 		expect(modeled.source).toBe('master')
 	})
 })

@@ -16,6 +16,22 @@
 		"noImplicitAny": true,
 		"noEmit": true,
 		"strict": true,
+		// Copied from `../tsconfig.base.json` rather than inherited, for the reason
+		// above, and that duplication is load bearing: the site compiles the same
+		// source the package does, so a rule the package holds and the site does not
+		// is a rule the playground can break without anyone hearing. Keep the two
+		// blocks in step. `noPropertyAccessFromIndexSignature` is off in both.
+		"noImplicitOverride": true,
+		"noFallthroughCasesInSwitch": true,
+		"useUnknownInCatchVariables": true,
+		"noImplicitReturns": true,
+		"verbatimModuleSyntax": true,
+		"isolatedModules": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"exactOptionalPropertyTypes": true,
+		"erasableSyntaxOnly": true,
+		"noUncheckedIndexedAccess": true,
 		// On here and nowhere else in the repo. `src/` checks its dependencies'
 		// declarations on purpose — it has one, and a broken `.d.ts` there is a real
 		// signal. The site pulls in VitePress's whole Vue toolchain, whose published

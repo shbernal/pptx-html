@@ -23,6 +23,7 @@ import { IslandError } from '../../src/parse/island'
 import { renderDeck } from '../../src/render/document'
 import { ISLAND_ID } from '../../src/render/island'
 import { CORPUS, corpusBytes } from '../corpus/decks'
+import { at } from '../support'
 import { viewDeck } from './roundtrip'
 
 async function entry(name: string) {
@@ -537,7 +538,9 @@ describe('what the return path refuses', () => {
 		const real = imported.assets.bytesFor({ $asset: name })
 		if (real === undefined) throw new Error('the picture deck lost its bytes')
 		const flipped = Uint8Array.from(real)
-		flipped[flipped.length - 1] ^= 0xff
+		// Flip the last byte: the manifest hash covers the bytes, so any change
+		// is enough, and the last one exists for any non-empty asset.
+		flipped[flipped.length - 1] = at(flipped, flipped.length - 1, 'asset byte') ^ 0xff
 
 		await expect(parseDeck(html, { parseHtml: null, assets: () => flipped })).rejects.toThrow(/manifest hash/)
 	})

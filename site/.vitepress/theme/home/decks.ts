@@ -298,7 +298,9 @@ function label(p: Page, text: string, x: number, y: number, w: number, h: number
 		italic: options.italic ?? false,
 		align: options.align ?? 'left',
 		valign: options.valign ?? 'top',
-		charSpacing: options.spacing,
+		// Spread, not assigned: `charSpacing` is optional, and writing `undefined`
+		// into it states a value where the caller stated none.
+		...(options.spacing === undefined ? {} : { charSpacing: options.spacing }),
 		objectName: p.id('copy'),
 	})
 }

@@ -40,8 +40,10 @@ class Lexer {
 		NUMBER_RE.lastIndex = this.i
 		const m = NUMBER_RE.exec(this.s)
 		if (!m || m.index !== this.i) return null
+		const digits = m[1]
+		if (digits === undefined) return null
 		this.i = NUMBER_RE.lastIndex
-		const n = parseFloat(m[1])
+		const n = parseFloat(digits)
 		return Number.isFinite(n) ? n : null
 	}
 

@@ -23,6 +23,7 @@ import type { RenderIr } from '../../src/ir/render'
 import { renderDeck } from '../../src/render/document'
 import { EMU_PER_POINT } from '../../src/render/paint'
 import { SAMPLE_IR } from '../fixtures/render-ir'
+import { at } from '../support'
 
 const NO_ASSETS = { assets: 'ref' } as const
 
@@ -79,7 +80,7 @@ describe('the painted slide', () => {
 				const declared = /font-size:([\d.]+)px/.exec(span.getAttribute('style') ?? '')
 				if (declared === null) continue
 				const computed = Number.parseFloat(doc.defaultView?.getComputedStyle(span).fontSize ?? '')
-				expect(computed).toBeCloseTo(Number.parseFloat(declared[1]), 3)
+				expect(computed).toBeCloseTo(Number.parseFloat(at(declared, 1, 'font-size capture')), 3)
 				compared.push(computed)
 			}
 			// Otherwise a renderer that stopped stating sizes altogether would pass by

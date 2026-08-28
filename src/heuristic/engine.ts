@@ -222,14 +222,17 @@ async function buildDeck(headHTML: string, slides: string[], lang: string, opts:
 	opts.onProgress?.({ phase: 'icons', total: slides.length })
 	const inlined = await inlineDeckIcons(headHTML, slides, opts.resolveIcon || defaultResolveIcon)
 	if (inlined) slides = inlined
-	for (let index = 0; index < slides.length; index++) {
+	// `entries()` rather than an index loop: the slide HTML comes out of the
+	// iterator already known to exist, which is the same guarantee the bounds check
+	// gave and one the compiler can see.
+	for (const [index, slideHtml] of slides.entries()) {
 		if (shouldStop()) {
 			stopped = true
 			break
 		}
 		opts.onProgress?.({ phase: 'slide', index, total: slides.length })
 		try {
-			const rendered = await renderSlideModel(headHTML, slides[index], lang, size, opts)
+			const rendered = await renderSlideModel(headHTML, slideHtml, lang, size, opts)
 			warnings.push(...rendered.warnings.map((message) => ({ slide: index + 1, message })))
 			const slide = pptx.addSlide()
 			completedSlides++

@@ -146,11 +146,8 @@ export async function inlineDeckIcons(
 		if (!slides.some((s) => /<iconify-icon/i.test(s))) return null
 		const names = new Set<string>()
 		slides.forEach((s) => {
-			const re = /<iconify-icon\b[^>]*?\sicon=["']([^"']+)["']/gi
-			let m = re.exec(s)
-			while (m) {
-				names.add(m[1])
-				m = re.exec(s)
+			for (const [, name] of s.matchAll(/<iconify-icon\b[^>]*?\sicon=["']([^"']+)["']/gi)) {
+				if (name) names.add(name)
 			}
 		})
 		if (!names.size) return null
@@ -182,8 +179,8 @@ export async function inlineDeckIcons(
 		document.body.appendChild(host)
 		try {
 			await waitForIconEls(els, 12000, 12000)
-			Object.keys(byName).forEach((name) => {
-				const svg = byName[name].shadowRoot?.querySelector('svg')
+			Object.entries(byName).forEach(([name, element]) => {
+				const svg = element.shadowRoot?.querySelector('svg')
 				if (!svg) return
 				svgByName[name] = normalizeIconSvg(svg.cloneNode(true) as SVGElement)
 			})

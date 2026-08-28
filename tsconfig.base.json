@@ -9,6 +9,39 @@
 		"noImplicitAny": true,
 		"sourceMap": true,
 		"strict": true,
-		"target": "es2024"
+		"target": "es2024",
+
+		// `strict` is a moving alias, and none of the below is in it. They are
+		// listed rather than assumed so that a TypeScript release folding one of
+		// them into `strict` changes nothing here.
+		"noImplicitOverride": true,
+		// The renderer and the importers lean hard on exhaustive switches over
+		// discriminated unions; this is the cheap half of guarding them.
+		"noFallthroughCasesInSwitch": true,
+		"useUnknownInCatchVariables": true,
+		"noImplicitReturns": true,
+		// Every `import type` in `src/` was already written as one. These make that
+		// a rule rather than a habit, which is what a package shipping ESM to
+		// bundlers needs.
+		"verbatimModuleSyntax": true,
+		"isolatedModules": true,
+		// Zero cost in `src/`; the value is in `test/`, where an unused local is
+		// usually an assertion someone stopped making.
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		// The IR's wire rule, held by the compiler instead of by review: an absent
+		// field is a missing key, and `{ x: undefined }` is not the same thing.
+		// See `docs/architecture.md` and the note at `src/ir/surface.ts`.
+		"exactOptionalPropertyTypes": true,
+		// No parameter properties, enums or namespaces. `engines` is node >= 24,
+		// where type stripping is on by default, and the site's scripts already run
+		// under it.
+		"erasableSyntaxOnly": true,
+		"noUncheckedIndexedAccess": true
+
+		// `noPropertyAccessFromIndexSignature` is deliberately off. Measured at 58
+		// errors in `src/` and 91 across the tests, almost all of them legitimate
+		// reads off the `Record<string, …>` option bags that are the heuristic
+		// lane's documented contract. It buys bracket syntax and no safety.
 	}
 }

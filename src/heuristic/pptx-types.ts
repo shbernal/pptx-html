@@ -21,10 +21,21 @@
  * mirroring ts-pptx's option unions here, is what this file exists to avoid.
  */
 
-/** A ts-pptx writer instance, narrowed to what the emitter reads off it. */
+/**
+ * A ts-pptx writer instance, narrowed to what the emitter reads off it: the four
+ * members of the shape-type enum this lane actually emits.
+ *
+ * Named rather than left as `Record<string, string>`, which said "any key" and
+ * meant "these four". A mock that supplies none of them now fails to typecheck
+ * instead of reaching `addShape(undefined, …)` at run time.
+ */
 export interface PptxWriter {
-	/** Shape-type enum: `ShapeType.rect`, `.roundRect`, `.line`, `.custGeom`, … */
-	ShapeType: Record<string, string>
+	ShapeType: {
+		custGeom: string
+		line: string
+		rect: string
+		roundRect: string
+	}
 }
 
 /**
