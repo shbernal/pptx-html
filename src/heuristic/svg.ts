@@ -244,7 +244,7 @@ function svgItemToPaths(item: Extract<Item, { type: 'image' }>): PathItem[] | nu
 			unsupported = true
 			return
 		}
-		if (tag === 'svg' && el !== (svg as unknown as Element)) {
+		if (tag === 'svg' && el !== (svg)) {
 			unsupported = true // nested SVG
 			return
 		}
@@ -263,8 +263,8 @@ function svgItemToPaths(item: Extract<Item, { type: 'image' }>): PathItem[] | nu
 	for (const el of drawables) {
 		const d = shapeToPathData(el)
 		if (!d) continue
-		const fillRaw = inheritedAttr(el, 'fill', svg as unknown as Element)
-		const strokeRaw = inheritedAttr(el, 'stroke', svg as unknown as Element)
+		const fillRaw = inheritedAttr(el, 'fill', svg)
+		const strokeRaw = inheritedAttr(el, 'stroke', svg)
 		// A url() paint (gradient/pattern) can't be represented — fall back wholesale.
 		if ((fillRaw && fillRaw.trim().toLowerCase().startsWith('url(')) || (strokeRaw && strokeRaw.trim().toLowerCase().startsWith('url(')))
 			return null
@@ -280,7 +280,7 @@ function svgItemToPaths(item: Extract<Item, { type: 'image' }>): PathItem[] | nu
 		if (fillRaw == null) path.fill = '000000'
 		else if (fill && fill !== 'none') path.fill = fill
 		if (stroke && stroke !== 'none') {
-			const widthUser = parseFloat(inheritedAttr(el, 'stroke-width', svg as unknown as Element) || '1') || 1
+			const widthUser = parseFloat(inheritedAttr(el, 'stroke-width', svg) || '1') || 1
 			// Convert stroke width from user units to points via the uniform scale.
 			const s = Math.min(item.position.w / vb.w, item.position.h / vb.h)
 			path.line = { color: stroke, width: Math.max(0.25, widthUser * s * 72) }

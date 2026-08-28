@@ -43,7 +43,7 @@ async function slidesOf(bytes: Uint8Array): Promise<Map<string, string>> {
 	const slides = new Map<string, string>()
 	for (const [name, data] of entries) {
 		if (!/^ppt\/slides\/slide\d+\.xml$/i.test(name)) continue
-		slides.set(name, typeof data === 'string' ? data : decoder.decode(data as Uint8Array))
+		slides.set(name, typeof data === 'string' ? data : decoder.decode(data))
 	}
 	return slides
 }

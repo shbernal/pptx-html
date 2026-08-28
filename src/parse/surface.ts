@@ -98,7 +98,7 @@ function readProps(raw: string | null, address: string, anomalies: string[]): Pi
 	// Back through the same narrowing the renderer wrote it with, so an unedited
 	// document's projection is not merely equal but *identically serialized* — the
 	// two hashes are compared as strings and key order is part of a JSON string.
-	return editableRunProps(picked as RunProperties)
+	return editableRunProps(picked)
 }
 
 /**
@@ -148,7 +148,7 @@ function readParaProps(
 		}
 		picked[key] = value
 	}
-	return editableParaProps(picked as Pick<ParagraphProperties, EditableParaProp>)
+	return editableParaProps(picked)
 }
 
 /** The four `a:pPr/@algn` values the write API expresses, and the only four `align` may be. */

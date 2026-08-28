@@ -7,18 +7,29 @@
 	// leaving it alone would turn the CI lint step into a step that cannot fail.
 	//
 	// The wider categories were measured rather than guessed, over `src`, `test`,
-	// `site` and `examples`, and are off on purpose:
+	// `site` and `examples`, and stay off as categories:
 	//
 	//   suspicious   +53   perf  +24   pedantic  +424   restriction  +1357
 	//   style      +8200
 	//
-	// Of `suspicious` and `perf`, 31 findings land outside `src/heuristic/`, and
-	// half of those are `no-await-in-loop` on sequential deck processing that has to
-	// stay sequential. None of the five is what biome's recommended preset was
-	// enforcing, so switching them on here would smuggle a new gate into a commit
-	// that is meant to swap one tool for another. Worth revisiting on its own.
+	// What follows is the individual reading that a category count cannot give: each
+	// rule below was measured on its own and turned on or left off with the reason
+	// written down, so nobody has to re-derive it.
 	"categories": {
 		"correctness": "error"
+	},
+
+	// Type-aware linting, via `oxlint-tsgolint`. This is the set of rules that can
+	// ask what a value *is* rather than what it looks like, which is worth more here
+	// than in most codebases: the difficulty in this one is values that are
+	// structurally similar and semantically opposite.
+	//
+	// It reads the tsconfig graph, which is why `test/tsconfig.json` exists — without
+	// a project covering `test/`, tsgolint falls back to default compiler options and
+	// every `noUncheckedIndexedAccess` guard in a test reads as a condition that can
+	// never fire. Measured: 71 such phantom findings before that file, 24 after.
+	"options": {
+		"typeAware": true
 	},
 
 	// No `ignorePatterns`. oxlint reads `.gitignore`, which already covers `dist`,
@@ -27,7 +38,116 @@
 	// warned about on every single run. The rest of biome's exclusions were about
 	// files it formatted rather than linted, and those live in `.oxfmtrc.json`.
 
+	"rules": {
+		// --- Type-aware, and clean across the whole repo -----------------------
+		//
+		// All five measured zero outside `src/heuristic/`. They are on for what they
+		// prevent rather than for what they found: every entry point in the loop is
+		// async, and `AssetResolver` returns
+		// `Promise<Uint8Array | undefined> | Uint8Array | undefined` — a union whose
+		// whole risk is a dropped `await` putting a `Promise` where bytes belong.
+		"typescript/no-floating-promises": "error",
+		"typescript/no-misused-promises": "error",
+		"typescript/await-thenable": "error",
+		// The rule that wants what the exhaustive switches below are already doing.
+		// See the `default-case` note further down: these two are opposites, and only
+		// one of them preserves the guarantee.
+		"typescript/switch-exhaustiveness-check": "error",
+		// Every SVG attribute in `src/render/` is built by template literal. An
+		// `undefined` landing in one emits the word into the document while the island
+		// beside it stays perfect, so nothing fails and the deck is quietly wrong.
+		"typescript/restrict-template-expressions": "error",
+		// 13 when first measured, all removed. `noUncheckedIndexedAccess` made some
+		// `as` casts necessary and others noise; this is what sorts them.
+		"typescript/no-unnecessary-type-assertion": "error",
+
+		// --- Not type-aware ----------------------------------------------------
+		//
+		// 12 when measured. `JSON.parse(JSON.stringify(…))` drops `undefined`-valued
+		// keys and cannot carry a `Uint8Array`; on this model the two agree only
+		// because of the JSON contract, which makes the difference invisible today and
+		// a silent divergence the moment that contract slips. See `cloneIr`.
+		// The three sites where the JSON round trip *is* the assertion carry a scoped
+		// disable saying so.
+		"unicorn/prefer-structured-clone": "error",
+		// 8 when measured, every one on a freshly built array, so `toSorted` reads the
+		// same and asserts the intent. Cheap insurance in a codebase whose whole point
+		// is not mutating models.
+		"unicorn/no-array-sort": "error",
+		// `{ "null": "ignore" }` is load bearing: the one hit is
+		// `if (link?.url == null)`, the deliberate nullish idiom. Plain `always` would
+		// force a rewrite of correct code, which is a lint rule doing harm.
+		"eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+
+		// --- Measured and deliberately off -------------------------------------
+		//
+		// Each of these was run, counted and read. They are listed rather than simply
+		// absent so that turning one on is a decision someone argues with, not a
+		// tidying pass.
+		//
+		// 8 hits, all in the loop, and every one a deliberately exhaustive switch over
+		// a closed union: `fillPaint`, `lineEndDef`, `bodyOf`, `segmentOf`, `endOf`,
+		// `paraValueComplaint`, `valueComplaint`, `fillOfBackground`. Having no
+		// `default` is what makes adding a union member a compile error;
+		// `src/parse/surface.ts` says so in as many words, and `src/render/paint.ts`
+		// keeps an unreachable `case 'none'` arm for exactly this reason. Adding a
+		// `default` to satisfy the lint would turn all eight into runtime
+		// fall-throughs and delete the guarantee.
+		"eslint/default-case": "off",
+		// 7 hits, all correct. Deleting a computed key is *how this model spells
+		// "back to inherited"*, and the rule's suggested fix — a `Map` — is
+		// incompatible with the JSON wire format the IR is defined by.
+		"typescript/no-dynamic-delete": "off",
+		// 22 hits, and the rule cannot tell the two kinds apart. Deck processing and
+		// `emit/script.ts`'s ordered `appendSlides` are sequential because the format
+		// is. The hashing loops in `src/import/assets.ts` are not, and those are worth
+		// fixing on their own terms rather than under a blanket rule.
+		"eslint/no-await-in-loop": "off",
+		// 8 hits, all `async` wrappers whose body returns a promise. Dropping `async`
+		// is *not* behaviour-preserving: an `async` function turns a synchronous throw
+		// in its body into a rejected promise, and `convertDeck(…).catch(…)` is how a
+		// consumer would expect to see one. Off, because the rule's fix trades a real
+		// property for a keyword.
+		"eslint/require-await": "off",
+		// 2 hits, both load bearing. `bytesFor: () => undefined` is a resolver
+		// declaring it has no bytes, and the rule's suggested `() => {}` infers `void`
+		// and does not typecheck against `Uint8Array | undefined`. The other is
+		// `coerceSlideModel(undefined)`, where the `undefined` is the argument under
+		// test.
+		"unicorn/no-useless-undefined": "off",
+		// 28 hits. 23 are inside `src/heuristic/extractor.ts`, the stringified payload
+		// that cannot be restructured; the rest are test helpers deliberately scoped
+		// to the `describe` they belong to. Hoisting those would spread a fixture's
+		// setup away from the tests that read it.
+		"unicorn/consistent-function-scoping": "off",
+		// 24 hits, and the rule disagrees with the compiler. It reports
+		// `element.textContent ?? ''` in `src/parse/surface.ts` as a dead branch, but
+		// `Node.textContent` is `string | null` in the same lib `tsc` reads. A gate
+		// that calls a necessary guard unnecessary teaches people to delete correct
+		// code, which is worse than no gate.
+		"typescript/no-unnecessary-condition": "off"
+	},
+
 	"overrides": [
+		{
+			// The `no-unsafe-*` family, scoped to the source tree. All 578 findings
+			// across the repo land in `src/heuristic/` (turned off again below),
+			// `examples/round-trip.mjs` and `charcheck.config.js` — untyped JS, where
+			// "unsafe" describes the language rather than the code — or a
+			// `JSON.parse` at a config boundary in `site/scripts/`.
+			//
+			// Scoping them to `src/**` rather than enabling them globally is what makes
+			// them a gate: zero findings in the loop today, so the next `any` to reach
+			// it fails the build instead of joining a backlog.
+			"files": ["src/**/*.ts"],
+			"rules": {
+				"typescript/no-unsafe-argument": "error",
+				"typescript/no-unsafe-assignment": "error",
+				"typescript/no-unsafe-call": "error",
+				"typescript/no-unsafe-member-access": "error",
+				"typescript/no-unsafe-return": "error"
+			}
+		},
 		{
 			// The heuristic lane is a byte-for-byte port of the original browser
 			// engine. Its host-side modules are now typed, but the code itself is
@@ -36,13 +156,11 @@
 			// that fight it. None of these flags a defect here; enforcing them would
 			// rewrite verbatim code wholesale and bury the real diffs.
 			//
-			// This is the same exemption biome carried, re-expressed in oxlint's rule
-			// names, and it is exactly load-bearing: these three rules account for all
-			// 11 findings in the directory and for none anywhere else.
-			//
 			// Scoped to this directory only. The loop — `index.ts`, `ir/`, `import/`,
 			// `render/`, `parse/`, `emit/`, `loop.ts` — keeps the full category, which
-			// is the point of the lane living behind its own boundary.
+			// is the point of the lane living behind its own boundary. That is also
+			// why the block above exists: the `no-unsafe-*` rules are a gate on the
+			// loop precisely because they are switched off here.
 			"files": ["src/heuristic/**/*.ts"],
 			"rules": {
 				// Unused catch bindings and unread parameters, kept as written.
@@ -50,7 +168,18 @@
 				// Over-escaped character classes in the ported regexes.
 				"no-useless-escape": "off",
 				// `...(x || {})` spreads the port uses throughout.
-				"unicorn/no-useless-fallback-in-spread": "off"
+				"unicorn/no-useless-fallback-in-spread": "off",
+				// `String(value || '')` at the two host boundaries that take `unknown`
+				// from the page. `[object Object]` is the intended answer for an object
+				// there, not an accident.
+				"typescript/no-base-to-string": "off",
+				// The port's opaque option bags: 93 / 97 / 81 / 286 / 13 findings across
+				// the five, and none anywhere else in `src/`.
+				"typescript/no-unsafe-argument": "off",
+				"typescript/no-unsafe-assignment": "off",
+				"typescript/no-unsafe-call": "off",
+				"typescript/no-unsafe-member-access": "off",
+				"typescript/no-unsafe-return": "off"
 			}
 		}
 	]

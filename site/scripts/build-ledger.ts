@@ -60,7 +60,7 @@ async function measure(): Promise<Ledger> {
 		rows.push(coverageRow(entry.name, entry.tier, view.ir))
 		for (const construct of unmatchableConstructs(view.ir.fidelity)) unmatchable.add(construct)
 	}
-	return { rows, unmatchable: [...unmatchable].sort() }
+	return { rows, unmatchable: [...unmatchable].toSorted() }
 }
 
 // ---------------------------------------------------------------------------

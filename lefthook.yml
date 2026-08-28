@@ -29,12 +29,16 @@ pre-commit:
   # oxfmt both rewrite files with `stage_fixed: true`, so they re-stage what they
   # touch; charcheck reads the staged content back out of the index. Run them at
   # once and charcheck is reading an index the other two are still writing, on the
-  # `.ts` files all three target. The jobs cost about a second together, which is
-  # not worth a race.
+  # `.ts` files all three target. The jobs are seconds, which is not worth a race.
   #
   # oxlint runs before oxfmt for the same reason `biome check` linted before it
   # formatted: a lint fix rewrites code, and formatting has to get the last word on
   # what that rewrite looks like.
+  #
+  # oxlint is the slow one now: `.oxlintrc.json` sets `typeAware`, so it builds the
+  # program before it lints and costs about eight seconds whether one file is staged
+  # or fifty. Verified rather than assumed — a single-file `--fix` neither fails nor
+  # hangs, which is the failure this note would otherwise be about.
   piped: true
   jobs:
     # Narrower glob than the formatter's below: oxlint reads JS/TS only and exits 1

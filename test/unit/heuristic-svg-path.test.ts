@@ -119,7 +119,7 @@ describe('basic shape → d', () => {
 	})
 
 	it('circle spans its diameter horizontally', () => {
-		const segs = parsePathData(circleToPathData('5', '5', '5')) as GeomSeg[]
+		const segs = parsePathData(circleToPathData('5', '5', '5'))
 		const move = segs[0] as Extract<GeomSeg, { cmd: 'move' }>
 		expect(move.x).toBeCloseTo(0, 6)
 		expect(move.y).toBeCloseTo(5, 6)

@@ -3,7 +3,7 @@ import type { RenderIr, ShapeNode, TableNode } from '../../src/ir/render'
 import { EDITABLE_PARA_PROPS, EDITABLE_RUN_PROPS, EDITABLE_SURFACE, freeze, project } from '../../src/ir/surface'
 import { SAMPLE_IR } from '../fixtures/render-ir'
 
-const clone = (ir: RenderIr): RenderIr => JSON.parse(JSON.stringify(ir)) as RenderIr
+const clone = (ir: RenderIr): RenderIr => structuredClone(ir)
 
 describe('the surface is one list, not two opinions', () => {
 	it('names every editable run property exactly once', () => {
@@ -87,6 +87,10 @@ describe('project', () => {
 		// inheritance into an explicit value on the way back.
 		const plain = projection.slides[0]?.nodes.find((node) => node.id === 's1.sp3')?.runs[0]
 		expect(plain?.props).toStrictEqual({})
+		// The JSON round trip is the assertion, not a way to copy: `structuredClone`
+		// here would prove that the model survives structured cloning, which is not
+		// the claim this test makes.
+		// oxlint-disable-next-line unicorn/prefer-structured-clone
 		expect(JSON.parse(JSON.stringify(projection))).toStrictEqual(projection)
 	})
 

@@ -11,7 +11,15 @@ model is expected to move.
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **`cloneIr(ir)`** — a deep copy of a `RenderIr`, exported beside `emuOf` and
+  `inchesOf`. It exists because the two spellings the repo was using are not
+  equivalent in general: `JSON.parse(JSON.stringify(...))` drops
+  `undefined`-valued keys and cannot carry a `Uint8Array`, and they agree on this
+  model only because of its JSON contract. A consumer holding an IR needs the
+  same guarantee, and the one that keeps working if that contract ever moves is
+  `structuredClone`.
 
 ## [0.1.2] — 2026-08-11
 

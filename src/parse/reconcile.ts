@@ -31,7 +31,7 @@
  * is the outcome a caller has to act on.
  */
 
-import type { NodeId, ParagraphProperties, RenderIr, RenderNode, RunProperties, TextBody } from '../ir/render'
+import { cloneIr, type NodeId, type ParagraphProperties, type RenderIr, type RenderNode, type RunProperties, type TextBody } from '../ir/render'
 import {
 	EDITABLE_PARA_PROPS,
 	EDITABLE_RUN_PROPS,
@@ -68,10 +68,9 @@ export interface Reconciliation {
  * browser, and the browser tests only have to prove that the reading is faithful.
  */
 export function reconcile(ir: RenderIr, reading: SurfaceReading): Reconciliation {
-	// The IR is JSON-safe by contract, so this is a deep clone. The island's own
-	// model is never mutated: it is what `modelHash` covers, and a caller comparing
-	// the two afterwards must be able to.
-	const next = JSON.parse(JSON.stringify(ir)) as RenderIr
+	// The island's own model is never mutated: it is what `modelHash` covers, and a
+	// caller comparing the two afterwards must be able to.
+	const next = cloneIr(ir)
 	const warnings: string[] = []
 
 	const deleted = new Set(reading.deleted)

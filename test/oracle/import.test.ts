@@ -49,6 +49,10 @@ describe('the imported model survives the JSON island', () => {
 			const offenders: string[] = []
 			walk(ir, '$', offenders)
 			expect(offenders).toEqual([])
+			// The JSON round trip is the assertion, not a way to copy: `structuredClone`
+			// here would prove that the model survives structured cloning, which is not
+			// the claim this test makes.
+			// oxlint-disable-next-line unicorn/prefer-structured-clone
 			expect(JSON.parse(JSON.stringify(ir))).toStrictEqual(ir)
 		})
 	}

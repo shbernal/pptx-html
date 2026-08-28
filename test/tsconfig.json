@@ -1,0 +1,11 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	// A one-line re-export of `../tsconfig.test.json`, which is what `pnpm run
+	// typecheck` invokes. It exists so that tools resolving a tsconfig by walking
+	// up from a file find the test project's options rather than the source
+	// project's, which excludes `test/` and would leave them on defaults.
+	// Type-aware linting is the one that cares: without this, every
+	// `noUncheckedIndexedAccess` guard in a test reads as a condition that can
+	// never fire.
+	"extends": "../tsconfig.test.json"
+}

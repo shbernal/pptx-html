@@ -27,7 +27,7 @@
  * `insertSlide`/`moveSlide`, so emit builds decks in append order.
  */
 
-import type { NodeId, NodeKind, ParagraphProperties, RenderIr, RenderNode, RunProperties } from './render'
+import { cloneIr, type NodeId, type NodeKind, type ParagraphProperties, type RenderIr, type RenderNode, type RunProperties } from './render'
 
 /**
  * The character properties inside the surface, and the single place they are
@@ -337,8 +337,7 @@ export function editableParaProps(
  * removes the values a deletion-aware comparison must not look at.
  */
 export function freeze(ir: RenderIr): RenderIr {
-	// The IR is JSON-safe by contract (see `./render`), so this is a deep clone.
-	const clone = JSON.parse(JSON.stringify(ir)) as RenderIr
+	const clone = cloneIr(ir)
 	for (const slide of clone.slides) {
 		for (const node of slide.nodes) stripNode(node)
 	}

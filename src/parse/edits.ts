@@ -435,7 +435,11 @@ function paraOptionValue(key: EditableParaProp, value: NonNullable<ParagraphProp
 	if (bullet.font !== undefined || bullet.color !== undefined || bullet.sizePct !== undefined) {
 		return unspellable('a bullet glyph carrying its own font, size or colour')
 	}
-	const points = [...bullet.char]
+	// Code points, not UTF-16 units: `a:buChar/@char` is one character, and a
+	// glyph outside the BMP is one character that `String.length` calls two.
+	// `Array.from` iterates the string the same way spreading it would, without
+	// reading as the accidental spread that mangles such a glyph.
+	const points = Array.from(bullet.char)
 	if (points.length !== 1) return unspellable(`the ${points.length}-character glyph ${JSON.stringify(bullet.char)}`)
 	return { characterCode: (bullet.char.codePointAt(0) as number).toString(16).toUpperCase().padStart(4, '0') }
 }
@@ -494,7 +498,7 @@ export interface AppliedEdits {
 export function applyEdits(deck: DeckIr, structure: RenderIr, edits: EditSet): AppliedEdits {
 	if (isEmpty(edits)) return { deck, warnings: [] }
 
-	const next = structuredClone(deck) as DeckIr
+	const next = structuredClone(deck)
 	const warnings: string[] = []
 
 	// Reported once per paragraph, before the walk, rather than inside `patchRuns`

@@ -36,7 +36,6 @@ import {
 	cellNodeId,
 	chromeNodeId,
 	type Connection,
-	type EdgeRect,
 	importedNodeId,
 	type NodeId,
 	type OpaqueNode,
@@ -201,7 +200,7 @@ function pictureNodeOf(picture: Picture, scope: ImportScope): RenderNode {
 		kind: 'picture',
 		render: 'drawn',
 		asset,
-		...(crop === null ? {} : { crop: crop as EdgeRect }),
+		...(crop === null ? {} : { crop }),
 		geometry: geometryOf(picture, scope),
 		stroke: strokeOf(picture, scope),
 	}

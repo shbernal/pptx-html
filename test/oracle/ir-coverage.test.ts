@@ -53,7 +53,7 @@ async function kindsOf(name: string): Promise<Set<NodeKind>> {
 
 describe('every node kind has a deck behind it', () => {
 	it('claims a corpus deck for each kind', () => {
-		expect(Object.keys(EXERCISED_BY).sort()).toEqual([...NODE_KINDS].sort())
+		expect(Object.keys(EXERCISED_BY).toSorted()).toEqual([...NODE_KINDS].toSorted())
 		for (const kind of NODE_KINDS) expect(EXERCISED_BY[kind].length).toBeGreaterThan(0)
 	})
 

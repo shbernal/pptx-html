@@ -63,7 +63,7 @@ export function readDocsSource(): DocsSource {
 	const slugs = readdirSync(DOCS_DIR)
 		.filter((name) => name.endsWith('.md'))
 		.map((name) => name.slice(0, -3))
-		.sort()
+		.toSorted()
 	const listed = nav.navigation.flatMap((group) => group.pages)
 
 	const duplicated = listed.filter((slug, i) => listed.indexOf(slug) !== i)

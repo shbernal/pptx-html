@@ -9,7 +9,6 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import type { RenderIr } from '../../src/ir/render'
 import { renderDeck } from '../../src/render/document'
 import { escapeForScript, INTEGRITY_ID, ISLAND_ID, integrityOf, islandTextOf } from '../../src/render/island'
 import { SAMPLE_IR } from '../fixtures/render-ir'
@@ -28,7 +27,7 @@ describe('escaping', () => {
 		// The failure this prevents is not a mangled string: the HTML tokenizer would
 		// end the script element early, the rest of the model would be parsed as
 		// markup, and the document would still *look* fine.
-		const hostile: RenderIr = JSON.parse(JSON.stringify(SAMPLE_IR))
+		const hostile = structuredClone(SAMPLE_IR)
 		const shape = hostile.slides[0]?.nodes.find((node) => node.kind === 'shape')
 		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]?.runs[0]) throw new Error('fixture shape changed')
 		shape.text.paragraphs[0].runs[0].text = 'a </script><img src=x> b'
@@ -53,7 +52,7 @@ describe('the two hashes', () => {
 		// leaving `surfaceHash` alone, so the parser can tell drift from an edit.
 		const before = await integrityOf(SAMPLE_IR, islandTextOf(SAMPLE_IR))
 
-		const moved: RenderIr = JSON.parse(JSON.stringify(SAMPLE_IR))
+		const moved = structuredClone(SAMPLE_IR)
 		const shape = moved.slides[0]?.nodes.find((node) => node.kind === 'shape')
 		if (shape?.kind !== 'shape' || shape.placement === null) throw new Error('fixture shape changed')
 		shape.placement.box.x += 1
@@ -66,7 +65,7 @@ describe('the two hashes', () => {
 	it('moves both when the edit is inside the surface', async () => {
 		const before = await integrityOf(SAMPLE_IR, islandTextOf(SAMPLE_IR))
 
-		const edited: RenderIr = JSON.parse(JSON.stringify(SAMPLE_IR))
+		const edited = structuredClone(SAMPLE_IR)
 		const shape = edited.slides[0]?.nodes.find((node) => node.kind === 'shape')
 		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]?.runs[0]) throw new Error('fixture shape changed')
 		shape.text.paragraphs[0].runs[0].text += ' edited'
@@ -91,7 +90,7 @@ describe('the renderer is read-only', () => {
 		// The trap the renderer is most likely to fall into later: normalizing a colour or
 		// clamping a box back into the model. It breaks Invariant R somewhere else
 		// entirely, so it is asserted here rather than left to review.
-		const untouched = JSON.parse(JSON.stringify(SAMPLE_IR))
+		const untouched = structuredClone(SAMPLE_IR)
 		await renderDeck(SAMPLE_IR, NO_ASSETS)
 		expect(SAMPLE_IR).toStrictEqual(untouched)
 	})
@@ -118,7 +117,7 @@ describe('line ends', () => {
 			arrow: 'M 0 0 L 10 5 L 0 10',
 		} as const
 		for (const [type, geometry] of Object.entries(expected)) {
-			const ir: RenderIr = JSON.parse(JSON.stringify(SAMPLE_IR))
+			const ir = structuredClone(SAMPLE_IR)
 			const connector = ir.slides[0]?.nodes.find((node) => node.kind === 'connector')
 			if (connector?.kind !== 'connector' || connector.stroke.kind !== 'line')
 				throw new Error('fixture connector changed')

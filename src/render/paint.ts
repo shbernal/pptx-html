@@ -218,8 +218,13 @@ export function strokePaint(stroke: Stroke, defs: Defs): Painted {
 	}
 }
 
-/** Small/medium/large line-end classes as factors of the medium marker. */
-function lineEndScale(size: LineEnd['width'] | LineEnd['length']): number {
+/**
+ * Small/medium/large line-end classes as factors of the medium marker.
+ *
+ * `LineEnd['width']` stands in for both axes: OOXML gives `@w` and `@len` the
+ * same three classes, so one spelling covers a caller passing either.
+ */
+function lineEndScale(size: LineEnd['width']): number {
 	if (size === 'sm') return 0.5
 	if (size === 'lg') return 1.5
 	return 1

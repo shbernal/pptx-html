@@ -119,7 +119,9 @@ export async function settleFrame(frame: SlideFrame): Promise<void> {
 		})
 	)
 	try {
-		if (doc.fonts?.ready) await Promise.race([doc.fonts.ready, wait(3000)])
+		// `doc.fonts` is what may be absent; `ready` is a promise, and testing a
+		// promise for truthiness answers yes whatever it resolves to.
+		if (doc.fonts) await Promise.race([doc.fonts.ready, wait(3000)])
 	} catch {
 		/* fonts API unavailable */
 	}

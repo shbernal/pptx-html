@@ -198,7 +198,7 @@ export async function browserExtractor(config) {
 		stops.forEach((stop, index) => {
 			if (stop.pos == null) stop.pos = stops.length === 1 ? 0 : index / (stops.length - 1)
 		})
-		return stops.sort((a, b) => a.pos - b.pos || a.index - b.index)
+		return stops.toSorted((a, b) => a.pos - b.pos || a.index - b.index)
 	}
 
 	function gradientLine(width, height, args) {

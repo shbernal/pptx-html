@@ -46,7 +46,7 @@ export function coverageRow(deck: string, tier: string, ir: DeckIr): CoverageRow
 		carried: ir.slides.filter((slide) => slide.source === 'carried').length,
 		calls: ir.slides.reduce((total, slide) => total + slide.calls.length, 0),
 		cells,
-		constructs: [...new Set(ir.fidelity.map((note) => note.construct))].sort(),
+		constructs: [...new Set(ir.fidelity.map((note) => note.construct))].toSorted(),
 	}
 }
 
@@ -66,7 +66,7 @@ export function coverageRow(deck: string, tier: string, ir: DeckIr): CoverageRow
 export function unmatchableConstructs(notes: FidelityNote[]): string[] {
 	return [...new Set(notes.map((note) => note.construct))]
 		.filter((construct) => !isKnownNoteConstruct(construct))
-		.sort()
+		.toSorted()
 }
 
 function pad(value: string, width: number): string {

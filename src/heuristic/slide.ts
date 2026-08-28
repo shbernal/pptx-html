@@ -36,7 +36,7 @@ function imageRef(src: string): { data: string } | { path: string } {
 function sortedItems(items: Item[]): Item[] {
 	return items
 		.map((item, index) => ({ item, index, z: Number.isFinite(item.z) ? item.z : 0 }))
-		.sort((a, b) => a.z - b.z || a.index - b.index)
+		.toSorted((a, b) => a.z - b.z || a.index - b.index)
 		.map((entry) => entry.item)
 }
 

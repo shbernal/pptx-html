@@ -89,7 +89,7 @@ function stopOf(stop: ReadGradientStop): GradientStop | null {
 			: { kind: 'scheme', slot: stop.schemeColor as SchemeToken, transforms: [], effectiveHex: hex }
 	return {
 		position: stop.position ?? 0,
-		color: stop.alpha === undefined ? color : ({ ...color, alpha: stop.alpha } as Color),
+		color: stop.alpha === undefined ? color : { ...color, alpha: stop.alpha },
 	}
 }
 

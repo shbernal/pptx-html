@@ -20,7 +20,7 @@ const NO_ASSETS = { assets: 'ref' } as const
 
 /** `SAMPLE_IR` with one run's text replaced. */
 function withText(text: string): RenderIr {
-	const ir = structuredClone(SAMPLE_IR) as RenderIr
+	const ir = structuredClone(SAMPLE_IR)
 	const shape = ir.slides[0]?.nodes.find((node) => node.kind === 'shape')
 	if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]?.runs[0]) throw new Error('fixture shape changed')
 	shape.text.paragraphs[0].runs[0].text = text

@@ -26,6 +26,10 @@ describe('the IR survives the JSON island', () => {
 		// back. `toStrictEqual` rather than `toEqual` on purpose: it distinguishes
 		// a missing key from a key holding `undefined`, which is exactly the
 		// distinction JSON erases and the one the model forbids.
+		// The JSON round trip is the assertion, not a way to copy: `structuredClone`
+		// here would prove that the model survives structured cloning, which is not
+		// the claim this test makes.
+		// oxlint-disable-next-line unicorn/prefer-structured-clone
 		expect(JSON.parse(JSON.stringify(SAMPLE_IR))).toStrictEqual(SAMPLE_IR)
 	})
 

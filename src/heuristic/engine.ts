@@ -24,7 +24,7 @@ import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
 import { DEFAULT_FONT, EMU_PER_IN } from '../constants'
 import { createHiddenFrame, settleFrame } from './frame'
 import { defaultResolveIcon, type IconResolver, inlineDeckIcons } from './icons'
-import type { Item, SlideModel, SlideSize } from './model'
+import type { SlideModel, SlideSize } from './model'
 import { composeSlideDocument, parseDeckHtml } from './parse'
 import type { PptxDeck } from './pptx-types'
 import { readSlideModel } from './read'
@@ -112,7 +112,7 @@ function getPptSize(pptx: PptxDeck): SlideSize {
 function collectWarnings(model: SlideModel, size: SlideSize): string[] {
 	const warnings: string[] = []
 	const tolerance = 0.03
-	for (const item of model.items as Item[]) {
+	for (const item of model.items) {
 		const p = item.position
 		if (!p) continue
 		const over: string[] = []

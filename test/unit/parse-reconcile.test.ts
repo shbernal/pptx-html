@@ -15,14 +15,14 @@
 
 import { describe, expect, it } from 'vitest'
 import type { RenderIr } from '../../src/ir/render'
-import { project, type SanctionedProjection } from '../../src/ir/surface'
+import { project } from '../../src/ir/surface'
 import { reconcile } from '../../src/parse/reconcile'
 import type { SurfaceReading } from '../../src/parse/surface'
 import { SAMPLE_IR } from '../fixtures/render-ir'
 
 /** A reading that says "nothing changed" — the baseline every case below perturbs. */
 function unchanged(ir: RenderIr): SurfaceReading {
-	return { projection: structuredClone(project(ir)) as SanctionedProjection, deleted: [], anomalies: [] }
+	return { projection: structuredClone(project(ir)), deleted: [], anomalies: [] }
 }
 
 /** The first run of the first node that has one, by address. */

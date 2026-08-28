@@ -93,6 +93,25 @@ export function emuOf(inches: number): number {
 	return Math.round(inches * EMU_PER_INCH)
 }
 
+/**
+ * A deep copy of a `RenderIr`.
+ *
+ * One function rather than a spelling repeated at each call site, because the
+ * two spellings that were in use are not equivalent in general:
+ * `JSON.parse(JSON.stringify(…))` drops `undefined`-valued keys and cannot carry
+ * a `Uint8Array`, and `structuredClone` does both. They agree on this model only
+ * because of the JSON contract above — which is to say the difference is
+ * invisible today and would become a silent divergence the moment that contract
+ * slipped. `structuredClone` is the one that keeps working either way.
+ *
+ * `DeckIr` is a different question and deliberately not this function's:
+ * `assets[].bytes` is a `Uint8Array`, so it must be `structuredClone` rather than
+ * may be.
+ */
+export function cloneIr(ir: RenderIr): RenderIr {
+	return structuredClone(ir)
+}
+
 // ---------------------------------------------------------------------------
 // Identity
 // ---------------------------------------------------------------------------

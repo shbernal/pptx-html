@@ -15,7 +15,7 @@ import { Presentation } from '@shbernal/ts-pptx/read'
 import { readModelToIr } from '@shbernal/ts-pptx/script'
 import { describe, expect, it } from 'vitest'
 import { importDeck, importPresentation } from '../../src/import/deck'
-import { IR_VERSION, type RenderIr } from '../../src/ir/render'
+import { IR_VERSION } from '../../src/ir/render'
 import { emitDeck } from '../../src/loop'
 import { parseDeck } from '../../src/parse/deck'
 import { applyEdits, editsBetween } from '../../src/parse/edits'
@@ -616,7 +616,7 @@ describe('the island survives what a deck can contain', () => {
 	it('round-trips a run whose text would end the script block', async () => {
 		const source = await entry('text-box')
 		const imported = await importDeck(source)
-		const hostile: RenderIr = JSON.parse(JSON.stringify(imported.render))
+		const hostile = structuredClone(imported.render)
 		const shape = hostile.slides[0]?.nodes[0]
 		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]?.runs[0]) throw new Error('fixture changed')
 		shape.text.paragraphs[0].runs[0].text = '</script><img src=x onerror=alert(1)>'
