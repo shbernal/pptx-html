@@ -36,7 +36,7 @@
  * would put inference back into the trusted path.
  */
 
-import type { NodeId, ParagraphProperties, RenderIr, RunProperties } from '../ir/render'
+import { eachNode, type NodeId, type ParagraphProperties, type RenderIr, type RunProperties } from '../ir/render'
 import {
 	EDITABLE_PARA_PROPS,
 	EDITABLE_RUN_PROPS,
@@ -62,35 +62,62 @@ export interface SurfaceReading {
 	anomalies: string[]
 }
 
-/** `data-pxh-props`, validated. Anything unexpected is refused rather than coerced. */
-function readProps(raw: string | null, address: string, anomalies: string[]): Pick<RunProperties, EditableRunProp> {
-	if (raw === null) return {}
+/**
+ * One `data-pxh-*` attribute, validated. Anything unexpected is refused rather
+ * than coerced.
+ *
+ * The two tiers share this and did not always, and the reason they can is worth
+ * keeping. The old comment argued that a shared reader "would have to be keyed
+ * off a union, which is precisely the sort of one-of-the-two indirection that
+ * lets a value from one tier be accepted on the other" — and it is right about
+ * the union. It does not follow that they cannot share anything: this reader is
+ * **generic over the key type**, not keyed off a union of the two. Instantiate it
+ * at `EditableRunProp` and only run-tier keys typecheck; instantiate it at
+ * `EditableParaProp` and only paragraph-tier ones do. The per-value gates stay
+ * exactly as they were, each exhaustive over its own key type, which is where the
+ * safety actually lives.
+ *
+ * `label` and `attribute` are what keep the anomaly wording identical to what the
+ * two readers said separately: a message naming the wrong attribute is worse than
+ * a duplicated function.
+ */
+function readStatedProps<K extends string, P>(
+	raw: string | null,
+	keys: readonly K[],
+	complaint: (key: K, value: unknown) => string | null,
+	narrow: (picked: Record<string, unknown>) => P,
+	label: string,
+	attribute: string,
+	address: string,
+	anomalies: string[]
+): P {
+	if (raw === null) return narrow({})
 	let parsed: unknown
 	try {
 		parsed = JSON.parse(raw)
 	} catch {
-		anomalies.push(`run ${address}: data-pxh-props is not JSON; the run's stated formatting was kept`)
-		return {}
+		anomalies.push(`${label} ${address}: ${attribute} is not JSON; the ${label}'s stated formatting was kept`)
+		return narrow({})
 	}
 	if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-		anomalies.push(`run ${address}: data-pxh-props is not an object; the run's stated formatting was kept`)
-		return {}
+		anomalies.push(`${label} ${address}: ${attribute} is not an object; the ${label}'s stated formatting was kept`)
+		return narrow({})
 	}
 
 	const entries = parsed as Record<string, unknown>
 	for (const key of Object.keys(entries)) {
-		if (!(EDITABLE_RUN_PROPS as readonly string[]).includes(key)) {
-			anomalies.push(`run ${address}: data-pxh-props carries ${JSON.stringify(key)}, which is not in the editable surface`)
+		if (!(keys as readonly string[]).includes(key)) {
+			anomalies.push(`${label} ${address}: ${attribute} carries ${JSON.stringify(key)}, which is not in the editable surface`)
 		}
 	}
 
 	const picked: Record<string, unknown> = {}
-	for (const key of EDITABLE_RUN_PROPS) {
+	for (const key of keys) {
 		const value = entries[key]
 		if (value === undefined) continue
-		const complaint = valueComplaint(key, value)
-		if (complaint !== null) {
-			anomalies.push(`run ${address}: data-pxh-props.${key} ${complaint}`)
+		const wrong = complaint(key, value)
+		if (wrong !== null) {
+			anomalies.push(`${label} ${address}: ${attribute}.${key} ${wrong}`)
 			continue
 		}
 		picked[key] = value
@@ -98,57 +125,39 @@ function readProps(raw: string | null, address: string, anomalies: string[]): Pi
 	// Back through the same narrowing the renderer wrote it with, so an unedited
 	// document's projection is not merely equal but *identically serialized* — the
 	// two hashes are compared as strings and key order is part of a JSON string.
-	return editableRunProps(picked)
+	return narrow(picked)
 }
 
-/**
- * `data-pxh-paraprops`, validated the same way and by the same rules.
- *
- * Kept as its own function rather than folded into {@link readProps} with a
- * parameterised key list: the two attributes carry different property sets and
- * different value shapes, and a shared reader would have to be keyed off a union,
- * which is precisely the sort of "one of the two" indirection that lets a value
- * from one tier be accepted on the other.
- */
+/** `data-pxh-props`, validated. */
+function readProps(raw: string | null, address: string, anomalies: string[]): Pick<RunProperties, EditableRunProp> {
+	return readStatedProps(
+		raw,
+		EDITABLE_RUN_PROPS,
+		valueComplaint,
+		editableRunProps,
+		'run',
+		'data-pxh-props',
+		address,
+		anomalies
+	)
+}
+
+/** `data-pxh-paraprops`, validated the same way and by the same rules. */
 function readParaProps(
 	raw: string | null,
 	address: string,
 	anomalies: string[]
 ): Pick<ParagraphProperties, EditableParaProp> {
-	if (raw === null) return {}
-	let parsed: unknown
-	try {
-		parsed = JSON.parse(raw)
-	} catch {
-		anomalies.push(`paragraph ${address}: data-pxh-paraprops is not JSON; the paragraph's stated formatting was kept`)
-		return {}
-	}
-	if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-		anomalies.push(`paragraph ${address}: data-pxh-paraprops is not an object; the paragraph's stated formatting was kept`)
-		return {}
-	}
-
-	const entries = parsed as Record<string, unknown>
-	for (const key of Object.keys(entries)) {
-		if (!(EDITABLE_PARA_PROPS as readonly string[]).includes(key)) {
-			anomalies.push(
-				`paragraph ${address}: data-pxh-paraprops carries ${JSON.stringify(key)}, which is not in the editable surface`
-			)
-		}
-	}
-
-	const picked: Record<string, unknown> = {}
-	for (const key of EDITABLE_PARA_PROPS) {
-		const value = entries[key]
-		if (value === undefined) continue
-		const complaint = paraValueComplaint(key, value)
-		if (complaint !== null) {
-			anomalies.push(`paragraph ${address}: data-pxh-paraprops.${key} ${complaint}`)
-			continue
-		}
-		picked[key] = value
-	}
-	return editableParaProps(picked)
+	return readStatedProps(
+		raw,
+		EDITABLE_PARA_PROPS,
+		paraValueComplaint,
+		editableParaProps,
+		'paragraph',
+		'data-pxh-paraprops',
+		address,
+		anomalies
+	)
 }
 
 /** The four `a:pPr/@algn` values the write API expresses, and the only four `align` may be. */
@@ -333,15 +342,27 @@ export function readSurface(root: ParentNode, ir: RenderIr): SurfaceReading {
 	return { projection: { irVersion: island.irVersion, slides }, deleted, anomalies }
 }
 
+/**
+ * The ids the renderer would have drawn, which is what separates *a sanctioned
+ * deletion* from *never drawn* — get that backwards and a shape leaves the deck
+ * on every round trip.
+ *
+ * **A placement-less node prunes its whole subtree**, and that is the rule rather
+ * than an accident of where the check sits. `render/node.ts` returns before it
+ * reaches a group's children, so nothing inside a group with no box is in the
+ * document either, and a child marked drawn would be read back as deleted.
+ */
 function collectDrawn(nodes: RenderIr['slides'][number]['nodes'], into: Set<NodeId>): void {
-	for (const node of nodes) {
-		if (node.placement === null) continue
+	eachNode(nodes, (node) => {
+		if (node.placement === null) return false
 		into.add(node.id)
-		if (node.kind === 'group') collectDrawn(node.children, into)
+		// A cell has an id of its own and no placement of its own; it is drawn
+		// exactly when its table is.
 		if (node.kind === 'table') {
 			for (const row of node.rows) for (const cell of row.cells) into.add(cell.id)
 		}
-	}
+		return true
+	})
 }
 
 /**

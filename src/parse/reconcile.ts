@@ -31,7 +31,7 @@
  * is the outcome a caller has to act on.
  */
 
-import { cloneIr, type NodeId, type ParagraphProperties, type RenderIr, type RenderNode, type RunProperties, type TextBody } from '../ir/render'
+import { cloneIr, eachTextBody, type NodeId, type ParagraphProperties, type RenderIr, type RenderNode, type RunProperties, type TextBody } from '../ir/render'
 import {
 	EDITABLE_PARA_PROPS,
 	EDITABLE_RUN_PROPS,
@@ -106,7 +106,7 @@ export function reconcile(ir: RenderIr, reading: SurfaceReading): Reconciliation
 		edits += slide.nodes.length - kept.length
 		slide.nodes = kept
 
-		for (const node of slide.nodes) edits += applyRuns(node, readRuns, readParagraphs)
+		edits += applyRuns(slide.nodes, readRuns, readParagraphs)
 
 		const notes = anomaliesBySlide.get(slide.number) ?? []
 		const lane: Lane = notes.length > 0 ? 'drifted' : edits > 0 ? 'reconciled' : 'exact'
@@ -135,22 +135,15 @@ function pruneDeleted(node: RenderNode, deleted: ReadonlySet<NodeId>): number {
 }
 
 function applyRuns(
-	node: RenderNode,
+	nodes: readonly RenderNode[],
 	read: ReadonlyMap<string, ProjectedRun>,
 	readParagraphs: ReadonlyMap<string, ProjectedParagraph>
 ): number {
-	if (node.kind === 'group') {
-		return node.children.reduce((sum, child) => sum + applyRuns(child, read, readParagraphs), 0)
-	}
-	if (node.kind === 'shape') return applyText(node.id, node.text, read, readParagraphs)
-	if (node.kind === 'table') {
-		let edits = 0
-		for (const row of node.rows) {
-			for (const cell of row.cells) edits += applyText(cell.id, cell.text, read, readParagraphs)
-		}
-		return edits
-	}
-	return 0
+	let edits = 0
+	eachTextBody(nodes, (owner, text) => {
+		edits += applyText(owner, text, read, readParagraphs)
+	})
+	return edits
 }
 
 function applyText(

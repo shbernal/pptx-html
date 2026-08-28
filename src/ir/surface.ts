@@ -27,7 +27,17 @@
  * `insertSlide`/`moveSlide`, so emit builds decks in append order.
  */
 
-import { cloneIr, type NodeId, type NodeKind, type ParagraphProperties, type RenderIr, type RenderNode, type RunProperties } from './render'
+import {
+	cloneIr,
+	eachTextBody,
+	type NodeId,
+	type NodeKind,
+	type ParagraphProperties,
+	type RenderIr,
+	type RenderNode,
+	type RunProperties,
+	type TextBody,
+} from './render'
 
 /**
  * The character properties inside the surface, and the single place they are
@@ -231,28 +241,20 @@ export function project(ir: RenderIr): SanctionedProjection {
 
 function projectNode(node: RenderNode): ProjectedNode[] {
 	// A group contributes nothing of its own but everything its children hold;
-	// flattening here is what keeps addressing by node id rather than by path.
+	// flattening here is what keeps addressing by node id rather than by path. It
+	// is the one arm this function still decides, because the projection groups by
+	// *top-level* node while `eachTextBody` flattens all the way down.
 	if (node.kind === 'group') return node.children.flatMap(projectNode)
 
 	const paragraphs: ProjectedParagraph[] = []
 	const runs: ProjectedRun[] = []
-	if (node.kind === 'shape') collectText(node.id, node.text, paragraphs, runs)
-	if (node.kind === 'table') {
-		for (const row of node.rows) {
-			for (const cell of row.cells) collectText(cell.id, cell.text, paragraphs, runs)
-		}
-	}
+	eachTextBody([node], (owner, text) => collectText(owner, text, paragraphs, runs))
 	return [{ id: node.id, kind: node.kind, paragraphs, runs }]
 }
 
-/** The shape {@link collectText} needs; both `ShapeNode.text` and `TableCell.text` satisfy it. */
-type TextBodyLike = {
-	paragraphs: { props: ParagraphProperties; runs: { text: string; props: RunProperties }[] }[]
-} | null
-
 function collectText(
 	owner: NodeId,
-	text: TextBodyLike,
+	text: TextBody | null,
 	intoParagraphs: ProjectedParagraph[],
 	intoRuns: ProjectedRun[]
 ): void {
@@ -287,14 +289,7 @@ function collectText(
  * fact from what the browser painted, and only the first is in surface.
  */
 export function editableRunProps(props: RunProperties): Pick<RunProperties, EditableRunProp> {
-	const picked: Pick<RunProperties, EditableRunProp> = {}
-	for (const key of EDITABLE_RUN_PROPS) {
-		// Assign only what is stated. An absent key means *inherited*, and writing
-		// `undefined` instead would both break the JSON island's "absence has one
-		// spelling" rule and turn inheritance into an explicit value.
-		if (props[key] !== undefined) Object.assign(picked, { [key]: props[key] })
-	}
-	return picked
+	return pickStated(props, EDITABLE_RUN_PROPS)
 }
 
 /**
@@ -311,9 +306,25 @@ export function editableRunProps(props: RunProperties): Pick<RunProperties, Edit
 export function editableParaProps(
 	props: Pick<ParagraphProperties, EditableParaProp>
 ): Pick<ParagraphProperties, EditableParaProp> {
-	const picked: Pick<ParagraphProperties, EditableParaProp> = {}
-	for (const key of EDITABLE_PARA_PROPS) {
-		if (props[key] !== undefined) Object.assign(picked, { [key]: props[key] })
+	return pickStated(props, EDITABLE_PARA_PROPS)
+}
+
+/**
+ * The keys of `keys` that `props` actually states.
+ *
+ * **Assign only what is stated.** An absent key means *inherited*, and writing
+ * `undefined` instead would both break the JSON island's "absence has one
+ * spelling" rule and turn inheritance into an explicit value. That is the whole
+ * of this function, and it is why the two wrappers above are wrappers rather than
+ * two copies: it is one rule about absence, applied to two key lists.
+ *
+ * Generic over the key rather than over a union of the two property types, so a
+ * run key cannot be picked off a paragraph's props or the reverse.
+ */
+function pickStated<P, K extends keyof P>(props: P, keys: readonly K[]): Pick<P, K> {
+	const picked = {} as Pick<P, K>
+	for (const key of keys) {
+		if (props[key] !== undefined) picked[key] = props[key]
 	}
 	return picked
 }
@@ -362,26 +373,15 @@ export function sameSurfaceValue(a: unknown, b: unknown): boolean {
  */
 export function freeze(ir: RenderIr): RenderIr {
 	const clone = cloneIr(ir)
-	for (const slide of clone.slides) {
-		for (const node of slide.nodes) stripNode(node)
-	}
+	// `slide.nodes` and not `slide.chrome`: a chrome shape belongs to the layout
+	// and master parts, so a change to one is drift rather than an edit, and it
+	// stays in the hash. That is a decision here rather than a flag on the
+	// traversal, which is what keeps it from being an argument someone passes wrong.
+	for (const slide of clone.slides) eachTextBody(slide.nodes, (_owner, text) => stripText(text))
 	return clone
 }
 
-function stripNode(node: RenderNode): void {
-	if (node.kind === 'group') {
-		for (const child of node.children) stripNode(child)
-		return
-	}
-	if (node.kind === 'shape') stripText(node.text)
-	if (node.kind === 'table') {
-		for (const row of node.rows) {
-			for (const cell of row.cells) stripText(cell.text)
-		}
-	}
-}
-
-function stripText(text: TextBodyLike): void {
+function stripText(text: TextBody | null): void {
 	if (!text) return
 	for (const paragraph of text.paragraphs) {
 		for (const key of EDITABLE_PARA_PROPS) delete paragraph.props[key]

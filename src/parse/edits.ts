@@ -36,15 +36,17 @@
  */
 
 import type { CallIr, DeckIr, IrValue } from '@shbernal/ts-pptx/script'
-import type {
-	Bullet,
-	Color,
-	NodeId,
-	ParagraphProperties,
-	RenderIr,
-	RenderNode,
-	RunProperties,
-	TextBody,
+import {
+	type Bullet,
+	type Color,
+	eachNode,
+	eachTextBody,
+	type NodeId,
+	type ParagraphProperties,
+	type RenderIr,
+	type RenderNode,
+	type RunProperties,
+	type TextBody,
 } from '../ir/render'
 import {
 	EDITABLE_PARA_PROPS,
@@ -216,9 +218,8 @@ export function editsBetween(before: RenderIr, after: RenderIr): EditSet {
 			// has left the loop and is not owed a reconstruction of what it meant.
 			throw new Error(`slide ${slide.number} is missing from the edited model, and slide removal is not in the editable surface`)
 		}
-		const surviving = new Set<NodeId>()
-		collectIds(now.nodes, surviving)
-		diffNodes(slide.nodes, indexById(now.nodes), surviving, { runs, paragraphs }, deleted)
+		markDeleted(slide.nodes, now.nodes, deleted)
+		diffText(slide.nodes, now.nodes, { runs, paragraphs })
 	}
 
 	return { runs, paragraphs, deleted }
@@ -230,54 +231,41 @@ interface TextEdits {
 	paragraphs: Map<string, ParaEdit>
 }
 
-function collectIds(nodes: readonly RenderNode[], into: Set<NodeId>): void {
-	for (const node of nodes) {
-		into.add(node.id)
-		if (node.kind === 'group') collectIds(node.children, into)
-	}
+/**
+ * Nodes present before and gone after. A deleted node prunes its own subtree: a
+ * caller that removed a group said one thing, and reporting every descendant as
+ * separately deleted would turn it into several.
+ */
+function markDeleted(before: readonly RenderNode[], after: readonly RenderNode[], deleted: Set<NodeId>): void {
+	const surviving = new Set<NodeId>()
+	eachNode(after, (node) => {
+		surviving.add(node.id)
+	})
+	eachNode(before, (node) => {
+		if (surviving.has(node.id)) return true
+		deleted.add(node.id)
+		return false
+	})
 }
 
-function indexById(nodes: readonly RenderNode[]): Map<NodeId, RenderNode> {
-	const index = new Map<NodeId, RenderNode>()
-	const walk = (list: readonly RenderNode[]): void => {
-		for (const node of list) {
-			index.set(node.id, node)
-			if (node.kind === 'group') walk(node.children)
-		}
-	}
-	walk(nodes)
-	return index
-}
-
-function diffNodes(
-	nodes: readonly RenderNode[],
-	after: ReadonlyMap<NodeId, RenderNode>,
-	surviving: ReadonlySet<NodeId>,
-	edits: TextEdits,
-	deleted: Set<NodeId>
-): void {
-	for (const node of nodes) {
-		if (!surviving.has(node.id)) {
-			deleted.add(node.id)
-			continue
-		}
-		const now = after.get(node.id)
-		if (now === undefined || now.kind !== node.kind) continue
-
-		if (node.kind === 'group' && now.kind === 'group') {
-			diffNodes(node.children, after, surviving, edits, deleted)
-			continue
-		}
-		if (node.kind === 'shape' && now.kind === 'shape') diffText(node.id, node.text, now.text, edits)
-		if (node.kind === 'table' && now.kind === 'table') {
-			node.rows.forEach((row, rowIndex) => {
-				row.cells.forEach((cell, cellIndex) => {
-					const cellNow = now.rows[rowIndex]?.cells[cellIndex]
-					if (cellNow !== undefined) diffText(cell.id, cell.text, cellNow.text, edits)
-				})
-			})
-		}
-	}
+/**
+ * Every text body that is on both sides, joined **by node id**.
+ *
+ * Not by position, and that is the point: `docs/architecture.md` says a node's
+ * identity is derived from the source precisely so the differ aligns the two
+ * sides by it. A pairing by index would follow a reordered group's shapes into
+ * each other's edits, and a node whose kind changed simply has no counterpart
+ * under its id, so it is skipped without a kind comparison to get wrong.
+ */
+function diffText(before: readonly RenderNode[], after: readonly RenderNode[], edits: TextEdits): void {
+	const now = new Map<NodeId, TextBody | null>()
+	eachTextBody(after, (owner, text) => {
+		now.set(owner, text)
+	})
+	eachTextBody(before, (owner, text) => {
+		if (!now.has(owner)) return
+		diffTextBody(owner, text, now.get(owner) ?? null, edits)
+	})
 }
 
 /**
@@ -309,7 +297,7 @@ function pinMarginsBesideBullet(edit: ParaEdit, props: ParagraphProperties): voi
 	}
 }
 
-function diffText(owner: NodeId, before: TextBody | null, after: TextBody | null, edits: TextEdits): void {
+function diffTextBody(owner: NodeId, before: TextBody | null, after: TextBody | null, edits: TextEdits): void {
 	if (before === null || after === null) return
 	before.paragraphs.forEach((paragraph, paragraphIndex) => {
 		const paragraphNow = after.paragraphs[paragraphIndex]

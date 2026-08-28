@@ -26,6 +26,14 @@ model is expected to move.
   the second one to make sense of the pair. It was already in the package, one
   directory down in the renderer.
 
+- **`eachNode(nodes, visit)` and `eachTextBody(nodes, visit)`** — the two
+  traversals of a node tree, exported beside the model they walk. `eachTextBody`
+  is the answer to "where does text live in a node tree", stated once and
+  exhaustive over `RenderNode['kind']`, so a new kind is a compile error rather
+  than an omission wherever the question is asked. `eachNode` visits a group
+  before its children and lets a consumer prune a subtree by returning `false`,
+  which is what "this node has no box, so nothing inside it was drawn" needs.
+
 ## [0.1.2] — 2026-08-11
 
 ### Fixed

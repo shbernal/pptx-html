@@ -765,6 +765,72 @@ export const NODE_KINDS = ['shape', 'picture', 'connector', 'table', 'group', 'o
 
 export type NodeKind = (typeof NODE_KINDS)[number]
 
+/**
+ * Every node in a tree, groups included, in document order.
+ *
+ * A group is visited *before* its children, which is what lets a consumer prune:
+ * return `false` from `visit` and the node's subtree is skipped. Returning
+ * anything else — including nothing — descends. The renderer skips a
+ * placement-less node before it reaches that node's children, so "this subtree is
+ * not in the document" is a real thing a caller has to be able to say.
+ */
+export function eachNode(nodes: readonly RenderNode[], visit: (node: RenderNode) => boolean | void): void {
+	for (const node of nodes) {
+		if (visit(node) === false) continue
+		if (node.kind === 'group') eachNode(node.children, visit)
+	}
+}
+
+/**
+ * Every text body a node tree holds, with the node id that addresses it.
+ *
+ * **This is the answer to "where does text live in a node tree", and it exists
+ * once.** Six consumers used to each hold a copy of it — the projection, its
+ * complement, the surface reader, the reconciler, the edit differ and the id
+ * index — none of which the type system related to the others. Add a
+ * seventh text-bearing kind and five of the six would still have compiled, and
+ * three of those failures are silent: an unprojected node is simply not editable,
+ * an unstripped one makes `freeze` non-complementary, an unwalked one makes an
+ * edit vanish.
+ *
+ * `docs/architecture.md` states the general form of this, about the editable
+ * surface: *a single-source list makes its consumers consistent, not complete.
+ * Completeness is the type system's job, and it only does it when the consumer is
+ * keyed off the list's element type.* The switch below is that, for the node
+ * tree: exhaustive over `RenderNode['kind']` with no `default`, so a new kind is a
+ * compile error here rather than an omission in six places.
+ *
+ * A table cell is visited under **its own** id, not its table's: a cell has a
+ * {@link cellNodeId} precisely so an edit can address one.
+ *
+ * Groups contribute nothing of their own and everything their children hold,
+ * which is what keeps addressing by node id rather than by path.
+ */
+export function eachTextBody(
+	nodes: readonly RenderNode[],
+	visit: (owner: NodeId, text: TextBody | null) => void
+): void {
+	for (const node of nodes) {
+		switch (node.kind) {
+			case 'group':
+				eachTextBody(node.children, visit)
+				break
+			case 'shape':
+				visit(node.id, node.text)
+				break
+			case 'table':
+				for (const row of node.rows) {
+					for (const cell of row.cells) visit(cell.id, cell.text)
+				}
+				break
+			case 'picture':
+			case 'connector':
+			case 'opaque':
+				break
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Slides and deck
 // ---------------------------------------------------------------------------
