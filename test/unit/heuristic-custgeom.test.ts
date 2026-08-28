@@ -5,10 +5,8 @@
  * where custGeom fidelity is proven without a browser.
  */
 
-// @ts-expect-error — ts-pptx ships its own types; node-resolved entry is fine for tests.
 import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
-// @ts-expect-error — read entry typed via package exports.
-import { Presentation } from '@shbernal/ts-pptx/read'
+import { type AnyShape, type AutoShape, type CustomGeometry, isAutoShape, Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
 import { pathShapeOptions } from '../../src/heuristic/custgeom'
 import type { PathItem, SlideModel } from '../../src/heuristic/model'
@@ -44,17 +42,34 @@ function model(items: PathItem[]): SlideModel {
 	return { background: { type: 'color', value: 'FFFFFF' }, items }
 }
 
+// `toBytes()` is what `Presentation.load` takes, so the deck never becomes base64
+// on the way from the writer to the reader.
 async function emit(items: PathItem[]) {
 	const pptx = new TsPptx()
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
 	const issues = await addModelToSlide({ ShapeType }, slide, model(items), SIZE)
-	const base64 = await pptx.write({ outputType: 'base64' })
-	return { issues, base64 }
+	const bytes = await pptx.toBytes()
+	return { issues, bytes }
 }
 
-function loadDeck(base64: string) {
-	return Presentation.load(Uint8Array.from(Buffer.from(base64, 'base64')))
+type FreeformShape = AutoShape & { customGeometry: CustomGeometry }
+
+/**
+ * The freeform shapes on a slide. `AnyShape` also covers connectors and pictures,
+ * which carry no geometry at all, so the guard is what makes `customGeometry`
+ * readable — and a run where the writer stopped emitting autoshapes fails here
+ * rather than reading `undefined` off the wrong shape kind.
+ */
+function freeforms(shapes: AnyShape[]): FreeformShape[] {
+	return shapes.filter((shape): shape is FreeformShape => isAutoShape(shape) && shape.customGeometry !== null)
+}
+
+/** The single freeform on a slide, asserted present so a miss fails loudly. */
+function onlyFreeform(shapes: AnyShape[]): FreeformShape {
+	const found = freeforms(shapes)
+	expect(found).toHaveLength(1)
+	return found[0] as FreeformShape
 }
 
 describe('pathShapeOptions — fill / stroke mapping', () => {
@@ -80,39 +95,41 @@ describe('emit → ts-pptx → read round-trip (custGeom)', () => {
 	})
 
 	it('writes custom geometry (not preset) shapes ts-pptx can read back', async () => {
-		const { base64 } = await emit([triangle(), cubicStroke()])
-		const pres = await loadDeck(base64)
-		const shapes = pres.slides[0].shapes
-		const customs = shapes.filter((s: { customGeometry?: unknown }) => s.customGeometry)
+		const { bytes } = await emit([triangle(), cubicStroke()])
+		const pres = await Presentation.load(bytes)
+		const customs = freeforms(pres.slides[0].shapes)
 		expect(customs.length).toBe(2)
-		for (const s of customs) {
-			expect(s.presetGeometry).toBeNull()
+		for (const shape of customs) {
+			expect(shape.presetGeometry).toBeNull()
 		}
 	})
 
 	it('round-trips the triangle command sequence (moveTo / lnTo×2 / close)', async () => {
-		const { base64 } = await emit([triangle()])
-		const pres = await loadDeck(base64)
-		const shape = pres.slides[0].shapes.find((s: { customGeometry?: unknown }) => s.customGeometry)
-		const cmds = shape.customGeometry.paths[0].commands.map((c: { cmd: string }) => c.cmd)
+		const { bytes } = await emit([triangle()])
+		const pres = await Presentation.load(bytes)
+		const shape = onlyFreeform(pres.slides[0].shapes)
+		const cmds = shape.customGeometry.paths[0].commands.map((command) => command.cmd)
 		expect(cmds).toEqual(['moveTo', 'lnTo', 'lnTo', 'close'])
 	})
 
 	it('preserves the cubic curve as a cubicBezTo segment', async () => {
-		const { base64 } = await emit([cubicStroke()])
-		const pres = await loadDeck(base64)
-		const shape = pres.slides[0].shapes.find((s: { customGeometry?: unknown }) => s.customGeometry)
-		const cmds = shape.customGeometry.paths[0].commands.map((c: { cmd: string }) => c.cmd)
+		const { bytes } = await emit([cubicStroke()])
+		const pres = await Presentation.load(bytes)
+		const shape = onlyFreeform(pres.slides[0].shapes)
+		const cmds = shape.customGeometry.paths[0].commands.map((command) => command.cmd)
 		expect(cmds).toEqual(['moveTo', 'cubicBezTo'])
 	})
 
 	it('scales path-unit coordinates to the shape box (triangle apex at half width, full height)', async () => {
-		const { base64 } = await emit([triangle()])
-		const pres = await loadDeck(base64)
-		const shape = pres.slides[0].shapes.find((s: { customGeometry?: unknown }) => s.customGeometry)
-		const path = shape.customGeometry.paths[0]
+		const { bytes } = await emit([triangle()])
+		const pres = await Presentation.load(bytes)
+		const shape = onlyFreeform(pres.slides[0].shapes)
+		const path = shape.customGeometry.paths[0] as CustomGeometry['paths'][number]
 		// Apex point (box-inch 1,2 in a 2×2 box) → path-units (w/2, h).
+		// The command list is a union discriminated on `cmd`; only the line and move
+		// verbs carry a coordinate, so the narrowing is what makes `x`/`y` readable.
 		const apex = path.commands[2] // third command = second lnTo
+		if (apex?.cmd !== 'lnTo') throw new Error(`expected an lnTo at index 2, got ${apex?.cmd ?? 'nothing'}`)
 		expect(apex.x).toBeCloseTo(path.w / 2, -2)
 		expect(apex.y).toBeCloseTo(path.h, -2)
 	})

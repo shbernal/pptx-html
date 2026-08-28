@@ -7,8 +7,18 @@
  * `TsPptx` at all.
  *
  * Options objects (`addImage`/`addShape`/`addTable`/`addText`) are passed through
- * to ts-pptx opaquely, so they are typed as `Record<string, unknown>` rather
- * than mirroring its option unions.
+ * to ts-pptx opaquely, so they are typed as `object` rather than mirroring its
+ * option unions — this lane never reads one back, it only builds and forwards it.
+ *
+ * Two details make a real ts-pptx `Slide` satisfy this type, and both are load
+ * bearing. The add-* members are written with **method syntax**, which checks
+ * parameters bivariantly; written as function-typed properties, a concrete
+ * `addImage(options: ImageProps)` would be rejected under `strictFunctionTypes`
+ * for accepting less than this type promises. And the parameter is `object`
+ * rather than `Record<string, unknown>`, because ts-pptx's option types are
+ * interfaces, and an interface has no implicit index signature — so it is not
+ * assignable to a `Record`, in either direction. Widening the other way, by
+ * mirroring ts-pptx's option unions here, is what this file exists to avoid.
  */
 
 /** A ts-pptx writer instance, narrowed to what the emitter reads off it. */
@@ -17,14 +27,20 @@ export interface PptxWriter {
 	ShapeType: Record<string, string>
 }
 
-/** A ts-pptx slide, narrowed to the add-* methods and background setter emit uses. */
+/**
+ * A ts-pptx slide, narrowed to the add-* methods and background setter emit uses.
+ *
+ * `background` is optional because the concrete `Slide` declares it that way — a
+ * slide that states no background has none. Requiring it here would mean a real
+ * `Slide` did not satisfy this type, which defeats the point of a subset.
+ */
 export interface PptxSlide {
-	background: { color?: string; path?: string; data?: string }
-	addImage: (opts: Record<string, unknown>) => unknown
-	addShape: (type: string, opts: Record<string, unknown>) => unknown
-	addTable: (rows: unknown, opts: Record<string, unknown>) => unknown
-	addText: (text: unknown, opts: Record<string, unknown>) => unknown
-	addNotes?: (notes: string) => unknown
+	background?: { color?: string; path?: string; data?: string }
+	addImage(opts: object): unknown
+	addShape(type: string, opts: object): unknown
+	addTable(rows: unknown, opts: object): unknown
+	addText(text: unknown, opts: object): unknown
+	addNotes?(notes: string): unknown
 }
 
 /**

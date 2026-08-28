@@ -58,7 +58,7 @@
 		"site:dev": "pnpm run build && pnpm run site:prepare && vitepress dev site",
 		"site:build": "pnpm run build && pnpm run site:prepare && vitepress build site",
 		"site:preview": "vitepress preview site",
-		"typecheck": "tsc -p tsconfig.json --noEmit && tsc -p site/tsconfig.json --noEmit",
+		"typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p site/tsconfig.json --noEmit",
 		"lint": "oxlint",
 		"lint:fix": "oxlint --fix",
 		"format": "oxfmt",

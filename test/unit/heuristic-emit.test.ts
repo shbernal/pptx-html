@@ -6,11 +6,10 @@
  * needed: these item shapes are hand-written, exactly as `heuristic/extractor.ts` would emit.
  */
 
-// @ts-expect-error — ts-pptx ships its own types; node-resolved entry is fine for tests.
 import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
-// @ts-expect-error — read entry typed via package exports.
 import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
+import type { SlideModel } from '../../src/heuristic/model'
 import { addModelToSlide } from '../../src/heuristic/slide'
 
 const SIZE = { width: 13.333, height: 7.5 }
@@ -19,7 +18,7 @@ const SIZE = { width: 13.333, height: 7.5 }
 const PNG_1X1 =
 	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAen63NgAAAAASUVORK5CYII='
 
-function listAndImageModel() {
+function listAndImageModel(): SlideModel {
 	return {
 		background: { type: 'color', value: 'FFFFFF' },
 		items: [
@@ -38,28 +37,26 @@ function listAndImageModel() {
 	}
 }
 
-async function emitToBase64(model: ReturnType<typeof listAndImageModel>) {
+// `toBytes()` returns exactly what `Presentation.load` reads, so the deck goes
+// from writer to reader without a base64 detour.
+async function emitToBytes(model: SlideModel) {
 	const pptx = new TsPptx()
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
 	const issues = await addModelToSlide({ ShapeType }, slide, model, SIZE)
-	const base64 = await pptx.write({ outputType: 'base64' })
-	return { issues, base64 }
-}
-
-function loadDeck(base64: string) {
-	return Presentation.load(Uint8Array.from(Buffer.from(base64, 'base64')))
+	const bytes = await pptx.toBytes()
+	return { issues, bytes }
 }
 
 describe('emit list + image → ts-pptx → read round-trip', () => {
 	it('emits list and image items without per-item issues', async () => {
-		const { issues } = await emitToBase64(listAndImageModel())
+		const { issues } = await emitToBytes(listAndImageModel())
 		expect(issues).toEqual([])
 	})
 
 	it('carries the bullet runs through to readable text', async () => {
-		const { base64 } = await emitToBase64(listAndImageModel())
-		const pres = await loadDeck(base64)
+		const { bytes } = await emitToBytes(listAndImageModel())
+		const pres = await Presentation.load(bytes)
 		expect(pres.slides.length).toBe(1)
 		const allText = pres.slides[0].shapes.map((shape: { text?: string }) => shape.text || '').join(' ')
 		expect(allText).toContain('First priority')

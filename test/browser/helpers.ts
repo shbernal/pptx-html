@@ -4,8 +4,6 @@
  * structural snapshots.
  */
 
-// @ts-expect-error — ts-pptx read entry is typed via package exports; node-resolved
-// in tooling is fine. The structural `ReadDeck` shape below is what we rely on.
 import { Presentation } from '@shbernal/ts-pptx/read'
 
 /**

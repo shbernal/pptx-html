@@ -1,10 +1,16 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
 	"display": "pptx-html tests",
+	// Run by `pnpm run typecheck`, alongside the source and site projects. Vitest
+	// transpiles rather than typechecks, so this is the only thing that reads the
+	// test tree's types — and the oracle is the fidelity gate, so it has to.
+	//
+	// `vitest/globals` is deliberately absent: `vitest.config.ts` does not set
+	// `globals: true`, and every test imports `describe`/`expect`/`it` explicitly.
 	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
 		"noEmit": true,
-		"types": ["node", "vitest/globals"]
+		"types": ["node"]
 	},
 	"include": ["test/**/*.ts"]
 }

@@ -7,8 +7,7 @@
  * (`DOMParser`) that jsdom/happy-dom don't provide faithfully.
  */
 
-// @ts-expect-error — ts-pptx read entry typed via package exports.
-import { Presentation } from '@shbernal/ts-pptx/read'
+import { type AutoShape, type CustomGeometry, isAutoShape, Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
 import { parseDeckHtml } from '../../src/heuristic/parse'
 import { convertDeck, convertSlide } from '../../src/index'
@@ -52,11 +51,17 @@ describe('vectorizeSvg — emit → ts-pptx read', () => {
 			output: 'base64',
 		})) as { base64: string }
 		const pres = await Presentation.load(base64ToBytes(base64))
-		const customs = pres.slides[0].shapes.filter((s: { customGeometry?: unknown }) => s.customGeometry)
-		expect(customs.length).toBe(3)
+		// `AnyShape` also covers connectors and pictures, which carry no geometry, so
+		// the guard is what makes `customGeometry` readable — and a run where the
+		// icons stopped being autoshapes fails here rather than reading `undefined`.
+		const customs = pres.slides[0].shapes.filter(
+			(shape): shape is AutoShape & { customGeometry: CustomGeometry } =>
+				isAutoShape(shape) && shape.customGeometry !== null
+		)
+		expect(customs).toHaveLength(3)
 		// Each square icon → moveTo + line segments + close.
-		const cmds = customs[0].customGeometry.paths[0].commands.map((c: { cmd: string }) => c.cmd)
-		expect(cmds[0]).toBe('moveTo')
+		const cmds = customs[0]?.customGeometry.paths[0]?.commands.map((command) => command.cmd)
+		expect(cmds?.[0]).toBe('moveTo')
 		expect(cmds).toContain('close')
 	})
 })

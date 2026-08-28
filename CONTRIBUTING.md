@@ -58,7 +58,7 @@ environment already provides.
 
 ```bash
 pnpm run build        # tsdown → ESM dist/
-pnpm run typecheck    # tsc --noEmit, over src/ and site/; needs `build` first
+pnpm run typecheck    # tsc --noEmit, over src/, test/ and site/; needs `build` first
 pnpm run check        # oxlint + oxfmt: lint, format and import sorting
 pnpm run check:fix
 
@@ -149,7 +149,7 @@ produced a plausible, working document while quietly doing nothing. See the end 
 
 | Change | Run |
 | --- | --- |
-| Any source change | `pnpm run build`, `pnpm run typecheck` |
+| Any source or test change | `pnpm run build`, `pnpm run typecheck` |
 | Behaviour | `pnpm run test:unit` |
 | Anything touching fidelity | `pnpm run test:oracle`, and update the coverage snapshot deliberately — never a blind `-u` |
 | Renderer, surface reading, or the heuristic lane | `pnpm run test:browser` |

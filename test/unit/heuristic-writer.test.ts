@@ -6,18 +6,17 @@
  * delivery is exercised by the Playwright harness.
  */
 
-// @ts-expect-error — ts-pptx ships its own types; node-resolved entry is fine for tests.
 import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
-// @ts-expect-error — read entry typed via package exports.
 import { Presentation } from '@shbernal/ts-pptx/read'
 import { describe, expect, it } from 'vitest'
+import type { SlideModel } from '../../src/heuristic/model'
 import { addModelToSlide } from '../../src/heuristic/slide'
 
 const SIZE = { width: 13.333, height: 7.5 }
 
 // A model in the *runtime* shape the emit layer reads (text/table items carry a
 // `style` object and `{ text, options }` runs), none of whose items needs a DOM.
-function domFreeModel() {
+function domFreeModel(): SlideModel {
 	return {
 		background: { type: 'color', value: '1A1A2E' },
 		items: [
@@ -50,36 +49,33 @@ function domFreeModel() {
 	}
 }
 
-async function emitToBase64(model: ReturnType<typeof domFreeModel>) {
+// `toBytes()` returns exactly what `Presentation.load` reads, so the deck goes
+// from writer to reader without a base64 detour.
+async function emitToBytes(model: SlideModel) {
 	const pptx = new TsPptx()
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
 	const issues = await addModelToSlide({ ShapeType }, slide, model, SIZE)
-	const base64 = await pptx.write({ outputType: 'base64' })
-	return { issues, base64 }
-}
-
-// ts-pptx's `Presentation.load` reads raw bytes; decode the base64 deck first.
-function loadDeck(base64: string) {
-	return Presentation.load(Uint8Array.from(Buffer.from(base64, 'base64')))
+	const bytes = await pptx.toBytes()
+	return { issues, bytes }
 }
 
 describe('emit → ts-pptx → read round-trip', () => {
 	it('emits a DOM-free model onto ts-pptx without per-item issues', async () => {
-		const { issues } = await emitToBase64(domFreeModel())
+		const { issues } = await emitToBytes(domFreeModel())
 		expect(issues).toEqual([])
 	})
 
 	it('produces a single readable slide with shapes', async () => {
-		const { base64 } = await emitToBase64(domFreeModel())
-		const pres = await loadDeck(base64)
+		const { bytes } = await emitToBytes(domFreeModel())
+		const pres = await Presentation.load(bytes)
 		expect(pres.slides.length).toBe(1)
 		expect(pres.slides[0].shapes.length).toBeGreaterThan(0)
 	})
 
 	it('carries the heading text through to the OOXML', async () => {
-		const { base64 } = await emitToBase64(domFreeModel())
-		const pres = await loadDeck(base64)
+		const { bytes } = await emitToBytes(domFreeModel())
+		const pres = await Presentation.load(bytes)
 		const allText = pres.slides[0].shapes.map((shape: { text?: string }) => shape.text || '').join(' ')
 		expect(allText).toContain('Hello pptx-html')
 	})
@@ -91,8 +87,8 @@ describe('emit → ts-pptx → read round-trip', () => {
 		// 5.625in, so the wrong rule and the right answer agreed here. The attribute
 		// is optional and PowerPoint infers it from the dimensions, which are the
 		// fact worth pinning.
-		const { base64 } = await emitToBase64(domFreeModel())
-		const pres = await loadDeck(base64)
+		const { bytes } = await emitToBytes(domFreeModel())
+		const pres = await Presentation.load(bytes)
 		const presXml = new TextDecoder().decode(pres.presentationPart.bytes)
 		expect(presXml).toMatch(/<p:sldSz[^>]*cx="9144000"[^>]*cy="5143500"/)
 	})
