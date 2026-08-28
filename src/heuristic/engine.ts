@@ -131,6 +131,16 @@ function collectWarnings(model: SlideModel, size: SlideSize): string[] {
 
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
 
+/**
+ * A `.pptx` blob from byte chunks, with the cast the DOM types force in one
+ * place. `BlobPart` wants an `ArrayBufferView<ArrayBuffer>`, and `Uint8Array` is
+ * declared over `ArrayBufferLike`, which also admits a `SharedArrayBuffer` no
+ * writer here returns. The constructor takes either at run time.
+ */
+function pptxBlobOf(chunks: Uint8Array[]): Blob {
+	return new Blob(chunks as BlobPart[], { type: PPTX_MIME })
+}
+
 function base64ToPptxBlob(base64: string): Blob {
 	const bytes = atob(base64)
 	const chunks: Uint8Array[] = []
@@ -140,11 +150,10 @@ function base64ToPptxBlob(base64: string): Blob {
 		for (let j = 0; j < slice.length; j++) arr[j] = slice.charCodeAt(j)
 		chunks.push(arr)
 	}
-	return new Blob(chunks as BlobPart[], { type: PPTX_MIME })
+	return pptxBlobOf(chunks)
 }
 
-function downloadBase64Pptx(base64: string, fileName?: string): void {
-	const blob = base64ToPptxBlob(base64)
+function downloadBlob(blob: Blob, fileName?: string): void {
 	const url = URL.createObjectURL(blob)
 	const a = document.createElement('a')
 	a.href = url
@@ -289,16 +298,36 @@ async function deliverDeck(pptx: PptxDeck, result: ConvertResult, opts: ConvertO
 
 	// Written and delivered as-is. There used to be a post-write OOXML repair pass
 	// here; see `test/oracle/writer-output.test.ts` for why there is not.
-	const base64 = await pptx.write({ outputType: 'base64' })
+	//
+	// Two of the three deliveries want bytes, and `toBytes()` hands them over
+	// directly. Going through base64 for those meant encoding a multi-megabyte
+	// archive with `btoa` and decoding it again with a per-character loop, in the
+	// browser, to arrive back where the writer started. Only `output: 'base64'`
+	// asks for the encoded form, so only it pays for one.
 	if (output === 'base64') {
-		result.base64 = base64
-	} else if (output === 'blob') {
-		result.blob = base64ToPptxBlob(base64)
+		result.base64 = await pptx.write({ outputType: 'base64' })
+		return result
+	}
+	const blob = await pptxBlob(pptx)
+	if (output === 'blob') {
+		result.blob = blob
 	} else {
 		// 'download': browser-only delivery, identical to the original behavior.
-		downloadBase64Pptx(base64, opts.fileName || 'deck.pptx')
+		downloadBlob(blob, opts.fileName || 'deck.pptx')
 	}
 	return result
+}
+
+/**
+ * The deck as a `Blob`, straight from `toBytes()` where the writer has it.
+ *
+ * The `write` arm is what keeps `opts.pptxFactory` open to a mock that predates
+ * ts-pptx 3.3.0, and it is the only reason the base64 decoder is still reachable
+ * from this lane.
+ */
+async function pptxBlob(pptx: PptxDeck): Promise<Blob> {
+	if (pptx.toBytes) return pptxBlobOf([await pptx.toBytes()])
+	return base64ToPptxBlob(await pptx.write({ outputType: 'base64' }))
 }
 
 /**

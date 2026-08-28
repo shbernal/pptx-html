@@ -75,6 +75,9 @@ export async function emitDeckIr(ir: DeckIr, template: Uint8Array, source?: Pres
 	}
 	await flush()
 
+	// `save()`, not `toBytes()`. The 3.3.0 rename replaced `stream()` on the
+	// *writer*; a `Presentation` from the read/edit side has always spelled it
+	// this way, and the two are different objects.
 	return destination.save()
 }
 

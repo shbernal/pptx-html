@@ -68,6 +68,13 @@ export interface PptxDeck {
 	theme?: Record<string, unknown>
 	/** Slide dimensions in EMU, read back after `layout` is set. */
 	presLayout?: { width: number; height: number }
-	addSlide: () => PptxSlide
-	write: (opts: { outputType: 'base64' }) => Promise<string>
+	addSlide(): PptxSlide
+	/**
+	 * The deck as bytes. Present as of ts-pptx 3.3.0, and optional so a
+	 * `pptxFactory` mock predating it still satisfies this type. `deliverDeck`
+	 * prefers it and falls back to `write` when it is absent: the fallback is
+	 * deliberate compatibility, not legacy code awaiting removal.
+	 */
+	toBytes?(opts?: object): Promise<Uint8Array>
+	write(opts: { outputType: 'base64' }): Promise<string>
 }

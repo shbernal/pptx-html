@@ -102,6 +102,19 @@ function runStyle(run: TextRun, fontScalePct: number | undefined): string {
 	const bold = props.bold ?? resolved.bold
 	if (bold !== undefined) style.push(`font-weight:${bold ? 700 : 400}`)
 
+	// Workaround for ts-pptx#27 - https://github.com/shbernal/ts-pptx/issues/27
+	//
+	// The one property on this list painted from `props` alone. Every neighbour is
+	// `props.X ?? resolved.X` because the read model has `resolvedBold`,
+	// `resolvedSizePt`, `resolvedFontFace` and `resolvedColor`; there is no
+	// `Run.resolvedItalic`, so `ResolvedRunProperties` has no `italic` to fall back
+	// to. A run that inherits italic from a layout placeholder's `a:defRPr i="1"`
+	// is painted upright. Paint-only: `props` is what emit reads, so the deck still
+	// round-trips.
+	//
+	// Remove when `Run.resolvedItalic` exists. Then add `italic` to
+	// `ResolvedRunProperties` (`src/ir/render.ts`), map it in `resolvedRunPropsOf`
+	// (`src/import/text.ts`), and write `props.italic ?? resolved.italic` here.
 	if (props.italic !== undefined) style.push(`font-style:${props.italic ? 'italic' : 'normal'}`)
 
 	const color = props.color ?? resolved.color

@@ -79,7 +79,19 @@ export function colorOf(token: string | null, resolved: ResolvedColor | null): C
 	return resolved.alpha === undefined ? color : { ...color, alpha: resolved.alpha }
 }
 
-/** A gradient stop, whose colour arrives pre-split by the read model. */
+/**
+ * A gradient stop, whose colour arrives pre-split by the read model.
+ *
+ * Workaround for ts-pptx#26 - https://github.com/shbernal/ts-pptx/issues/26
+ *
+ * `transforms` is empty because the reader has none to give, not because the
+ * deck stated none. `GradientStop` exposes `position`, `color`, `schemeColor`,
+ * `effectiveHex` and `alpha`, with no transform list, so a stop that was
+ * `lumMod`-darkened arrives indistinguishable from one that was not.
+ *
+ * Remove when a stop's colour comes back as a `ResolvedColor` (or gains a
+ * `transforms` field), and map that list through the way `resolvedOf` does above.
+ */
 function stopOf(stop: ReadGradientStop): GradientStop | null {
 	const hex = stop.effectiveHex ?? stop.color
 	if (hex === null) return null
@@ -341,8 +353,17 @@ export function strokeOf(source: StrokeSource, scope: ImportScope): Stroke {
 
 /**
  * A table cell edge. Its own decode because `CellBorder` is a different shape
- * from a shape's line accessors — the colour arrives already resolved to a hex
- * rather than as a {@link ResolvedColor}, so there are no transforms to keep.
+ * from a shape's line accessors: the colour arrives already resolved to a hex
+ * rather than as a {@link ResolvedColor}.
+ *
+ * Workaround for ts-pptx#26 - https://github.com/shbernal/ts-pptx/issues/26
+ *
+ * Same shape as the gradient stop above, one construct along. `transforms` is
+ * empty because `CellBorder` gives a resolved `color` and a `schemeColor` token
+ * and nothing between them, not because the edge stated no transform.
+ *
+ * Remove when the edge's colour comes back as a `ResolvedColor`, and map its
+ * transform list through.
  */
 export function cellBorderOf(border: CellBorder | null, scope: ImportScope): Stroke {
 	if (border === null) return { kind: 'inherit' }
