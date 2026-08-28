@@ -13,6 +13,16 @@ model is expected to move.
 
 ### Fixed
 
+- **A table cell's two diagonals are modeled and drawn.** `a:lnTlToBr` and
+  `a:lnBlToTr` — PowerPoint's Diagonal Down/Up Border, and how a cell is struck
+  out — were dropped on import with no `FidelityNote`, which is neither modeled,
+  carried nor warned. They were also not a loss that had to happen: the read model
+  decodes both (`CellBorders.tlToBr` / `.blToTr`) and the write API takes them back
+  (`TableCellProps.diagonal`), so both sides of `@shbernal/ts-pptx` could express a
+  diagonal and only this pipeline could not. `TableCell.borders` now carries all
+  six lines and the renderer draws them, the two diagonals last, across the whole
+  spanned region of a merged cell.
+
 - **A gradient stop and a table cell's edge keep their colour's transform list.**
   Both arrived pre-flattened — a scheme token and a painted hex with nothing
   between them — so `transforms: []` meant "the reader had nothing to say", which
@@ -31,7 +41,20 @@ model is expected to move.
   ([ts-pptx#27](https://github.com/shbernal/ts-pptx/issues/27)) closes it, and
   `ResolvedRunProperties` now carries `italic` beside `bold`.
 
+### Changed
+
+- **`IR_VERSION` is 8.** `TableCell.borders` gained the two diagonals as required
+  fields, so a document rendered by an older build carries no key to read them
+  from. The parser refuses the mismatch and says to re-render, which is the true
+  answer; nothing migrates.
+
 ### Added
+
+- **`cell-diagonal` joins the corpus** as a primitive-tier deck: three cells, one
+  with a single diagonal, one with both, one with none. The distinction is only
+  testable from a generated deck if the deck states it three ways — a lane that
+  carried the first cell's rule onto every cell would agree with a corpus that
+  used one.
 
 - **`color-transform` joins the corpus** as a primitive-tier deck, holding both
   halves of the flattening above: a themed gradient stop with a transform beside

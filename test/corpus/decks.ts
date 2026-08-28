@@ -265,6 +265,43 @@ export const CORPUS = [
 		)
 	}),
 
+	deck(
+		'cell-diagonal',
+		'primitive',
+		'the two cell borders that are not edges — corner to corner, and struck out',
+		(pptx) => {
+			// `a:lnTlToBr` / `a:lnBlToTr`, PowerPoint's Diagonal Down/Up Border. They are
+			// the only part of `a:tcPr`'s six lines that no *edge* can stand in for, and
+			// the deck states them three ways — one diagonal, both, and none — so a lane
+			// that carried the first back onto every cell would differ here.
+			pptx.addSlide().addTable(
+				[
+					[
+						{ text: 'n/a', options: { diagonal: { tlToBr: { type: 'solid', color: 'C00000', width: 1 } } } },
+						{
+							text: 'void',
+							options: {
+								diagonal: {
+									tlToBr: { type: 'solid', color: 'C00000', width: 1 },
+									blToTr: { type: 'dash', color: '250F6B', width: 0.75 },
+								},
+							},
+						},
+						{ text: 'plain' },
+					],
+				],
+				{
+					x: 0.5,
+					y: 0.5,
+					w: 6,
+					colW: [2, 2, 2],
+					border: { type: 'solid', color: 'CCCCCC', width: 1 },
+					objectName: 'struck',
+				}
+			)
+		}
+	),
+
 	deck('picture', 'primitive', 'embedded media — the case hash-addressed assets must survive', (pptx) => {
 		pptx.addSlide().addImage({ data: PIXEL_PNG, x: 1, y: 1, w: 2, h: 2, objectName: 'photo' })
 	}),

@@ -77,8 +77,13 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  * `6` → `7` is the same move a third time: `EDITABLE_PARA_PROPS` gained
  * `marginLeftPt` and `indentPt`, which 3.2.0's `paraMarginLeft`/`paraIndent` can
  * now state — including the inherited one — so both hashes move again.
+ * `7` → `8` is a shape change after four hash ones: {@link TableCell.borders}
+ * gained the two diagonals, and they are required rather than optional because a
+ * cell has six lines whether or not it states any — `inherit` is the spelling of
+ * "states none". A v7 document's cells carry no key to read them from, which is
+ * the `2` → `3` case again.
  */
-export const IR_VERSION = 7
+export const IR_VERSION = 8
 
 /** English Metric Units per inch. */
 export const EMU_PER_INCH = 914_400
@@ -692,11 +697,27 @@ export interface TableCell {
 	id: NodeId
 	text: TextBody | null
 	fill: Fill
+	/**
+	 * All six of `a:tcPr`'s lines, not just the four edges: `tlToBr` (`a:lnTlToBr`,
+	 * ╲) and `blToTr` (`a:lnBlToTr`, ╱) are the corner-to-corner rules PowerPoint
+	 * calls Diagonal Down/Up, and they are how a cell is struck out.
+	 *
+	 * Modeled rather than noted. A `dropped` note is for a loss that has to happen,
+	 * and this one does not: the read model decodes both (`CellBorders.tlToBr` /
+	 * `.blToTr`) and the write API takes them back (`TableCellProps.diagonal`), so
+	 * dropping them would be a loss this pipeline chose rather than inherited.
+	 *
+	 * On a merged cell a diagonal is one stroke across the whole region, which is
+	 * what the renderer draws: only the span origin carries it, and a covered cell
+	 * has no box of its own to strike.
+	 */
 	borders: {
 		left: Stroke
 		right: Stroke
 		top: Stroke
 		bottom: Stroke
+		tlToBr: Stroke
+		blToTr: Stroke
 	}
 	/** `>1` when this cell spans; `null` for a plain 1×1 cell. */
 	span: { columns: number; rows: number } | null

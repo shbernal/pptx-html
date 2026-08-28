@@ -552,4 +552,30 @@ describe('tables', () => {
 		expect(cells.rows[1]?.cells[1]?.fill).toStrictEqual({ kind: 'none' })
 		expect(cells.rows[1]?.cells[0]?.fill).toStrictEqual({ kind: 'inherit' })
 	})
+
+	it('reads the two diagonals, which no edge can stand in for', async () => {
+		// `a:lnTlToBr` / `a:lnBlToTr`. Both sides of ts-pptx can express one — the
+		// read model decodes them and `TableCellProps.diagonal` writes them back — so
+		// a cell struck out in the source and plain in the model would be a loss this
+		// pipeline chose, which is the one thing `docs/architecture.md` rules out.
+		const struck = await nodeNamed('cell-diagonal', 'struck')
+		if (struck.kind !== 'table') return
+		const [one, both, plain] = struck.rows[0]?.cells ?? []
+		expect(one?.borders.tlToBr).toStrictEqual({
+			kind: 'line',
+			widthPt: 1,
+			color: { kind: 'srgb', hex: 'C00000' },
+			dash: 'solid',
+		})
+		// Stated on one corner only: the other diagonal is unstated, not the same line.
+		expect(one?.borders.blToTr).toStrictEqual({ kind: 'inherit' })
+		expect(both?.borders.blToTr).toStrictEqual({
+			kind: 'line',
+			widthPt: 0.75,
+			color: { kind: 'srgb', hex: '250F6B' },
+			dash: 'sysDash',
+		})
+		expect(plain?.borders.tlToBr).toStrictEqual({ kind: 'inherit' })
+		expect(plain?.borders.blToTr).toStrictEqual({ kind: 'inherit' })
+	})
 })

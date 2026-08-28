@@ -183,7 +183,7 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 				`<g ${context.editable ? `data-pxh-node="${escapeAttr(cell.id)}" ` : ''}transform="translate(${x} ${y})"` +
 					`${fill.approx === undefined ? '' : ` data-pxh-approx="${fill.approx}"`}>` +
 					`<rect x="0" y="0" width="${cellW}" height="${cellH}" ${fill.attrs}/>` +
-					edges(cell.borders, cellW, cellH, context) +
+					cellLines(cell.borders, cellW, cellH, context) +
 					(cell.text === null
 						? ''
 						: textFrame(
@@ -199,13 +199,23 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 	return parts.join('')
 }
 
-/** A cell's four edges, drawn as separate lines so each keeps its own stroke. */
-function edges(borders: TableNode['rows'][number]['cells'][number]['borders'], w: number, h: number, context: NodeContext): string {
+/**
+ * A cell's six lines, drawn separately so each keeps its own stroke: the four
+ * edges, then the two corner-to-corner rules. The diagonals come last so a cell
+ * struck out over a heavy edge reads as struck out, which is the order PowerPoint
+ * paints them in.
+ *
+ * `w`/`h` are the *spanned* box, so a diagonal on a merged cell is the single
+ * stroke across the whole region that OOXML means by it.
+ */
+function cellLines(borders: TableNode['rows'][number]['cells'][number]['borders'], w: number, h: number, context: NodeContext): string {
 	const sides: [keyof typeof borders, number, number, number, number][] = [
 		['top', 0, 0, w, 0],
 		['right', w, 0, w, h],
 		['bottom', 0, h, w, h],
 		['left', 0, 0, 0, h],
+		['tlToBr', 0, 0, w, h],
+		['blToTr', 0, h, w, 0],
 	]
 	return sides
 		.map(([side, x1, y1, x2, y2]) => {

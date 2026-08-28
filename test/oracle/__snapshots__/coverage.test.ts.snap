@@ -8,6 +8,7 @@ preset-geometry     primitive  slides=1 (1a/0c)  calls=8
 custgeom            primitive  slides=1 (1a/0c)  calls=1
 table               primitive  slides=1 (1a/0c)  calls=1
 cell-fill           primitive  slides=1 (1a/0c)  calls=1
+cell-diagonal       primitive  slides=1 (1a/0c)  calls=1
 picture             primitive  slides=1 (1a/0c)  calls=1
 picture-svg         primitive  slides=1 (1a/0c)  calls=1
 connector           primitive  slides=1 (1a/0c)  calls=1
@@ -33,9 +34,9 @@ theme-color         hard       slides=1 (1a/0c)  calls=2
 
 # fidelity notes by disposition × cause (whole corpus)
              unread       unwritable   unsupported  
-dropped      29           28           8            
-flattened    0            28           10           
-approximated 28           0            6            
+dropped      30           29           9            
+flattened    0            29           10           
+approximated 29           0            7            
 
 # constructs named, by deck
 text-box            deck.docProps, master.background, master.txStyles, theme.fmtScheme
@@ -44,6 +45,7 @@ preset-geometry     deck.docProps, master.background, master.txStyles, theme.fmt
 custgeom            deck.docProps, master.background, master.txStyles, shape.custGeom.guides, theme.fmtScheme
 table               deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
 cell-fill           deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
+cell-diagonal       deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
 picture             deck.docProps, master.background, master.txStyles, theme.fmtScheme
 picture-svg         deck.docProps, image.svg, master.background, master.txStyles, theme.fmtScheme
 connector           deck.docProps, master.background, master.txStyles, theme.fmtScheme

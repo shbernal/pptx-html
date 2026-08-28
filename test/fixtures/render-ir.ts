@@ -277,7 +277,17 @@ const GRID: TableNode = {
 					id: cellNodeId(TABLE_ID, 0, 0),
 					text: body('Region'),
 					fill: SOLID,
-					borders: { left: HAIRLINE, right: HAIRLINE, top: HAIRLINE, bottom: HAIRLINE },
+					// One diagonal stated and one not: a cell states its six lines
+					// independently, and a fixture that set both the same way could not
+					// tell a renderer reading `tlToBr` from one reading either.
+					borders: {
+						left: HAIRLINE,
+						right: HAIRLINE,
+						top: HAIRLINE,
+						bottom: HAIRLINE,
+						tlToBr: HAIRLINE,
+						blToTr: INHERITED,
+					},
 					span: { columns: 2, rows: 1 },
 					covered: false,
 					marginsEmu: CELL_MARGINS,
@@ -287,7 +297,14 @@ const GRID: TableNode = {
 					id: cellNodeId(TABLE_ID, 0, 1),
 					text: null,
 					fill: { kind: 'inherit' },
-					borders: { left: INHERITED, right: INHERITED, top: INHERITED, bottom: INHERITED },
+					borders: {
+						left: INHERITED,
+						right: INHERITED,
+						top: INHERITED,
+						bottom: INHERITED,
+						tlToBr: INHERITED,
+						blToTr: INHERITED,
+					},
 					span: null,
 					covered: true,
 					marginsEmu: { left: null, right: null, top: null, bottom: null },

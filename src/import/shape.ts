@@ -306,6 +306,11 @@ function cellOf(
 			right: cellBorderOf(borders?.right ?? null, scope),
 			top: cellBorderOf(borders?.top ?? null, scope),
 			bottom: cellBorderOf(borders?.bottom ?? null, scope),
+			// The two that are not edges. Same decode as the four above — a diagonal
+			// carries nothing a side cannot — so there is no second reader here, only
+			// two more keys the read model was already answering.
+			tlToBr: cellBorderOf(borders?.tlToBr ?? null, scope),
+			blToTr: cellBorderOf(borders?.blToTr ?? null, scope),
 		},
 		span: spans.columns > 1 || spans.rows > 1 ? spans : null,
 		covered: cell.isMergeContinuation,
