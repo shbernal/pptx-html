@@ -46,20 +46,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Before the lint and the typecheck both, and the order is load-bearing.
+      # Each of them reads `site/`, and the site imports `pptx-html` by name —
+      # resolved through the `exports` map to `dist/index.d.ts`, the way a
+      # consumer's editor resolves it. With no `dist/` on disk that is errors
+      # about a module that cannot be found, which is a true statement about the
+      # runner and nothing at all about the code.
+      #
+      # The typecheck needed this first; the lint joined it when `.oxlintrc.json`
+      # turned on `typeAware`, because a type-aware rule that cannot resolve an
+      # import does not skip the file, it reports the unresolved name as an `error`
+      # type. That failure reads as a defect in `site/` and is nothing of the kind,
+      # which is exactly why it costs a release to diagnose.
+      - name: Build package artifacts
+        run: pnpm run build
+
       - name: Lint
         run: pnpm run lint
 
       - name: Check formatting
         run: pnpm run format:check
-
-      # Before the typecheck, and the order is load-bearing. `pnpm run typecheck`
-      # checks `site/` too, and the site imports `pptx-html` by name — resolved
-      # through the `exports` map to `dist/index.d.ts`, the way a consumer's
-      # editor resolves it. With no `dist/` on disk that is seventeen errors
-      # about a module that cannot be found, which is a true statement about the
-      # runner and nothing at all about the code.
-      - name: Build package artifacts
-        run: pnpm run build
 
       - name: Typecheck
         run: pnpm run typecheck
