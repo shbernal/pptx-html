@@ -293,6 +293,14 @@ export interface GeometryPath {
  */
 export type SchemeToken = ThemeColorSlot | ColorMapToken | 'phClr'
 
+/**
+ * A colour, keeping all three of its parts on the scheme arm.
+ *
+ * `alpha` is `a:alpha` as a fraction, present only when the colour states one.
+ * It is a separate field rather than folded into the hex because that is how both
+ * ends spell it: OOXML as a transform on the colour, SVG as a `fill-opacity` /
+ * `stop-opacity` attribute beside the paint.
+ */
 export type Color =
 	| { kind: 'srgb'; hex: string; alpha?: number }
 	| {

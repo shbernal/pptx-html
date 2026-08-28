@@ -33,6 +33,7 @@
 
 import { ANGLE_UNITS_PER_DEGREE } from '@shbernal/ts-pptx'
 import type { Geometry, GeometryCommand, GeometryPath } from '../ir/render'
+import { round3 } from './paint'
 
 export interface PathResult {
 	/** SVG path data in local EMU space. */
@@ -110,7 +111,7 @@ function onEllipse(rx: number, ry: number, angle: number): { x: number; y: numbe
  * Applied only to the trig presets, so the exact ones keep printing exactly.
  */
 function coord(value: number): number {
-	return Math.round(value * 1000) / 1000
+	return round3(value)
 }
 
 /** A full turn, in OOXML's angle units. Half of it is the SVG large-arc threshold. */
@@ -175,24 +176,49 @@ function rect(w: number, h: number): string {
  * those measured sets still fall back visibly instead of turning an appealing
  * but unevidenced list into dozens of formulas that each have to be right.
  */
+/** The four corner radii of a rounded rectangle, clockwise from the top left. */
+interface Corners {
+	tl: number
+	tr: number
+	br: number
+	bl: number
+}
+
+/**
+ * A rectangle with four independently rounded corners.
+ *
+ * One arc sequence rather than three transcriptions of it. The three presets
+ * below differ only in which radius each corner gets, and the file's own bar for
+ * an entry in `PRESETS` is that it draws the shape *correctly* — three copies of
+ * `M / L / A x4 / Z` is three chances to put a sweep flag the wrong way round,
+ * and the result of that is an outline subtly wrong rather than obviously a box.
+ *
+ * Every arc is `0 0 1`: no rotation, small arc, clockwise, which is what a corner
+ * traversed clockwise from the top-left always is.
+ */
+function roundedRectPath(w: number, h: number, corners: Corners): string {
+	const { tl, tr, br, bl } = corners
+	return [
+		`M ${tl} 0`,
+		`L ${w - tr} 0`,
+		`A ${tr} ${tr} 0 0 1 ${w} ${tr}`,
+		`L ${w} ${h - br}`,
+		`A ${br} ${br} 0 0 1 ${w - br} ${h}`,
+		`L ${bl} ${h}`,
+		`A ${bl} ${bl} 0 0 1 0 ${h - bl}`,
+		`L 0 ${tl}`,
+		`A ${tl} ${tl} 0 0 1 ${tl} 0`,
+		'Z',
+	].join(' ')
+}
+
 const PRESETS: Record<string, (w: number, h: number, adj: Record<string, string>) => string> = {
 	rect,
 	// A picture's default geometry, and the shape every unresolved preset becomes.
 	roundRect: (w, h, adj) => {
 		const radius = (adjust(adj, 'adj', 16_667) / GUIDE_SCALE) * Math.min(w, h)
 		const r = Math.max(0, Math.min(radius, Math.min(w, h) / 2))
-		return [
-			`M ${r} 0`,
-			`L ${w - r} 0`,
-			`A ${r} ${r} 0 0 1 ${w} ${r}`,
-			`L ${w} ${h - r}`,
-			`A ${r} ${r} 0 0 1 ${w - r} ${h}`,
-			`L ${r} ${h}`,
-			`A ${r} ${r} 0 0 1 0 ${h - r}`,
-			`L 0 ${r}`,
-			`A ${r} ${r} 0 0 1 ${r} 0`,
-			'Z',
-		].join(' ')
+		return roundedRectPath(w, h, { tl: r, tr: r, br: r, bl: r })
 	},
 	ellipse: (w, h) => {
 		const rx = w / 2
@@ -221,37 +247,17 @@ const PRESETS: Record<string, (w: number, h: number, adj: Record<string, string>
 		// square unless the deck states otherwise.
 		const r1 = (pin(0, adjust(adj, 'adj1', 16_667), 50_000) / GUIDE_SCALE) * Math.min(w, h)
 		const r2 = (pin(0, adjust(adj, 'adj2', 0), 50_000) / GUIDE_SCALE) * Math.min(w, h)
-		return [
-			`M ${r1} 0`,
-			`L ${w - r2} 0`,
-			`A ${r2} ${r2} 0 0 1 ${w} ${r2}`,
-			`L ${w} ${h - r1}`,
-			`A ${r1} ${r1} 0 0 1 ${w - r1} ${h}`,
-			`L ${r2} ${h}`,
-			`A ${r2} ${r2} 0 0 1 0 ${h - r2}`,
-			`L 0 ${r1}`,
-			`A ${r1} ${r1} 0 0 1 ${r1} 0`,
-			'Z',
-		].join(' ')
+		return roundedRectPath(w, h, { tl: r1, tr: r2, br: r1, bl: r2 })
 	},
 	round2SameRect: (w, h, adj) => {
 		// One handle controls both top corners and the other both bottom corners.
 		// PowerPoint's default is the useful "rounded header" case: rounded above,
-		// square below.
+		// square below. Stated as four corners for the first time here, which is what
+		// makes the pairing checkable: `tl`/`tr` take `adj1` and `bl`/`br` take
+		// `adj2`, and the earlier hand-written path did the same thing less legibly.
 		const top = (pin(0, adjust(adj, 'adj1', 16_667), 50_000) / GUIDE_SCALE) * Math.min(w, h)
 		const bottom = (pin(0, adjust(adj, 'adj2', 0), 50_000) / GUIDE_SCALE) * Math.min(w, h)
-		return [
-			`M ${top} 0`,
-			`L ${w - top} 0`,
-			`A ${top} ${top} 0 0 1 ${w} ${top}`,
-			`L ${w} ${h - bottom}`,
-			`A ${bottom} ${bottom} 0 0 1 ${w - bottom} ${h}`,
-			`L ${bottom} ${h}`,
-			`A ${bottom} ${bottom} 0 0 1 0 ${h - bottom}`,
-			`L 0 ${top}`,
-			`A ${top} ${top} 0 0 1 ${top} 0`,
-			'Z',
-		].join(' ')
+		return roundedRectPath(w, h, { tl: top, tr: top, br: bottom, bl: bottom })
 	},
 	// The notch and the point are the same inset, which is why one adjust states
 	// both. `maxAdj` pins it to `w`, so the two never cross into a bowtie.
@@ -436,8 +442,12 @@ function customPathData(path: GeometryPath, w: number, h: number): string {
 	const parts: string[] = []
 
 	for (const command of path.commands) {
-		parts.push(segmentOf(command, x, y, () => ({ penX, penY })))
+		// The pen goes in as two numbers rather than as a thunk over the two `let`s
+		// above. It was a closure only because `segmentOf` needed the value at call
+		// time and `endOf` recomputed it; now the end point is computed once and
+		// both take it.
 		const moved = endOf(command, x, y, penX, penY)
+		parts.push(segmentOf(command, x, y, moved))
 		penX = moved.x
 		penY = moved.y
 	}
@@ -446,7 +456,7 @@ function customPathData(path: GeometryPath, w: number, h: number): string {
 
 type Scale = (value: number) => number
 
-function segmentOf(command: GeometryCommand, x: Scale, y: Scale, pen: () => { penX: number; penY: number }): string {
+function segmentOf(command: GeometryCommand, x: Scale, y: Scale, end: { x: number; y: number }): string {
 	switch (command.cmd) {
 		case 'moveTo':
 			return `M ${x(command.x)} ${y(command.y)}`
@@ -457,19 +467,14 @@ function segmentOf(command: GeometryCommand, x: Scale, y: Scale, pen: () => { pe
 		case 'quadBezTo':
 			return `Q ${x(command.x1)} ${y(command.y1)} ${x(command.x)} ${y(command.y)}`
 		case 'arcTo': {
-			const { penX, penY } = pen()
-			const rx = x(command.wR)
-			const ry = y(command.hR)
-			const start = (command.stAng * Math.PI) / 180
-			const end = ((command.stAng + command.swAng) * Math.PI) / 180
-			// The centre is wherever it has to be for the pen to sit at `stAng` on it.
-			const cx = penX - rx * Math.cos(start)
-			const cy = penY - ry * Math.sin(start)
 			const largeArc = Math.abs(command.swAng) > 180 ? 1 : 0
 			// Both systems measure a positive angle clockwise (y grows downward), so
 			// a positive sweep is SVG's sweep-flag 1 with no sign juggling.
 			const sweep = command.swAng >= 0 ? 1 : 0
-			return `A ${rx} ${ry} 0 ${largeArc} ${sweep} ${cx + rx * Math.cos(end)} ${cy + ry * Math.sin(end)}`
+			// The end point is `endOf`'s answer, not a second derivation of it. Two
+			// spellings of the same formula with nothing checking they agree draws a
+			// path whose next command starts where the previous one did not end.
+			return `A ${x(command.wR)} ${y(command.hR)} 0 ${largeArc} ${sweep} ${end.x} ${end.y}`
 		}
 		case 'close':
 			return 'Z'
@@ -490,14 +495,17 @@ function endOf(
 		case 'quadBezTo':
 			return { x: x(command.x), y: y(command.y) }
 		case 'arcTo': {
+			// OOXML states an arc by its radii and its start/sweep angles; SVG states
+			// it by its radii and its end point, so this is the conversion, and it is
+			// the *only* place the end point is derived. The centre is wherever it has
+			// to be for the pen to sit at `stAng` on it.
 			const rx = x(command.wR)
 			const ry = y(command.hR)
 			const start = (command.stAng * Math.PI) / 180
-			const end = ((command.stAng + command.swAng) * Math.PI) / 180
-			return {
-				x: penX - rx * Math.cos(start) + rx * Math.cos(end),
-				y: penY - ry * Math.sin(start) + ry * Math.sin(end),
-			}
+			const finish = ((command.stAng + command.swAng) * Math.PI) / 180
+			const cx = penX - rx * Math.cos(start)
+			const cy = penY - ry * Math.sin(start)
+			return { x: cx + rx * Math.cos(finish), y: cy + ry * Math.sin(finish) }
 		}
 		// A `close` returns the pen to the subpath's start. Tracking that exactly
 		// would mean remembering every `moveTo`; the only command that reads the pen

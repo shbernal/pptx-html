@@ -78,6 +78,13 @@
 		// `if (link?.url == null)`, the deliberate nullish idiom. Plain `always` would
 		// force a rewrite of correct code, which is a lint rule doing harm.
 		"eslint/eqeqeq": ["error", "always", { "null": "ignore" }],
+		// Was 2, both in the renderer and both closures over a loop-mutated `let`.
+		// The geometry one went away when the arc end point stopped being computed
+		// twice; the table one when the row loop stopped needing an index it did not
+		// have. Zero now, and on so it stays that way: a closure that reads a `let`
+		// the loop is still moving is the shape of bug that only appears at the second
+		// iteration.
+		"eslint/no-loop-func": "error",
 
 		// --- Measured and deliberately off -------------------------------------
 		//

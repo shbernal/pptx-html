@@ -41,7 +41,7 @@
 
 import type { Bullet, Paragraph, ParagraphProperties, TextBody, TextRun } from '../ir/render'
 import { editableParaProps, editableRunProps } from '../ir/surface'
-import { cssColor, escapeAttr } from './paint'
+import { cssColor, escapeAttr, round3 } from './paint'
 
 /** Text-node escaping. `&` first, or it would double-escape the entities below. */
 export function escapeText(value: string): string {
@@ -54,14 +54,16 @@ const ANCHOR: Record<TextBody['anchor'], string> = {
 	bottom: 'flex-end',
 }
 
-/** Three decimals, finer than any unit here resolves. */
-function tidy(value: number): number {
-	return Math.round(value * 1000) / 1000
-}
-
-/** Points, tidied — this file's `px` is the frame's own point-scaled unit. */
+/**
+ * Points, rounded — this file's `px` is the frame's own point-scaled unit, which
+ * {@link textFrame}'s `scale(EMU_PER_POINT)` is what establishes.
+ *
+ * A name rather than a call to {@link round3} at each site: the `px` in
+ * `font-size:${px(...)}px` is a claim about *which space* the number is in, and
+ * that is the part a reader needs.
+ */
 function px(points: number): number {
-	return tidy(points)
+	return round3(points)
 }
 
 /**
@@ -272,14 +274,14 @@ function paragraphStyle(props: ParagraphProperties, reductionPct: number): strin
 	if (props.lineSpacing !== undefined) {
 		style.push(
 			props.lineSpacing.type === 'percent'
-				? `line-height:${tidy(Math.max(0, props.lineSpacing.percent - reductionPct))}%`
+				? `line-height:${round3(Math.max(0, props.lineSpacing.percent - reductionPct))}%`
 				: `line-height:${px(props.lineSpacing.valuePt)}px`
 		)
 	} else if (reductionPct > 0) {
 		// The paragraph inherits its spacing, so there is no stated base to subtract
 		// from and CSS cannot express one. Unitless, so it recomputes against each
 		// run's own size instead of freezing to the paragraph's.
-		style.push(`line-height:${tidy((SINGLE_LINE_HEIGHT * (100 - reductionPct)) / 100)}`)
+		style.push(`line-height:${round3((SINGLE_LINE_HEIGHT * (100 - reductionPct)) / 100)}`)
 	}
 	return style.join(';')
 }

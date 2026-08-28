@@ -14,7 +14,17 @@
 
 import type { Box, EdgeRect, Placement, RenderNode, TableNode } from '../ir/render'
 import { pathOf } from './geometry'
-import { type Defs, EMU_PER_POINT, escapeAttr, fillPaint, strokePaint } from './paint'
+import {
+	type Defs,
+	EMU_PER_POINT,
+	escapeAttr,
+	fillPaint,
+	type Painted,
+	round3,
+	strokePaint,
+	UNPAINTED_FILL,
+	UNPAINTED_STROKE,
+} from './paint'
 import { renderTextBody } from './text'
 
 export interface NodeContext {
@@ -79,7 +89,7 @@ function textFrame(box: Box, html: string): string {
 
 /** EMU → the point-scaled space {@link textFrame} establishes. */
 function points(emu: number): number {
-	return Math.round((emu / EMU_PER_POINT) * 1000) / 1000
+	return round3(emu / EMU_PER_POINT)
 }
 
 /**
@@ -137,11 +147,11 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 
 	const statedH = node.rows.reduce((sum, row) => sum + (row.heightEmu ?? 0), 0)
 	const autoRows = node.rows.filter((row) => row.heightEmu === null).length
-	const rowFill = autoRows === 0 ? Math.max(0, box.h - statedH) / Math.max(1, node.rows.length) : Math.max(0, box.h - statedH) / autoRows
+	const rowFill = autoRows === 0 ? 0 : Math.max(0, box.h - statedH) / autoRows
 
 	const parts: string[] = []
 	let y = 0
-	for (const row of node.rows) {
+	node.rows.forEach((row, rowIndex) => {
 		const h = row.heightEmu ?? rowFill
 		let x = 0
 		row.cells.forEach((cell, columnIndex) => {
@@ -152,9 +162,21 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 				x += w
 				return
 			}
+			// Both arms sum what they cover. The row arm used to multiply *this* row's
+			// height by the span count, which is only the same answer when every row
+			// is the same height: a header row plus body rows drew a two-row cell as
+			// twice the header rather than as the header plus the body.
 			const span = cell.span
-			const cellW = span === null ? w : node.columns.slice(columnIndex, columnIndex + span.columns).reduce((sum, column) => sum + (column.widthEmu ?? columnFill), 0)
-			const cellH = span === null ? h : h * span.rows
+			const cellW =
+				span === null
+					? w
+					: node.columns
+							.slice(columnIndex, columnIndex + span.columns)
+							.reduce((sum, column) => sum + (column.widthEmu ?? columnFill), 0)
+			const cellH =
+				span === null
+					? h
+					: node.rows.slice(rowIndex, rowIndex + span.rows).reduce((sum, spanned) => sum + (spanned.heightEmu ?? rowFill), 0)
 
 			const fill = fillPaint(cell.fill, context.defs)
 			parts.push(
@@ -173,7 +195,7 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 			x += w
 		})
 		y += h
-	}
+	})
 	return parts.join('')
 }
 
@@ -188,7 +210,7 @@ function edges(borders: TableNode['rows'][number]['cells'][number]['borders'], w
 	return sides
 		.map(([side, x1, y1, x2, y2]) => {
 			const paint = strokePaint(borders[side], context.defs)
-			if (paint.attrs === 'stroke="none"') return ''
+			if (!paint.painted) return ''
 			return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${paint.attrs}/>`
 		})
 		.join('')
@@ -227,8 +249,10 @@ function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
 
 		case 'shape': {
 			const path = pathOf(node.geometry, box.w, box.h)
-			const fill = path.unfilled === true ? { attrs: 'fill="none"' } : fillPaint(node.fill, context.defs)
-			const stroke = path.unstroked === true ? { attrs: 'stroke="none"' } : strokePaint(node.stroke, context.defs)
+			// A preset that says it paints nothing overrides what the node states: the
+			// geometry decided there is no interior or no outline to paint.
+			const fill: Painted = path.unfilled === true ? UNPAINTED_FILL : fillPaint(node.fill, context.defs)
+			const stroke: Painted = path.unstroked === true ? UNPAINTED_STROKE : strokePaint(node.stroke, context.defs)
 			const approx = [path.fallback === undefined ? '' : `geometry:${path.fallback}`, fill.approx ?? '', stroke.approx ?? '']
 				.filter((entry) => entry !== '')
 				.join(' ')
@@ -247,7 +271,7 @@ function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
 			const clip = context.defs.add((id) => `<clipPath id="${id}"><path d="${path.d}"/></clipPath>`)
 			return (
 				`<g clip-path="${clip}">${croppedImage(node.asset.$asset, box, node.crop)}</g>` +
-				(stroke.attrs === 'stroke="none"' ? '' : `<path d="${path.d}" fill="none" ${stroke.attrs}/>`)
+				(stroke.painted ? `<path d="${path.d}" fill="none" ${stroke.attrs}/>` : '')
 			)
 		}
 

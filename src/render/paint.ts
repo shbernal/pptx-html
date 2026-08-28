@@ -81,15 +81,10 @@ export function cssColor(color: Color): string {
 	return color.kind === 'srgb' ? `#${color.hex}` : `#${color.effectiveHex}`
 }
 
-/** `a:alpha`, when the colour states one. SVG wants it as a separate attribute. */
-function opacityOf(color: Color): number | undefined {
-	return color.alpha
-}
-
 function gradientDef(gradient: Gradient, defs: Defs): string {
 	const stops = gradient.stops
 		.map((stop) => {
-			const opacity = opacityOf(stop.color)
+			const opacity = stop.color.alpha
 			const extra = opacity === undefined ? '' : ` stop-opacity="${opacity}"`
 			return `<stop offset="${stop.position}" stop-color="${cssColor(stop.color)}"${extra}/>`
 		})
@@ -131,6 +126,17 @@ export interface Painted {
 	attrs: string
 	/** Set when the paint is a documented guess rather than something the deck stated. */
 	approx?: string
+	/**
+	 * False when this paint draws nothing: an explicit `a:noFill`, or nothing
+	 * stated at all.
+	 *
+	 * A caller that needs to know this used to compare {@link attrs} against the
+	 * string `'stroke="none"'`, which worked because two files agreed on a literal
+	 * with no type relating them. Reorder the attributes, add a `stroke-opacity`,
+	 * change the quotes, and every table border and picture outline silently starts
+	 * drawing an invisible line over itself with nothing failing.
+	 */
+	painted: boolean
 }
 
 /** Attribute-value escaping. Shared by every attribute this module writes. */
@@ -142,6 +148,14 @@ export function escapeAttr(value: string): string {
 		.replaceAll('"', '&quot;')
 }
 
+/**
+ * The two paints that draw nothing, named so a caller that has decided *not* to
+ * paint states the same thing {@link fillPaint} and {@link strokePaint} state.
+ * A preset geometry that declares itself unfilled or unstroked is such a caller.
+ */
+export const UNPAINTED_FILL: Painted = { attrs: 'fill="none"', painted: false }
+export const UNPAINTED_STROKE: Painted = { attrs: 'stroke="none"', painted: false }
+
 export function fillPaint(fill: Fill, defs: Defs): Painted {
 	switch (fill.kind) {
 		// Two different facts, one drawing. `none` is an explicit `a:noFill`; `inherit`
@@ -150,19 +164,21 @@ export function fillPaint(fill: Fill, defs: Defs): Painted {
 		// wanted" look the same on a canvas.
 		case 'none':
 		case 'inherit':
-			return { attrs: 'fill="none"' }
+			return { attrs: 'fill="none"', painted: false }
 		case 'solid': {
-			const opacity = opacityOf(fill.color)
+			const opacity = fill.color.alpha
 			return {
 				attrs: `fill="${cssColor(fill.color)}"${opacity === undefined ? '' : ` fill-opacity="${opacity}"`}`,
+				painted: true,
 			}
 		}
 		case 'gradient':
-			return { attrs: `fill="${gradientDef(fill.gradient, defs)}"` }
+			return { attrs: `fill="${gradientDef(fill.gradient, defs)}"`, painted: true }
 		case 'picture': {
 			const opacity = fill.alpha
 			return {
 				attrs: `fill="${pictureDef(fill.asset.$asset, defs)}"${opacity === undefined ? '' : ` fill-opacity="${opacity}"`}`,
+				painted: true,
 				...(fill.mode === 'tile' ? { approx: 'fill:tile' } : {}),
 			}
 		}
@@ -174,6 +190,7 @@ export function fillPaint(fill: Fill, defs: Defs): Painted {
 			const background = fill.background ?? fill.foreground
 			return {
 				attrs: background === null ? 'fill="none"' : `fill="${cssColor(background)}"`,
+				painted: background !== null,
 				approx: 'fill:pattern',
 			}
 		}
@@ -181,7 +198,7 @@ export function fillPaint(fill: Fill, defs: Defs): Painted {
 }
 
 export function strokePaint(stroke: Stroke, defs: Defs): Painted {
-	if (stroke.kind === 'none' || stroke.kind === 'inherit') return { attrs: 'stroke="none"' }
+	if (stroke.kind === 'none' || stroke.kind === 'inherit') return { attrs: 'stroke="none"', painted: false }
 
 	const parts: string[] = []
 	const approx: string[] = []
@@ -193,7 +210,7 @@ export function strokePaint(stroke: Stroke, defs: Defs): Painted {
 	}
 	else if (stroke.color !== undefined) {
 		markerPaint = cssColor(stroke.color)
-		markerOpacity = opacityOf(stroke.color)
+		markerOpacity = stroke.color.alpha
 		parts.push(`stroke="${markerPaint}"`)
 		if (markerOpacity !== undefined) parts.push(`stroke-opacity="${markerOpacity}"`)
 	} else {
@@ -215,6 +232,7 @@ export function strokePaint(stroke: Stroke, defs: Defs): Painted {
 
 	return {
 		attrs: parts.join(' '),
+		painted: true,
 		...(approx.length === 0 ? {} : { approx: approx.join(' ') }),
 	}
 }
@@ -269,7 +287,35 @@ function lineEndDef(end: LineEnd | undefined, paint: string, opacity: number | u
 	})
 }
 
+/**
+ * Three decimals, which is the rounding this whole channel uses and the one place
+ * the reason for it is written.
+ *
+ * The unit varies by caller and the argument does not: everything here is either
+ * EMU, a 914,400th of an inch, or a point. Three decimals of either is already far
+ * below what a screen can show, and the alternative is output whose noise obscures
+ * what it draws.
+ */
+export function round3(value: number): number {
+	return Math.round(value * 1000) / 1000
+}
+
 const SVG_CAP: Record<'flat' | 'rnd' | 'sq', string> = { flat: 'butt', rnd: 'round', sq: 'square' }
+
+/** The eleven `a:prstDash` presets, in multiples of the stroke width. */
+const DASH_MULTIPLES: Record<DashStyle, number[]> = {
+	solid: [],
+	dot: [1, 3],
+	dash: [4, 3],
+	lgDash: [8, 3],
+	dashDot: [4, 3, 1, 3],
+	lgDashDot: [8, 3, 1, 3],
+	lgDashDotDot: [8, 3, 1, 3, 1, 3],
+	sysDash: [3, 1],
+	sysDot: [1, 1],
+	sysDashDot: [3, 1, 1, 1],
+	sysDashDotDot: [3, 1, 1, 1, 1, 1],
+}
 
 /**
  * `a:prstDash` → `stroke-dasharray`, in multiples of the stroke width.
@@ -279,20 +325,7 @@ const SVG_CAP: Record<'flat' | 'rnd' | 'sq', string> = { flat: 'butt', rnd: 'rou
  * on a 1pt and a 6pt line is a different array in absolute units.
  */
 function dashArray(dash: DashStyle, widthEmu: number): string {
-	const pattern: Record<DashStyle, number[]> = {
-		solid: [],
-		dot: [1, 3],
-		dash: [4, 3],
-		lgDash: [8, 3],
-		dashDot: [4, 3, 1, 3],
-		lgDashDot: [8, 3, 1, 3],
-		lgDashDotDot: [8, 3, 1, 3, 1, 3],
-		sysDash: [3, 1],
-		sysDot: [1, 1],
-		sysDashDot: [3, 1, 1, 1],
-		sysDashDotDot: [3, 1, 1, 1, 1, 1],
-	}
-	const multiples = pattern[dash]
+	const multiples = DASH_MULTIPLES[dash]
 	if (multiples.length === 0) return 'none'
 	return multiples.map((multiple) => Math.max(1, Math.round(multiple * widthEmu))).join(' ')
 }

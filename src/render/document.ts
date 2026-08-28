@@ -84,7 +84,7 @@ const UNSTATED_SLIDE_BACKGROUND = '#ffffff'
  */
 function backgroundPaint(fill: RenderSlide['background']['fill'], defs: Defs): Painted {
 	if (fill.kind !== 'inherit') return fillPaint(fill, defs)
-	return { attrs: `fill="${UNSTATED_SLIDE_BACKGROUND}"`, approx: 'background:inherit' }
+	return { attrs: `fill="${UNSTATED_SLIDE_BACKGROUND}"`, painted: true, approx: 'background:inherit' }
 }
 
 function renderSlide(slide: RenderSlide, size: RenderIr['size'], warnings: string[]): string {
