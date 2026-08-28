@@ -11,6 +11,10 @@ model is expected to move.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.2.0] — 2026-08-28
+
 ### Fixed
 
 - **A table cell's two diagonals are modeled and drawn.** `a:lnTlToBr` and
@@ -49,6 +53,15 @@ model is expected to move.
   ([ts-pptx#27](https://github.com/shbernal/ts-pptx/issues/27)) closes it, and
   `ResolvedRunProperties` now carries `italic` beside `bold`.
 
+- **A cell spanning rows is drawn as tall as the rows it covers.** `renderTable`
+  measured a spanning cell's two dimensions two different ways: the column arm
+  summed the widths of the columns the cell covers, and the row arm multiplied
+  *this* row's height by the span count. Those agree only when every row is the
+  same height, and a header row above body rows — the shape most tables have — is
+  where they do not: a two-row cell was drawn as twice the header rather than as
+  the header plus the body. Both arms sum now. Paint only, so nothing here reached
+  the island and no oracle number moved.
+
 ### Changed
 
 - **`IR_VERSION` is 8.** `TableCell.borders` gained the two diagonals as required
@@ -56,7 +69,27 @@ model is expected to move.
   from. The parser refuses the mismatch and says to re-render, which is the true
   answer; nothing migrates.
 
+- **`@shbernal/ts-pptx` `^3.6.0` is the floor**, up from `^3.2.0`. Two of the
+  fixes above are upstream's ([ts-pptx#26](https://github.com/shbernal/ts-pptx/issues/26),
+  [ts-pptx#27](https://github.com/shbernal/ts-pptx/issues/27)), so the release that
+  carries them is the one this reads them from.
+
+- **A delivered deck goes out as bytes.** `deliverDeck`'s `blob` and default
+  `download` modes wrote the package to base64 and decoded it straight back, so a
+  routinely multi-megabyte archive was encoded over 32 KB chunks and decoded again
+  a character at a time, in the browser, to arrive where the writer started. Both
+  take the writer's `toBytes()` now, and only `output: 'base64'` pays for an
+  encode. That method is optional on the type — `opts.pptxFactory` may hand back a
+  mock, or a writer predating it — so the base64 path stays as the fallback.
+
 ### Added
+
+- **Five more preset geometries, and connector line ends.** `round2DiagRect`,
+  `round2SameRect`, `rightArrow`, `rightArrowCallout` and `wedgeRectCallout` are
+  resolved from their formulas instead of falling back to the obvious box, and a
+  modeled `a:headEnd` / `a:tailEnd` is drawn as a stroke-relative SVG marker,
+  which is how OOXML defines an end's `@w` and `@len` in the first place. Both
+  additions are on the fidelity gate.
 
 - **`cell-diagonal` joins the corpus** as a primitive-tier deck: three cells, one
   with a single diagonal, one with both, one with none. The distinction is only
@@ -208,7 +241,8 @@ First public release.
 - ESM only, Node `>=24`. `@shbernal/ts-pptx` `^3.2.0` is the one runtime
   dependency.
 
-[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.1.2...HEAD
+[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/shbernal/pptx-html/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/shbernal/pptx-html/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/shbernal/pptx-html/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/shbernal/pptx-html/releases/tag/v0.1.0
