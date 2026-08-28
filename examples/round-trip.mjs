@@ -34,9 +34,22 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TsPptx } from '@shbernal/ts-pptx'
-import { emitDeck, importDeck, parseDeck, renderDeck } from 'pptx-html'
+import { convertDeck, convertSlide, emitDeck, importDeck, parseDeck, renderDeck } from 'pptx-html'
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), 'out')
+
+// The heuristic lane's entry points, imported and not called. They need a browser
+// — an iframe, `getComputedStyle`, canvas — so a Node example cannot run them.
+// What it *can* do is prove they are still there: this file is the only thing in
+// the repo that resolves `pptx-html` through its `exports` map at run time, and an
+// ESM import of a name the entry point no longer exports fails at link time, before
+// a line of this script runs. Without these two the check covered the loop only,
+// and the lane beside it could have been renamed out from under a consumer with
+// every test still green. (`test/public-surface.ts` is the type half of the same
+// check; a runtime import cannot see a type-only export.)
+for (const [name, entry] of Object.entries({ convertDeck, convertSlide })) {
+	if (typeof entry !== 'function') throw new Error(`pptx-html no longer exports ${name} as a function`)
+}
 
 /** A two-slide deck to start from. Any `.pptx` on disk would do just as well. */
 async function sourceDeck() {
