@@ -13,6 +13,42 @@ model is expected to move.
 
 Nothing yet.
 
+## [0.2.1] — 2026-09-21
+
+Two rendering bugs, both of which made a correctly imported deck look wrong, and
+the ts-pptx 4 upgrade. Nothing about the model or the editable surface changes,
+so a document rendered by 0.2.0 still parses.
+
+### Fixed
+
+- **A group no longer offsets its children twice.** Every grouped shape was drawn
+  at twice its distance from the origin, because the renderer put the group's own
+  `translate` on the wrapper and then rendered the children against the slide.
+  The further a group sat from the origin the further its contents left it: a row
+  of KPI cards across a slide ends up with some cards off the slide and the rest
+  on top of the body text. The model has always said a child's placement is
+  slide-absolute and that a renderer "never composes a transform"; this makes the
+  renderer obey it. A table keeps its own transform, because unlike a group it is
+  what its cells are positioned against.
+
+- **Percentage line spacing is written as the multiple it is.** A paragraph asking
+  for 105% got lines 16.8px apart whatever size its text was, so a large title
+  painted its lines on top of each other. PowerPoint's `spcPct` is a multiple of
+  each line's own font size; a CSS percentage resolves once, against the
+  paragraph, before the runs inherit it, and the size lives on the runs. It is
+  unitless now, which is what the inherited-spacing branch beside it already did
+  and for the same stated reason. An exact `spcPts` spacing still emits `px`.
+
+### Changed
+
+- **Requires `@shbernal/ts-pptx` 4.** The read model consolidated every colour
+  onto one `ColorRef`, renamed `Part.bytes` to `Part.originalBytes`, and made
+  `importSlide` refuse a source page whose hyperlink leaves the set being
+  imported. Nothing here renders differently for it. Two recorded forms move
+  because upstream now reads more than it did: the coverage baseline gains
+  `text.color.inherited` on the two corpus decks that build their text as
+  paragraph arrays, and the canonical model gains `company`.
+
 ## [0.2.0] — 2026-08-28
 
 ### Fixed
@@ -241,7 +277,8 @@ First public release.
 - ESM only, Node `>=24`. `@shbernal/ts-pptx` `^3.2.0` is the one runtime
   dependency.
 
-[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/shbernal/pptx-html/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/shbernal/pptx-html/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/shbernal/pptx-html/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/shbernal/pptx-html/compare/v0.1.0...v0.1.1
