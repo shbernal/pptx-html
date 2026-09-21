@@ -46,8 +46,13 @@ describe('a baked shrink', () => {
 	it('subtracts the reduction from a percentage spacing rather than scaling it', () => {
 		// 150% less 20 points of reduction is 130%, not 120% — the spec says
 		// subtracted, and the two only agree at 100%.
+		//
+		// Written unitless, as `1.3`. PowerPoint's percentage is a multiple of each line's
+		// own font size, and a CSS percentage is not: it resolves once against the element
+		// it is written on, which is the paragraph, while the size lives on the runs. The
+		// arithmetic is unchanged; only the spelling is.
 		const html = renderTextBody(frame({ type: 'percent', percent: 150 }, { autofitLineSpaceReductionPct: 20 }), 'n')
-		expect(html).toContain('line-height:130%')
+		expect(html).toContain('line-height:1.3')
 		// Nothing was guessed at: the paragraph stated its own base.
 		expect(html).not.toContain('data-pxh-approx')
 	})
@@ -70,6 +75,8 @@ describe('a baked shrink', () => {
 
 	it('never lets a reduction drive the line height negative', () => {
 		const html = renderTextBody(frame({ type: 'percent', percent: 80 }, { autofitLineSpaceReductionPct: 100 }), 'n')
-		expect(html).toContain('line-height:0%')
+		// Matched to the end of the declaration: a bare `line-height:0` is a prefix of the
+		// `0.96` stand-in two cases up, so it would pass on the wrong value.
+		expect(html).toMatch(/line-height:0[;"]/)
 	})
 })

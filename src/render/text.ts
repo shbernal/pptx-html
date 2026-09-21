@@ -262,8 +262,15 @@ function paragraphStyle(props: ParagraphProperties, reductionPct: number): strin
 	if (props.lineSpacing !== undefined) {
 		style.push(
 			props.lineSpacing.type === 'percent'
-				? `line-height:${round3(Math.max(0, props.lineSpacing.percent - reductionPct))}%`
-				: `line-height:${px(props.lineSpacing.valuePt)}px`
+				? // Unitless, for the reason the inherited branch below already gives. PowerPoint's
+					// `spcPct` is a multiple of each line's own font size, which in CSS is a unitless
+					// number: a percentage resolves once, against the element it is written on, and the
+					// runs inherit the resolved length. This is written on the `<p>`, whose size is the
+					// 16px default, while the size lives on the runs -- so a 44pt title asking for 105%
+					// got 16.8px lines and painted them over each other.
+					`line-height:${round3(Math.max(0, props.lineSpacing.percent - reductionPct) / 100)}`
+				: // `spcPts` keeps its px: an exact line height is the one that should not scale.
+					`line-height:${px(props.lineSpacing.valuePt)}px`
 		)
 	} else if (reductionPct > 0) {
 		// The paragraph inherits its spacing, so there is no stated base to subtract

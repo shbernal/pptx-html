@@ -174,8 +174,10 @@ describe('what the picture admits to', () => {
 		expect(styleOf('unbaked')).toContain('font-size:28px')
 
 		// A stated percentage has the reduction subtracted from it, per ECMA-376
-		// §21.1.2.1.3; an unstated one has no base, so it falls back and says so.
-		expect(html).toContain('line-height:140%')
+		// §21.1.2.1.3; an unstated one has no base, so it falls back and says so. Both are
+		// written unitless, because that is what PowerPoint's percentage means: a multiple of
+		// each line's own font size, which a CSS percentage is not.
+		expect(html).toContain('line-height:1.4')
 		expect(html).toContain('line-height:0.96')
 		expect(html).toContain('data-pxh-approx="text:linespace"')
 	})
