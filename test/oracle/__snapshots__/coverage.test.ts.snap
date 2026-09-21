@@ -35,7 +35,7 @@ theme-color         hard       slides=1 (1a/0c)  calls=2
 # fidelity notes by disposition × cause (whole corpus)
              unread       unwritable   unsupported  
 dropped      30           29           9            
-flattened    0            29           10           
+flattened    0            29           12           
 approximated 29           0            7            
 
 # constructs named, by deck
@@ -59,8 +59,8 @@ bullet              deck.docProps, master.background, master.txStyles, text.bull
 autofit-shrink      deck.docProps, master.background, master.txStyles, theme.fmtScheme
 text-decoration     deck.docProps, master.background, master.txStyles, theme.fmtScheme
 paragraph-align     deck.docProps, master.background, master.txStyles, theme.fmtScheme
-paragraph-bullet    deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, theme.fmtScheme
-paragraph-indent    deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, theme.fmtScheme
+paragraph-bullet    deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, theme.fmtScheme
+paragraph-indent    deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, theme.fmtScheme
 master-background   deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, theme.fmtScheme
 layout-chrome       deck.docProps, master.background, master.placeholders, master.txStyles, shape.placeholder, text.color.inherited, theme.fmtScheme
 chart               chart.workbook, deck.docProps, master.background, master.txStyles, theme.fmtScheme

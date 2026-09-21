@@ -211,8 +211,19 @@ export const resaveLoop: Loop = async (input) => ({ bytes: await input.pres.save
  */
 export const carryLoop: Loop = async (input) => {
 	const destination = await Presentation.fromTemplate(input.bytes)
-	for (let index = 0; index < input.pres.slides.length; index++) {
-		destination.importSlide(input.pres, index, { importNotes: true })
-	}
+	// One batch, not a loop of `importSlide`. A slide that links to another slide in the
+	// same deck can only be copied alongside its target: ts-pptx 4.0 refuses a source page
+	// whose link leaves the set being imported, because the alternative is rewriting the
+	// relationship to point at a page that is not there. Imported one at a time, every page
+	// is its own set, so the `hyperlink` deck's slide-to-slide link had nowhere to land; the
+	// batch makes the whole deck the set and the link resolves inside it.
+	destination.importSlides(
+		input.pres.slides.map((_, index) => ({
+			source: input.pres,
+			sourceIndex: index,
+			outputIndex: index,
+			importNotes: true,
+		}))
+	)
 	return { bytes: await destination.save() }
 }

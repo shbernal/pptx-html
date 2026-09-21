@@ -95,7 +95,7 @@ describe('emit → ts-pptx → read round-trip', () => {
 		const slide = pptx.addSlide()
 		await addModelToSlide({ ShapeType }, slide, domFreeModel(), SIZE, 'fr-CA')
 		const pres = await Presentation.load(await pptx.toBytes())
-		const slideXml = new TextDecoder().decode(first(pres.slides, 'slide').part.bytes)
+		const slideXml = new TextDecoder().decode(first(pres.slides, 'slide').part.serialize())
 		expect(slideXml).toContain('lang="fr-CA"')
 		// And no run is still on the writer's default. The model has a text box and a
 		// table, and only checking that *some* run moved would pass with the table
@@ -114,7 +114,7 @@ describe('emit → ts-pptx → read round-trip', () => {
 		// fact worth pinning.
 		const { bytes } = await emitToBytes(domFreeModel())
 		const pres = await Presentation.load(bytes)
-		const presXml = new TextDecoder().decode(pres.presentationPart.bytes)
+		const presXml = new TextDecoder().decode(pres.presentationPart.serialize())
 		expect(presXml).toMatch(/<p:sldSz[^>]*cx="9144000"[^>]*cy="5143500"/)
 	})
 })

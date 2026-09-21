@@ -36,7 +36,7 @@ import { type DeckIr, type FidelityNote, readModelToIr } from '@shbernal/ts-pptx
 import { type Background, type Fill, IR_VERSION, type RenderIr, type RenderNode, type RenderSlide } from '../ir/render'
 import { type AssetIndex, buildAssetIndex } from './assets'
 import { forChrome, type ImportScope } from './context'
-import { colorOf, gradientOf, pictureFillOf } from './paint'
+import { colorOfRef, gradientOf, pictureFillOf } from './paint'
 import { residualOf } from './residual'
 import { nodeOf } from './shape'
 
@@ -172,7 +172,7 @@ function backgroundOf(background: SlideBackground | null, scope: ImportScope): B
 
 	const resolved = background.resolvedFill
 	if (resolved !== null) return { source: background.source, fill: fillOfBackground(resolved, scope) }
-	const color = colorOf(null, background.color)
+	const color = colorOfRef(background.colorRef)
 	return { source: background.source, fill: color === undefined ? { kind: 'inherit' } : { kind: 'solid', color } }
 }
 
@@ -181,7 +181,7 @@ function fillOfBackground(background: BackgroundFill, scope: ImportScope): Fill 
 		case 'none':
 			return { kind: 'none' }
 		case 'solid': {
-			const color = colorOf(null, background.color)
+			const color = colorOfRef(background.colorRef)
 			return color === undefined ? { kind: 'inherit' } : { kind: 'solid', color }
 		}
 		case 'gradient': {
@@ -192,8 +192,8 @@ function fillOfBackground(background: BackgroundFill, scope: ImportScope): Fill 
 			return {
 				kind: 'pattern',
 				preset: background.preset,
-				foreground: colorOf(null, background.foreground) ?? null,
-				background: colorOf(null, background.background) ?? null,
+				foreground: colorOfRef(background.foreground) ?? null,
+				background: colorOfRef(background.background) ?? null,
 			}
 		case 'image':
 			return pictureFillOf(background.picture, scope)

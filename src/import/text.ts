@@ -40,7 +40,7 @@ import type {
 	TextRun,
 } from '../ir/render'
 import { type ImportScope, note } from './context'
-import { colorOf } from './paint'
+import { colorOf, colorOfRef } from './paint'
 
 /** PowerPoint's `a:bodyPr` inset defaults: 0.1" horizontally, 0.05" vertically. */
 const DEFAULT_INSETS = { left: 7.2, right: 7.2, top: 3.6, bottom: 3.6 } as const
@@ -168,7 +168,7 @@ function bulletStyleFields(
 			`this bullet sets an absolute glyph size of ${style.sizePt}pt (a:buSzPts); bullet.size is a percentage of the run size, so the glyph follows the text size instead`
 		)
 
-	const color = colorOf(style.schemeColor, style.resolvedColor) ?? colorOfHex(style.color)
+	const color = colorOfRef(style.colorRef) ?? colorOfHex(style.colorRef.srgb)
 	return {
 		...(style.font === null ? {} : { font: style.font }),
 		...(color === undefined ? {} : { color }),

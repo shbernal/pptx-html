@@ -44,9 +44,19 @@ export interface PptxWriter {
  * `background` is optional because the concrete `Slide` declares it that way — a
  * slide that states no background has none. Requiring it here would mean a real
  * `Slide` did not satisfy this type, which defeats the point of a subset.
+ *
+ * It carries `| undefined` as well as the `?`, and the two are not the same thing
+ * under `exactOptionalPropertyTypes`: the `?` alone means "present with this type,
+ * or absent", which a `Slide` whose own `background` is typed `… | undefined`
+ * does not satisfy. Widening here rather than dropping the compiler option, which
+ * is what keeps the rest of this file honest about what may be missing.
+ *
+ * The `| string` is the writer's `BackgroundOption`, which is `BackgroundProps` or
+ * a bare `Color`. This lane never sets that form, but a subset type has to admit
+ * everything the concrete one does or the concrete one stops satisfying it.
  */
 export interface PptxSlide {
-	background?: { color?: string; path?: string; data?: string }
+	background?: { color?: string; path?: string; data?: string } | string | undefined
 	addImage(opts: object): unknown
 	addShape(type: string, opts: object): unknown
 	addTable(rows: unknown, opts: object): unknown

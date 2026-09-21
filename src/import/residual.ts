@@ -27,9 +27,11 @@ const IMAGE_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relatio
 
 export function residualOf(slide: Slide, assets: AssetIndex): Residual {
 	// The part's *original* bytes, not a reserialization: a carried slide is only
-	// worth carrying if it crosses unchanged, and `Part.bytes` is the untouched
-	// zip entry.
-	const xml = new TextDecoder().decode(slide.part.bytes)
+	// worth carrying if it crosses unchanged, and `Part.originalBytes` is the
+	// untouched zip entry. ts-pptx 4.0 renamed it from `Part.bytes` precisely so
+	// that a call site says which of the two it means; `serialize()` is the other
+	// one, and it is the wrong one here.
+	const xml = new TextDecoder().decode(slide.part.originalBytes)
 
 	const referenced: ResidualAsset[] = []
 	for (const relationship of slide.relationships.byType(IMAGE_REL)) {

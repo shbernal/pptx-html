@@ -19,6 +19,7 @@
 
 import type {
 	CellBorder,
+	ColorRef,
 	GradientFill,
 	GradientStop as ReadGradientStop,
 	PatternFill,
@@ -80,6 +81,20 @@ export function colorOf(token: string | null, resolved: ResolvedColor | null): C
 }
 
 /**
+ * The same decode, for the read values that carry their colour as one `ColorRef`.
+ *
+ * ts-pptx 4.0 gave every colour-carrying read value one field, `{ srgb, scheme,
+ * preset, resolved }`, where a handful of types used to spell the same two parts
+ * as `schemeColor` plus `resolvedColor`, `color`, or `foreground`. The split this
+ * file decodes has not changed, so the ref is taken apart and handed to
+ * {@link colorOf}: `scheme` is the token, `resolved` is what it renders as. A
+ * `ColorRef` is never `null` itself, but the value holding it can be absent.
+ */
+export function colorOfRef(ref: ColorRef | null | undefined): Color | undefined {
+	return colorOf(ref?.scheme ?? null, ref?.resolved ?? null)
+}
+
+/**
  * A gradient stop, whose colour arrives as the same two-part split a solid fill
  * gives — the raw `a:schemeClr` token and a {@link ResolvedColor} carrying the
  * transform list — so {@link colorOf} decodes it with no special case.
@@ -88,7 +103,7 @@ export function colorOf(token: string | null, resolved: ResolvedColor | null): C
  * the one case there is nothing to paint and nothing to reference.
  */
 function stopOf(stop: ReadGradientStop): GradientStop | null {
-	const color = colorOf(stop.schemeColor, stop.resolvedColor)
+	const color = colorOfRef(stop.colorRef)
 	if (color === undefined) return null
 	return { position: stop.position ?? 0, color }
 }
@@ -157,8 +172,8 @@ export function fillOf(source: FillSource, scope: ImportScope): Fill {
 		return {
 			kind: 'pattern',
 			preset: pattern.preset,
-			foreground: colorOf(null, pattern.foreground) ?? null,
-			background: colorOf(null, pattern.background) ?? null,
+			foreground: colorOfRef(pattern.foreground) ?? null,
+			background: colorOfRef(pattern.background) ?? null,
 		}
 	}
 
@@ -349,7 +364,7 @@ export function cellBorderOf(border: CellBorder | null, scope: ImportScope): Str
 	if (border === null) return { kind: 'inherit' }
 	if (border.noFill) return { kind: 'none' }
 
-	const color = colorOf(border.schemeColor, border.resolvedColor)
+	const color = colorOfRef(border.colorRef)
 	const dash = dashOf(border.dash, scope, 'table.cell.borders.dash')
 
 	if (color === undefined && dash === undefined && border.widthPt === null) return { kind: 'inherit' }

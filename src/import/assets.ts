@@ -84,7 +84,7 @@ export async function buildAssetIndex(opc: OpcPackage, deck: DeckIr): Promise<As
 	const media = await Promise.all(
 		[...opc.parts]
 			.filter(([, part]) => isMediaPart(part.contentType))
-			.map(async ([partName, part]) => ({ partName, part, hash: await sha256OfBytes(part.bytes) }))
+			.map(async ([partName, part]) => ({ partName, part, hash: await sha256OfBytes(part.serialize()) }))
 	)
 
 	for (const { partName, part, hash } of media) {
@@ -100,11 +100,11 @@ export async function buildAssetIndex(opc: OpcPackage, deck: DeckIr): Promise<As
 		const name = uniqueName(carried?.name ?? partName.replace(/^.*\//, ''), bytesByName)
 		nameByHash.set(hash, name)
 		refByPart.set(partName, { $asset: name })
-		bytesByName.set(name, part.bytes)
+		bytesByName.set(name, part.serialize())
 		manifest.push({
 			name,
 			contentType: carried?.contentType ?? part.contentType,
-			byteLength: part.bytes.byteLength,
+			byteLength: part.serialize().byteLength,
 			sha256: hash,
 		})
 	}

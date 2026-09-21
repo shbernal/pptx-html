@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@shbernal/ts-pptx':
-        specifier: ^3.6.0
-        version: 3.6.0
+        specifier: ^4.0.1
+        version: 4.0.1
     devDependencies:
       '@types/node':
         specifier: ^26.3.0
@@ -964,8 +964,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@shbernal/ts-pptx@3.6.0':
-    resolution: {integrity: sha512-G1Iypgn24Puh/4K8Uw2wngd05Tyaq4R6F1RgR8yZIbyPFx98asYz0kDug3SD4bRhI8ctIhNOy5XbwCeD0XmVag==}
+  '@shbernal/ts-pptx@4.0.1':
+    resolution: {integrity: sha512-w0JaRzaxbYlVLXBmQVVA7Tw74D6m4OCkpddQMTleMmb1Tae10/D+hbyDqKmAKTbbnwt53cywsHBY8vbD4r7GBg==}
     engines: {node: '>=24'}
     peerDependencies:
       mathml2omml: ^0.5.0
@@ -2778,7 +2778,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.4':
     optional: true
 
-  '@shbernal/ts-pptx@3.6.0':
+  '@shbernal/ts-pptx@4.0.1':
     dependencies:
       '@xmldom/xmldom': 0.9.12
       fflate: 0.8.3

@@ -396,8 +396,12 @@ describe('the template’s furniture arrives as chrome, not as nodes', () => {
 		if (!entry) throw new Error('the corpus lost its layout-chrome deck')
 		const { deck, render } = await importDeck(await corpusBytes(entry))
 
+		// The names are the writer's own defaults, and they are 1-based as of ts-pptx 4.0:
+		// eleven definers had been split between counting from 0 and from 1, and all of them
+		// now use the base PowerPoint uses. Nothing here relies on the numbers beyond their
+		// being the two chrome shapes.
 		const chromeNames = new Set(flatten(render.slides[0]?.chrome ?? []).map((node) => node.name))
-		expect(chromeNames).toEqual(new Set(['Shape 0', 'Text 1']))
+		expect(chromeNames).toEqual(new Set(['Shape 1', 'Text 2']))
 
 		// The second half. A note about a layout must not land on the slide: it would
 		// show the reader "Text 1 lost its indent" beneath a slide whose own content is
