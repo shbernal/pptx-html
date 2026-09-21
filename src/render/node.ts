@@ -237,9 +237,15 @@ export function renderNode(node: RenderNode, context: NodeContext): string {
 	}
 
 	const box = node.placement.box
+	// A group states a placement and does not apply one. Its children's placements are
+	// already slide-absolute -- `bodyOf` renders them against the slide, and says so --
+	// so wrapping them in the group's own `translate` applies that offset a second time
+	// and every grouped shape lands at twice its distance from the origin. The wrapper
+	// stays, because it is what carries the node id; only the transform goes.
+	const placed = node.kind !== 'group'
 	const attrs = [
 		...(context.editable ? [`data-pxh-node="${escapeAttr(node.id)}"`] : []),
-		`transform="${transformOf(node.placement)}"`,
+		...(placed ? [`transform="${transformOf(node.placement)}"`] : []),
 	]
 	if (node.hidden === true) attrs.push('style="display:none"')
 	if (node.alt !== undefined) attrs.push(`aria-label="${escapeAttr(node.alt)}"`)
