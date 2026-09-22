@@ -25,7 +25,7 @@ import type {
 	PatternFill,
 	PictureFill,
 	ResolvedColor,
-} from '@shbernal/ts-pptx/read'
+} from 'pptx-ts/read'
 import type {
 	Color,
 	DashStyle,

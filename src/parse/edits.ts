@@ -35,7 +35,7 @@
  * prevent, and it would look exactly like success.
  */
 
-import type { CallIr, DeckIr, IrValue } from '@shbernal/ts-pptx/script'
+import type { CallIr, DeckIr, IrValue } from 'pptx-ts/script'
 import {
 	type Bullet,
 	type Color,

@@ -5,8 +5,8 @@
  * `base64` result back with ts-pptx's `read` model to assert deck structure.
  */
 
-import { TsPptx } from '@shbernal/ts-pptx'
-import { Presentation } from '@shbernal/ts-pptx/read'
+import { TsPptx } from 'pptx-ts'
+import { Presentation } from 'pptx-ts/read'
 import { describe, expect, it } from 'vitest'
 import { convertDeck } from '../../src/index'
 import deckHtml from '../fixtures/deck.html?raw'

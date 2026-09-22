@@ -24,9 +24,9 @@
  * and are not defects to chase.
  */
 
-import TsPptx, { EMU_PER_INCH } from '@shbernal/ts-pptx'
-import { type LayoutHandle, Presentation } from '@shbernal/ts-pptx/read'
-import { type AssetIr, type CallIr, type DeckIr, type IrValue, isAssetRef, type SlideIr } from '@shbernal/ts-pptx/script'
+import TsPptx, { EMU_PER_INCH } from 'pptx-ts'
+import { type LayoutHandle, Presentation } from 'pptx-ts/read'
+import { type AssetIr, type CallIr, type DeckIr, type IrValue, isAssetRef, type SlideIr } from 'pptx-ts/script'
 import { base64Of } from '../base64'
 
 /**

@@ -11,7 +11,7 @@ Requires Node `>=24` and pnpm.
 pnpm install
 ```
 
-The writer dependency, `@shbernal/ts-pptx`, is a **released version from npm**.
+The writer dependency, `pptx-ts`, is a **released version from npm**.
 The range lives in `package.json` and is not repeated here; it moves often enough
 that a second copy in prose is a copy that goes stale, so read it from the
 manifest. It was pinned to a git sha for as long as the fixes this repo depends on
@@ -23,8 +23,8 @@ check for.
 To move to a newer release:
 
 ```bash
-pnpm add "@shbernal/ts-pptx@^<version>"
-npx skills add ./node_modules/@shbernal/ts-pptx -s '*' -a claude-code -a codex -a universal -y
+pnpm add "pptx-ts@^<version>"
+npx skills add ./node_modules/pptx-ts -s '*' -a claude-code -a codex -a universal -y
 pnpm run test:oracle
 ```
 
@@ -33,7 +33,7 @@ inside the package, so it moves with the version ([AGENTS.md](./AGENTS.md)).
 
 Two things the sha era left behind in `pnpm-workspace.yaml`, both still live:
 
-- `'@shbernal/ts-pptx': false` in `allowBuilds`. The entry is no longer about
+- `'pptx-ts': false` in `allowBuilds`. The entry is no longer about
   building the writer, since the published tarball ships `dist/`, but the manifest
   still declares `prepare`, which pnpm counts as a build script and asks about for
   a registry dependency too. Deleting the line makes pnpm write `set this to true
@@ -101,7 +101,7 @@ which is the same reason `examples/round-trip.mjs` does, so `dist/` has to exist
 The home page (`site/index.md`) is a landing page rather than a doc page, and the
 two rows of slides drifting across it are **rendered on load, in the visitor's
 browser**, by `site/.vitepress/theme/home/`. `decks.ts` writes two eight-slide
-consulting decks with `@shbernal/ts-pptx`, `showcase.ts` runs
+consulting decks with `pptx-ts`, `showcase.ts` runs
 `importDeck → renderDeck` and cuts the document into its `section.pxh-slide`
 elements verbatim, and each one is installed in a shadow root so the site's own
 stylesheet cannot restyle it. They are **not** corpus decks and must not become
@@ -113,7 +113,7 @@ Two rules for anything under `site/**`:
 
 - **No claim the oracle does not gate.** The site is the project's marketing
   surface and therefore the likeliest place to overstate. Every page that touches
-  fidelity states the input domain, decks written by `@shbernal/ts-pptx`, and
+  fidelity states the input domain, decks written by `pptx-ts`, and
   says that PowerPoint-authored decks are a deliberate second tier.
 - **Nothing is shown that was not produced by running the library.** There are no
   slide images anywhere on the site. A screenshot of a converted deck is exactly
@@ -174,22 +174,22 @@ This package drives a writer; it does not emit XML. Check in this order:
 
 1. **ts-pptx's shipped type declarations.** The package publishes its API as
    `.d.ts` files next to `dist/`. Locate it with
-   `node -e "console.log(require.resolve('@shbernal/ts-pptx/package.json'))"`
+   `node -e "console.log(require.resolve('pptx-ts/package.json'))"`
    (pnpm hides the real directory under `node_modules/.pnpm/`), then read the
    `exports` map. The subpaths that matter here:
-   - `@shbernal/ts-pptx`, the writer: `addShape` / `addText` / `addTable` /
+   - `pptx-ts`, the writer: `addShape` / `addText` / `addTable` /
      `addImage` option shapes, `ShapeType.custGeom`, and the freeform point DSL
      that `src/heuristic/custgeom.ts` passes through unchanged.
-   - `@shbernal/ts-pptx/read`: `Presentation.load`, the round-trip oracle the
+   - `pptx-ts/read`: `Presentation.load`, the round-trip oracle the
      unit tests already assert against.
-   - `@shbernal/ts-pptx/inspect`: per-element view (box, fill, text runs,
+   - `pptx-ts/inspect`: per-element view (box, fill, text runs,
      paragraph boundaries, `a:bodyPr` autofit mode). Use it to confirm what an
      emit path actually produced.
-   - `@shbernal/ts-pptx/measure`: font metrics and measured text fit. Read-only,
+   - `pptx-ts/measure`: font metrics and measured text fit. Read-only,
      and **not from the emit path**: a measurement taken at emit time makes the
      same IR produce different decks on different machines. Measuring belongs in
      `src/heuristic/`, resolved into that lane's model where it is taken.
-   - `@shbernal/ts-pptx/zip`: the fflate ZIP toolkit, if a test ever needs to look
+   - `pptx-ts/zip`: the fflate ZIP toolkit, if a test ever needs to look
      inside a package. Do not add a separate ZIP dependency.
 2. **The `ooxml` MCP** (ECMA-376 schema/spec), for raw XML questions only. Note
    that [there is no raw OOXML work in `src/`](./docs/decisions.md), so this is
@@ -205,7 +205,7 @@ Do not vendor large spec text into the repo.
 
 ## Fix upstream when possible
 
-Prefer fixing generic OOXML / emitter problems upstream in `@shbernal/ts-pptx`,
+Prefer fixing generic OOXML / emitter problems upstream in `pptx-ts`,
 where it helps every consumer, over patching them here. The dependency is a
 published range now rather than a sha, so a fix arrives on the release that
 carries it, and a stopgap covers the window between the two. That window is

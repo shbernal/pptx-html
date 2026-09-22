@@ -20,16 +20,16 @@ and the routing between them.
 ## Repository expectations
 
 - This repo builds `pptx-html`: it moves slides between HTML and PPTX by driving
-  `@shbernal/ts-pptx`. Its role is the **HTML ⇄ ts-pptx** link, both directions.
+  `pptx-ts`. Its role is the **HTML ⇄ ts-pptx** link, both directions.
 - This is a **standalone repository** with its own git. It is not a member of any
   workspace; run its commands from the repository root.
 - Use `pnpm`. Node `>=24`. Keep source in `src/`, tests in `test/`. Treat `dist/`
   as generated build output.
-- **`@shbernal/ts-pptx` is a released npm range, no longer a git sha.** Bumping it
+- **`pptx-ts` is a released npm range, no longer a git sha.** Bumping it
   is three commands, not one; the skill reinstall is part of it →
   [CONTRIBUTING](./CONTRIBUTING.md#setup).
 - **Version numbers live in `package.json`, never in prose.** A range written down
-  twice goes stale in one of the two places, and `@shbernal/ts-pptx` moves fast
+  twice goes stale in one of the two places, and `pptx-ts` moves fast
   enough that it did: the README named a range the manifest had already left four
   minor versions behind. Markdown names the package and points at the manifest.
   The exception is history, where the number *is* the fact: the changelog, and a
@@ -38,14 +38,14 @@ and the routing between them.
   directory (`.claude/skills/`, `.gitignore`d) linking into it, so every runtime
   loads the same files and there is one copy to edit.
 - **`ts-pptx-upstream` is installed from the dependency, not authored here.** It
-  ships inside `@shbernal/ts-pptx`, which is what keeps it matching the installed
+  ships inside `pptx-ts`, which is what keeps it matching the installed
   version; editing the copy would only diverge from it, and a change to it belongs
   in the ts-pptx repo. `skills-lock.json` is the tracked record and the copy is
   `.gitignore`d. Install it after a fresh clone, and again after bumping the
   dependency:
 
   ```bash
-  npx skills add ./node_modules/@shbernal/ts-pptx -s '*' -a claude-code -a codex -a universal -y
+  npx skills add ./node_modules/pptx-ts -s '*' -a claude-code -a codex -a universal -y
   ```
 
   Name the runtimes rather than passing `--all`: that flag writes an `agent/`
@@ -116,7 +116,7 @@ Two habits that have each paid for themselves more than once:
 
 ## Upstream
 
-Gaps in `@shbernal/ts-pptx` are filed as GitHub issues **in the same unit of work
+Gaps in `pptx-ts` are filed as GitHub issues **in the same unit of work
 that found them**, before the commit. The `ts-pptx-upstream` skill, which the
 package itself ships, is the normative reference for *how*: which error class
 means whose bug, reducing the failure to a script that builds its own deck rather

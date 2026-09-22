@@ -7,7 +7,7 @@
  * (`DOMParser`) that jsdom/happy-dom don't provide faithfully.
  */
 
-import { type AutoShape, type CustomGeometry, isAutoShape, Presentation } from '@shbernal/ts-pptx/read'
+import { type AutoShape, type CustomGeometry, isAutoShape, Presentation } from 'pptx-ts/read'
 import { describe, expect, it } from 'vitest'
 import { parseDeckHtml } from '../../src/heuristic/parse'
 import { convertDeck, convertSlide } from '../../src/index'

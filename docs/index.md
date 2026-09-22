@@ -11,7 +11,7 @@ doc_type: 'overview'
 # pptx-html docs
 
 `pptx-html` moves slides between HTML and PPTX by driving
-[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx). It owns
+[`pptx-ts`](https://www.npmjs.com/package/pptx-ts). It owns
 the **HTML ⇄ ts-pptx** link, in both directions. It does not emit OOXML itself,
 and it does not generate the HTML.
 

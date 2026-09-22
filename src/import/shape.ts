@@ -31,7 +31,7 @@ import {
 	type Shape,
 	type Table,
 	type TableCell as ReadTableCell,
-} from '@shbernal/ts-pptx/read'
+} from 'pptx-ts/read'
 import {
 	cellNodeId,
 	chromeNodeId,
@@ -167,7 +167,7 @@ function groupNodeOf(group: GroupShape, scope: ImportScope): RenderNode {
  *
  * A PowerPoint SVG picture is two parts, not one: the art hangs off the
  * `asvg:svgBlip` extension and `a:blip/@r:embed` holds a raster fallback for
- * readers that cannot draw vectors. `@shbernal/ts-pptx` writes that fallback as
+ * readers that cannot draw vectors. `pptx-ts` writes that fallback as
  * a **1×1 transparent PNG**, so taking `imagePartName` alone paints every icon
  * in a deck as one invisible pixel — with no warning, because a picture that
  * resolves to a real part looks resolved. Upstream's own `pictureCall` states

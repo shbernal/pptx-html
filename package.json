@@ -5,7 +5,7 @@
 		"name": "shbernal",
 		"url": "https://github.com/shbernal/"
 	},
-	"description": "Turn HTML from the DOM into editable PowerPoint presentations via @shbernal/ts-pptx",
+	"description": "Turn HTML from the DOM into editable PowerPoint presentations via pptx-ts",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/shbernal/pptx-html.git"
@@ -72,9 +72,6 @@
 		"prepack": "pnpm run build",
 		"prepublishOnly": "pnpm run typecheck && pnpm run check && pnpm run test:oracle"
 	},
-	"dependencies": {
-		"@shbernal/ts-pptx": "^4.0.1"
-	},
 	"devDependencies": {
 		"@types/node": "^26.3.0",
 		"@vitest/browser": "^4.1.11",
@@ -92,5 +89,8 @@
 		"vitepress": "^1.6.4",
 		"vitest": "^4.1.11",
 		"vue": "^3.5.41"
+	},
+	"dependencies": {
+		"pptx-ts": "^4.0.1"
 	}
 }

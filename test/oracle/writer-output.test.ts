@@ -31,7 +31,7 @@
  * not a second repair layer — but it should be a failing test first.
  */
 
-import { readZip } from '@shbernal/ts-pptx/zip'
+import { readZip } from 'pptx-ts/zip'
 import { describe, expect, it } from 'vitest'
 import { CORPUS, corpusBytes } from '../corpus/decks'
 

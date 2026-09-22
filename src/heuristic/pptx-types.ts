@@ -1,5 +1,5 @@
 /**
- * Minimal structural types for the slice of `@shbernal/ts-pptx` that the
+ * Minimal structural types for the slice of `pptx-ts` that the
  * heuristic lane drives. The lane's emitter is pure and isomorphic, so it
  * depends on these shapes rather than on the full writer types — which keeps the
  * model → ts-pptx boundary decoupled and unit-testable against an injected mock,

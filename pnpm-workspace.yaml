@@ -42,13 +42,13 @@
 # `false` is the answer that runs no foreign script. Back to `true` if the pin
 # ever returns to a sha.
 allowBuilds:
-  '@shbernal/ts-pptx': false
+  'pptx-ts': false
   esbuild: false
   lefthook: false
 #
 # The writer is excluded from the release-age gate. That gate exists to keep a
 # compromised publish from being pulled in before anyone notices it; this repo
-# and `@shbernal/ts-pptx` share an author, so it buys nothing here and costs a
+# and `pptx-ts` share an author, so it buys nothing here and costs a
 # two-day wait on every bump — during which `pnpm run`, and therefore the
 # pre-commit hook, refuses to run at all.
 #
@@ -61,7 +61,7 @@ allowBuilds:
 # has none — and the pin is a version range again, so it is now the thing keeping
 # a same-day bump installable rather than a note about one.
 minimumReleaseAgeExclude:
-  - '@shbernal/ts-pptx'
+  - 'pptx-ts'
   # Was pinned to `charcheck@0.1.0`, which is the pinned form the paragraph above
   # says does not work. It went unnoticed while 0.1.0 was the installed version
   # and old enough to clear the gate on its own. The 0.2.5 bump is what a stale

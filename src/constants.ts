@@ -18,7 +18,7 @@
  *   package should not have its value depend on a transitive dependency's release.
  * - **Internal-only conversions take upstream's.** `src/emit/script.ts` may not
  *   import `src/ir/render.ts` at all — that is the emit boundary — so it takes
- *   `EMU_PER_INCH` from `@shbernal/ts-pptx`, which is the library that owns the
+ *   `EMU_PER_INCH` from `pptx-ts`, which is the library that owns the
  *   format. `src/render/geometry.ts` does the same for `ANGLE_UNITS_PER_DEGREE`.
  *
  * `PX_PER_IN` and `PT_PER_PX` stay here rather than becoming upstream's

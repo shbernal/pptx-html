@@ -13,7 +13,7 @@ doc_type: 'architecture'
 
 One-way dependency: **consumer app → pptx-html → ts-pptx**. No cycles.
 
-`pptx-html` does not know about AI or UI. `@shbernal/ts-pptx` is its only runtime
+`pptx-html` does not know about AI or UI. `pptx-ts` is its only runtime
 dependency, and consumers never import `ts-pptx` directly.
 
 ## Two lanes, and the directory layout says which is which
@@ -63,7 +63,7 @@ The fourth state, **approximated** (output that looks about right but has no way
 back), is what the charter rules out.
 
 The machine-readable classification is upstream's `FidelityNote`
-(`Disposition` × `Cause`) from `@shbernal/ts-pptx/script`, checked against
+(`Disposition` × `Cause`) from `pptx-ts/script`, checked against
 `knownNoteConstructs()`. **Do not coin a local `modeled`/`carried`/`unsupported`
 enum** alongside it: two vocabularies for one concept is how the differ and the
 renderer drift apart. The trio above is the plain-language framing of that same
@@ -79,7 +79,7 @@ construct, not a pixel match, and record a `Warning` rather than dropping conten
 ## Two IRs, on purpose
 
 `src/ir/render.ts` (`RenderIr`) is the **paint** model. `DeckIr` from
-`@shbernal/ts-pptx/script` is the **contract** model: it is what emit writes and
+`pptx-ts/script` is the **contract** model: it is what emit writes and
 what `diffDeckIr` judges. Both are built from **one loaded `Presentation`**
 (`src/import/deck.ts`), so they cannot disagree about the source deck.
 
@@ -184,7 +184,7 @@ finds a bug is not necessarily the corpus the bug lives in.
 `src/import/` turns a `.pptx` into both models. It is **browser-capable**, the
 same code runs in Chromium, and it holds to three rules:
 
-- **No XML.** Everything comes through `@shbernal/ts-pptx/read`'s typed object
+- **No XML.** Everything comes through `pptx-ts/read`'s typed object
   graph. When the read model exposes no accessor, that is an upstream ask, not a
   licence to reach into `Shape.element_`. **No code in `src/` touches OOXML
   directly**: see [the decisions record](./decisions.md) for why the one place

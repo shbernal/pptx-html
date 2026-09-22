@@ -24,7 +24,7 @@
  * behind the same seam without changing a line here.
  */
 
-import { Presentation } from '@shbernal/ts-pptx/read'
+import { Presentation } from 'pptx-ts/read'
 import {
 	type CanonicalDeck,
 	canonicalDeckIr,
@@ -35,7 +35,7 @@ import {
 	printScript,
 	type RoundTripReport,
 	readModelToIr,
-} from '@shbernal/ts-pptx/script'
+} from 'pptx-ts/script'
 
 /** One deck, at every level the oracle needs to see it. */
 export interface DeckView {
@@ -195,7 +195,7 @@ export const resaveLoop: Loop = async (input) => ({ bytes: await input.pres.save
  * `theme: 'copy'` default brought the slide's own layout → master → theme
  * subgraph across unconditionally, so the destination ended up holding the
  * source's master beside its own and the layout gallery gained an entry nothing
- * bound to — declared here as a `master.default` note. As of `@shbernal/ts-pptx`
+ * bound to — declared here as a `master.default` note. As of `pptx-ts`
  * 3.5.0 the import reuses chrome the destination already holds, and this lane
  * templates the destination *from the source*, so there is nothing left to
  * duplicate. Verified rather than assumed: across the whole corpus the note

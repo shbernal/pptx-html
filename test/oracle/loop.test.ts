@@ -11,8 +11,8 @@
  * case rather than by observing its absence.
  */
 
-import { Presentation } from '@shbernal/ts-pptx/read'
-import { readModelToIr } from '@shbernal/ts-pptx/script'
+import { Presentation } from 'pptx-ts/read'
+import { readModelToIr } from 'pptx-ts/script'
 import { describe, expect, it } from 'vitest'
 import { importDeck, importPresentation } from '../../src/import/deck'
 import { IR_VERSION } from '../../src/ir/render'

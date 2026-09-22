@@ -100,12 +100,12 @@ const warnings = computed(() => rows.value.flatMap((row) => row.warnings))
 						<div v-for="n in 8" :key="n" class="pxh-skeleton"></div>
 					</div>
 				</div>
-				<p class="pxh-waiting">Writing two decks with <code>@shbernal/ts-pptx</code> and rendering them…</p>
+				<p class="pxh-waiting">Writing two decks with <code>pptx-ts</code> and rendering them…</p>
 			</div>
 		</template>
 
 		<p v-if="rows.length > 0" class="pxh-marquee-note">
-			Sixteen slides, written by <code>@shbernal/ts-pptx</code> and drawn by <code>renderDeck</code> in this tab a
+			Sixteen slides, written by <code>pptx-ts</code> and drawn by <code>renderDeck</code> in this tab a
 			moment ago. Not screenshots: this site has none, and
 			<a :href="withBase('/docs/decisions')">that is a rule, not an oversight</a>.
 			Each row's button hands you the <code>.pptx</code> its slides were drawn from: written in this tab, never

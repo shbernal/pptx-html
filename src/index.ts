@@ -9,7 +9,7 @@
  *   └──emitDeck──────────────┴──────parseDeck─────────┘     (what a machine reads)
  * ```
  *
- * with one property to defend: for a deck written by `@shbernal/ts-pptx`,
+ * with one property to defend: for a deck written by `pptx-ts`,
  * `import → render → parse → emit` produces a deck equal to the input **under
  * the normalized read model**. Not byte-identical — zip order, `rId` numbering
  * and timestamps all vary legally. Slides whose features the model cannot

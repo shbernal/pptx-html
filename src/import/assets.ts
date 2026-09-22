@@ -16,8 +16,8 @@
  * workaround for a missing accessor.
  */
 
-import type { AssetRef, DeckIr } from '@shbernal/ts-pptx/script'
-import type { OpcPackage } from '@shbernal/ts-pptx/read'
+import type { AssetRef, DeckIr } from 'pptx-ts/script'
+import type { OpcPackage } from 'pptx-ts/read'
 // The hash that *defines* {@link AssetManifestEntry.sha256}. It lives in
 // `src/hash.ts` rather than here because the return path verifies resolved bytes
 // against that field, and two implementations of the manifest hash would be two

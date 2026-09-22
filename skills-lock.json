@@ -2,7 +2,7 @@
   "version": 1,
   "skills": {
     "ts-pptx-upstream": {
-      "source": "./node_modules/@shbernal/ts-pptx",
+      "source": "./node_modules/pptx-ts",
       "sourceType": "local",
       "computedHash": "2b188148a980ff4fd434ac8e5a3ec531dc05925c2ea6712c264de21b0e45fd55"
     }

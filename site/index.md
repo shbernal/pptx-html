@@ -31,7 +31,7 @@ import { withBase } from 'vitepress'
 ## Four functions, arranged in a circle
 
 `pptx-html` moves slides between HTML and PPTX by driving
-[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx). It reads a
+[`pptx-ts`](https://www.npmjs.com/package/pptx-ts). It reads a
 `.pptx` into a slide model, renders that model as HTML, reads the edited HTML back,
 and writes a `.pptx` out again, so a deck can be edited by anything that can edit
 a web page, and still be a deck afterwards.
@@ -100,7 +100,7 @@ it says so.
 <ul class="pxh-facts">
 	<li>
 		<b>Input domain</b>
-		<span>Decks written by <code>@shbernal/ts-pptx</code>, which is what the generated corpus is made of, and what the two decks moving above are written by. Decks authored in PowerPoint are a deliberate second tier and are <strong>not yet gated</strong>.</span>
+		<span>Decks written by <code>pptx-ts</code>, which is what the generated corpus is made of, and what the two decks moving above are written by. Decks authored in PowerPoint are a deliberate second tier and are <strong>not yet gated</strong>.</span>
 	</li>
 	<li>
 		<b>Environment</b>

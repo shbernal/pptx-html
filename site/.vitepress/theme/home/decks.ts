@@ -1,7 +1,7 @@
 /**
  * The two decks the landing page puts in motion.
  *
- * These are **written by `@shbernal/ts-pptx` at page load**, imported, and drawn
+ * These are **written by `pptx-ts` at page load**, imported, and drawn
  * by `renderDeck` in the visitor's browser. Nothing here is a picture of a slide,
  * and there is no image of a deck anywhere on this site — a screenshot would
  * prove exactly the thing the project refuses to do (see docs/decisions). What
@@ -18,7 +18,7 @@
  * the page says what they are.
  *
  * They are still inside the guarantee's stated input domain, because that domain
- * is "decks written by `@shbernal/ts-pptx`" and these are written by it.
+ * is "decks written by `pptx-ts`" and these are written by it.
  *
  * ## Drawn with what the renderer actually draws
  *
@@ -37,7 +37,7 @@
  * The companies, numbers and dates are fictitious, and the page says so.
  */
 
-import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
+import { ShapeType, TsPptx } from 'pptx-ts'
 
 /** `LAYOUT_16x9`, in inches. Every coordinate below is stated against these. */
 const W = 10
@@ -1224,7 +1224,7 @@ function newDeck(title: string): TsPptx {
 	pptx.layout = 'LAYOUT_16x9'
 	pptx.author = 'pptx-html'
 	pptx.company = 'pptx-html showcase'
-	pptx.subject = 'Illustrative deck, written by @shbernal/ts-pptx'
+	pptx.subject = 'Illustrative deck, written by pptx-ts'
 	pptx.title = title
 	return pptx
 }

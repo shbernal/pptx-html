@@ -33,8 +33,8 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { TsPptx } from '@shbernal/ts-pptx'
 import { convertDeck, convertSlide, emitDeck, importDeck, parseDeck, renderDeck } from 'pptx-html'
+import { TsPptx } from 'pptx-ts'
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), 'out')
 

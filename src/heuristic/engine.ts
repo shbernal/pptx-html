@@ -11,7 +11,7 @@
  * lane that carries a guarantee.
  *
  * The seams, all of them options on the `opts` argument:
- *  - the writer is `@shbernal/ts-pptx`, imported here and overridable via
+ *  - the writer is `pptx-ts`, imported here and overridable via
  *    `opts.pptxFactory`;
  *  - delivery is the `opts.output` option (`download` | `base64` | `blob` |
  *    `pptx-instance`);
@@ -20,7 +20,7 @@
  * The entry points are ES module exports, re-exported from `index.ts`.
  */
 
-import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
+import { ShapeType, TsPptx } from 'pptx-ts'
 import { bytesOfBase64 } from '../base64'
 import { DEFAULT_FONT } from '../constants'
 import { EMU_PER_INCH } from '../ir/render'

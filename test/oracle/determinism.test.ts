@@ -1,4 +1,4 @@
-import { Presentation } from '@shbernal/ts-pptx/read'
+import { Presentation } from 'pptx-ts/read'
 import { describe, expect, it } from 'vitest'
 import { buildLabelledDeck, CORPUS, corpusBytes, labelledProducer } from '../corpus/decks'
 import { first } from '../support'

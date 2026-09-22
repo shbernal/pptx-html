@@ -195,7 +195,7 @@ function onDrop(event: DragEvent): void {
 				</label>
 				<p>
 					Decks authored in PowerPoint are the project's <strong>second tier</strong>: the guarantee is scoped to
-					decks written by <code>@shbernal/ts-pptx</code>, and PowerPoint-authored files are not gated by the
+					decks written by <code>pptx-ts</code>, and PowerPoint-authored files are not gated by the
 					oracle. Anything imperfect you see is the documented state of the project, shown rather than hidden.
 				</p>
 			</div>

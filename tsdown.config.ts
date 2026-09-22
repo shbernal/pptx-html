@@ -1,6 +1,6 @@
 import { defineConfig } from 'tsdown'
 
-// Browser-only package (needs a real DOM at runtime). @shbernal/ts-pptx is a
+// Browser-only package (needs a real DOM at runtime). pptx-ts is a
 // real dependency of this package, not bundled here; the consumer's bundler
 // resolves it.
 export default defineConfig({

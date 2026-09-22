@@ -117,7 +117,7 @@ function scope(rows: CoverageRow[]): string {
 	return [
 		'**What this covers, before any number below.** The round-trip guarantee is',
 		'scoped to decks written by',
-		'[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx), which is',
+		'[`pptx-ts`](https://www.npmjs.com/package/pptx-ts), which is',
 		`what these ${rows.length} decks are. Decks authored in PowerPoint are a deliberate`,
 		'second tier and are **not gated** by any of this. See [Invariant R and the',
 		'round-trip oracle](./round-trip) for what the gate does and does not promise.',

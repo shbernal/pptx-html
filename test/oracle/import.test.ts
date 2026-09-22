@@ -8,7 +8,7 @@
  * oracle project owns. No DOM is involved.
  */
 
-import { LAYOUT_NOTE_PREFIX } from '@shbernal/ts-pptx/script'
+import { LAYOUT_NOTE_PREFIX } from 'pptx-ts/script'
 import { describe, expect, it } from 'vitest'
 import { importDeck } from '../../src/import/deck'
 import type { RenderIr, RenderNode, ShapeNode } from '../../src/ir/render'

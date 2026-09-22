@@ -14,7 +14,7 @@
  * to read a path back out.
  */
 
-import { type AnyShape, isAutoShape } from '@shbernal/ts-pptx/read'
+import { type AnyShape, isAutoShape } from 'pptx-ts/read'
 import type { Geometry, GeometryPath } from '../ir/render'
 import { type ImportScope, note } from './context'
 

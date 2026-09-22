@@ -18,7 +18,7 @@
  * way back — is keyed the same way.
  */
 
-import type { Slide } from '@shbernal/ts-pptx/read'
+import type { Slide } from 'pptx-ts/read'
 import type { Residual, ResidualAsset } from '../ir/render'
 import type { AssetIndex } from './assets'
 

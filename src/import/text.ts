@@ -27,7 +27,7 @@ import type {
 	Paragraph as ReadParagraph,
 	Run as ReadRun,
 	TextFrame,
-} from '@shbernal/ts-pptx/read'
+} from 'pptx-ts/read'
 import type {
 	Bullet,
 	Color,

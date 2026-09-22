@@ -1,4 +1,4 @@
-import { diffDeckIr, type FidelityNote } from '@shbernal/ts-pptx/script'
+import { diffDeckIr, type FidelityNote } from 'pptx-ts/script'
 import { describe, expect, it } from 'vitest'
 import { CORPUS, corpusBytes } from '../corpus/decks'
 import { first } from '../support'

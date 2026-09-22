@@ -9,7 +9,7 @@
  * *address* a note is stamped with.
  */
 
-import type { Cause, Disposition, FidelityNote } from '@shbernal/ts-pptx/script'
+import type { Cause, Disposition, FidelityNote } from 'pptx-ts/script'
 import type { ChromeTier } from '../ir/render'
 import type { AssetIndex } from './assets'
 

@@ -13,8 +13,8 @@
  * tier and will not be fixed by more converter work.
  */
 
-import type { Cause, DeckIr, Disposition, FidelityNote } from '@shbernal/ts-pptx/script'
-import { isKnownNoteConstruct } from '@shbernal/ts-pptx/script'
+import type { Cause, DeckIr, Disposition, FidelityNote } from 'pptx-ts/script'
+import { isKnownNoteConstruct } from 'pptx-ts/script'
 
 const DISPOSITIONS: Disposition[] = ['dropped', 'flattened', 'approximated']
 const CAUSES: Cause[] = ['unread', 'unwritable', 'unsupported']

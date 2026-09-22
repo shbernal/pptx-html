@@ -1,13 +1,13 @@
 /**
  * Writer round-trip, headless. The emit layer for a DOM-free model (colour
- * background + shape + line + text + table) drives `@shbernal/ts-pptx`, the deck
+ * background + shape + line + text + table) drives `pptx-ts`, the deck
  * is serialised and parsed back with the writer's `read` model to assert the
  * conversion round-trips. Browser `convertDeck`
  * delivery is exercised by the Playwright harness.
  */
 
-import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
-import { Presentation } from '@shbernal/ts-pptx/read'
+import { ShapeType, TsPptx } from 'pptx-ts'
+import { Presentation } from 'pptx-ts/read'
 import { describe, expect, it } from 'vitest'
 import type { SlideModel } from '../../src/heuristic/model'
 import { addModelToSlide } from '../../src/heuristic/slide'

@@ -1,7 +1,7 @@
 version: 2
 
 updates:
-  # The one runtime dependency is @shbernal/ts-pptx, and its releases are the
+  # The one runtime dependency is pptx-ts, and its releases are the
   # events this repo most wants to hear about: a release is what makes a local
   # stopgap deletable, and what can move the coverage snapshot. Grouping the dev
   # toolchain keeps that signal from being buried under oxlint/vitest bumps.

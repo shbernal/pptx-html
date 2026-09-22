@@ -1,12 +1,12 @@
 /**
  * custGeom emit round-trip, headless. Feeds hand-written `path` IR items through
- * `heuristic/custgeom`, serializes on `@shbernal/ts-pptx`, then parses the deck back
+ * `heuristic/custgeom`, serializes on `pptx-ts`, then parses the deck back
  * with ts-pptx's `read` model and asserts the freeform geometry survives. This is
  * where custGeom fidelity is proven without a browser.
  */
 
-import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
-import { type AnyShape, type AutoShape, type CustomGeometry, isAutoShape, Presentation } from '@shbernal/ts-pptx/read'
+import { ShapeType, TsPptx } from 'pptx-ts'
+import { type AnyShape, type AutoShape, type CustomGeometry, isAutoShape, Presentation } from 'pptx-ts/read'
 import { describe, expect, it } from 'vitest'
 import { pathShapeOptions } from '../../src/heuristic/custgeom'
 import type { PathItem, SlideModel } from '../../src/heuristic/model'

@@ -4,7 +4,7 @@
  * structural snapshots.
  */
 
-import { Presentation } from '@shbernal/ts-pptx/read'
+import { Presentation } from 'pptx-ts/read'
 
 /**
  * Static, offline icon resolver injected via `opts.resolveIcon`. Returns a fixed

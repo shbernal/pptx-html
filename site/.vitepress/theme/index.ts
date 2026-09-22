@@ -15,7 +15,7 @@ import './wide.css'
  *
  * `Playground` and `SlideMarquee` are registered asynchronously, which is what
  * keeps the library off every other page: the chunk holding `pptx-html` and
- * `@shbernal/ts-pptx` is fetched when one of them mounts, and both only mount
+ * `pptx-ts` is fetched when one of them mounts, and both only mount
  * inside `<ClientOnly>` — the playground on its page, the marquee on the home
  * page. A static import here would put a megabyte of deck-writing code in the
  * bundle a reader of the architecture page downloads, and would also break the

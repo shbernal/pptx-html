@@ -19,7 +19,7 @@
  * merged into the matching slides so a renderer can label what was lost without
  * re-deriving anything.
  *
- * This layer never touches XML. Everything comes through `@shbernal/ts-pptx/read`'s
+ * This layer never touches XML. Everything comes through `pptx-ts/read`'s
  * typed object graph, which is what makes it browser-capable — the same code runs
  * in Chromium, where the point of the loop lives.
  */
@@ -31,8 +31,8 @@ import {
 	Presentation,
 	type Slide,
 	type SlideBackground,
-} from '@shbernal/ts-pptx/read'
-import { type DeckIr, type FidelityNote, readModelToIr } from '@shbernal/ts-pptx/script'
+} from 'pptx-ts/read'
+import { type DeckIr, type FidelityNote, readModelToIr } from 'pptx-ts/script'
 import { type Background, type Fill, IR_VERSION, type RenderIr, type RenderNode, type RenderSlide } from '../ir/render'
 import { type AssetIndex, buildAssetIndex } from './assets'
 import { forChrome, type ImportScope } from './context'

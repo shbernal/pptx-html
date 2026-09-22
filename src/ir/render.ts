@@ -5,7 +5,7 @@
  * ## What this is not
  *
  * It is **not** the round-trip contract and **not** the emit spec. `DeckIr` from
- * `@shbernal/ts-pptx/script` is both of those, and `diffDeckIr` judges it. The
+ * `pptx-ts/script` is both of those, and `diffDeckIr` judges it. The
  * two exist side by side for one reason: `DeckIr.slides[].calls[].args` is
  * `IrValue` — untyped write-API option bags — and you cannot draw an SVG from a
  * bag. So:
@@ -43,11 +43,11 @@
  * **no `Uint8Array`** — bytes live behind an {@link AssetRef}, never inline.
  */
 
-import type { AssetRef, FidelityNote, SlideLayoutIr, SlideSource } from '@shbernal/ts-pptx/script'
+import type { AssetRef, FidelityNote, SlideLayoutIr, SlideSource } from 'pptx-ts/script'
 // `SlideSource` is two unrelated types upstream: `'authored' | 'carried'` here in
 // `/script`, and the `{ extractSlides() }` interface in `/read`. Importing both
 // into one file silently shadows one of them.
-import type { ColorMapToken, ColorTransform, GeometryCommand, LineSpacing, ThemeColorSlot } from '@shbernal/ts-pptx/read'
+import type { ColorMapToken, ColorTransform, GeometryCommand, LineSpacing, ThemeColorSlot } from 'pptx-ts/read'
 
 export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
 

@@ -11,7 +11,12 @@ model is expected to move.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **The writer dependency is `pptx-ts`, which replaces `@shbernal/ts-pptx`.** It is
+  the same library under its new npm name, at the same version, so nothing renders
+  or imports differently. A consumer that imported `@shbernal/ts-pptx` alongside
+  this package should switch its imports to `pptx-ts` too, or it installs two copies.
 
 ## [0.2.1] — 2026-09-21
 

@@ -33,7 +33,7 @@
  * on a different shape.
  */
 
-import { Presentation } from '@shbernal/ts-pptx/read'
+import { Presentation } from 'pptx-ts/read'
 import { emitDeckIr } from './emit/script'
 import { importPresentation } from './import/deck'
 import { applyEdits, editsBetween } from './parse/edits'

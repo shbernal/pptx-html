@@ -8,7 +8,7 @@
  *
  * ## Presets are resolved here, and that is not a second source of truth
  *
- * There is no upstream preset catalogue to defer to. `@shbernal/ts-pptx` emits
+ * There is no upstream preset catalogue to defer to. `pptx-ts` emits
  * `<a:prstGeom prst="…">` by name and lets PowerPoint resolve it —
  * `VALID_SHAPE_PRESETS` is 188 names and no geometry — and the read model's
  * `customGeometry` is documented as `null` for exactly the shapes that use a
@@ -31,7 +31,7 @@
  * *marked* ({@link PathResult.fallback}) rather than quietly boxed.
  */
 
-import { ANGLE_UNITS_PER_DEGREE } from '@shbernal/ts-pptx'
+import { ANGLE_UNITS_PER_DEGREE } from 'pptx-ts'
 import type { Geometry, GeometryCommand, GeometryPath } from '../ir/render'
 import { round3 } from './paint'
 

@@ -71,7 +71,7 @@ Nothing is lost by leaving it alone: an untouched bullet is never rewritten.
 ## What it does not prove
 
 The round-trip oracle gates decks written by
-[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx); the
+[`pptx-ts`](https://www.npmjs.com/package/pptx-ts); the
 samples above are that corpus. A deck you author in PowerPoint and drop here runs
 the same code, but it is the project's **second tier** and is not gated by CI. If
 one comes back with warnings or on a weaker lane, that is the documented state of

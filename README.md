@@ -4,7 +4,7 @@
 approximation of it.**
 
 `pptx-html` moves slides between HTML and PPTX by driving
-[`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx). It owns
+[`pptx-ts`](https://www.npmjs.com/package/pptx-ts). It owns
 the HTML ⇄ `ts-pptx` link in both directions: it reads a `.pptx` into a slide
 model, renders that model as HTML, reads the edited HTML back, and writes a
 `.pptx` out again.
@@ -80,7 +80,7 @@ that way is a failure wearing a success's clothes.
 pnpm add pptx-html
 ```
 
-The writer, [`@shbernal/ts-pptx`](https://www.npmjs.com/package/@shbernal/ts-pptx),
+The writer, [`pptx-ts`](https://www.npmjs.com/package/pptx-ts),
 comes with it as an ordinary dependency. Nothing is built from source, and a clone
 installs the same way → [CONTRIBUTING](./CONTRIBUTING.md#setup).
 
@@ -124,7 +124,7 @@ await convertSlide(headHTML, slideHTML, opts) // → { model, warnings }
 All four legs of the loop are implemented and exported, and the round-trip oracle
 gates CI. What that guarantee currently covers:
 
-- **Input domain.** Decks written by `@shbernal/ts-pptx`, which is what the
+- **Input domain.** Decks written by `pptx-ts`, which is what the
   generated corpus is made of. Decks authored in PowerPoint are a deliberate
   second tier and are not yet gated.
 - **Environment.** The loop is host-agnostic and runs in Node and the browser

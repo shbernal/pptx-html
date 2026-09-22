@@ -6,8 +6,8 @@
  * needed: these item shapes are hand-written, exactly as `heuristic/extractor.ts` would emit.
  */
 
-import { ShapeType, TsPptx } from '@shbernal/ts-pptx'
-import { Presentation } from '@shbernal/ts-pptx/read'
+import { ShapeType, TsPptx } from 'pptx-ts'
+import { Presentation } from 'pptx-ts/read'
 import { describe, expect, it } from 'vitest'
 import type { SlideModel } from '../../src/heuristic/model'
 import { addModelToSlide } from '../../src/heuristic/slide'
