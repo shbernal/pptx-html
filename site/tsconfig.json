@@ -8,6 +8,15 @@
 	// `extends` chain, so inheriting it means a warning on every build about a
 	// setting the site never asked for. The options below are the base config's,
 	// with `target` one step down.
+	//
+	// One `Unrecognized target environment "es2024"` warning survives this, and no
+	// setting here can reach it. It comes from Vite bundling
+	// `.vitepress/config.ts` in order to *read* it, the only esbuild call in a
+	// whole `vitepress build`; that call also resolves the repo-root
+	// `tsconfig.json`, and it runs before any config option has been loaded.
+	// Lowering the package's own `target` or overriding Vite's pinned esbuild
+	// would both cost more than the line. It goes away when VitePress ships on a
+	// Vite with a newer esbuild.
 	"compilerOptions": {
 		"allowSyntheticDefaultImports": true,
 		"lib": ["dom", "dom.iterable", "es2023"],
