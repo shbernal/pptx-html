@@ -311,14 +311,7 @@ export const PROBES: Probe[] = [
 		'addText.fill.pattern.fgColor',
 		'addText.fill.pattern.bgColor',
 	]),
-	{
-		...text('addText.fill.image.data', { fill: { image: { data: PNG } } }),
-		accepted: {
-			kind: 'equivalent',
-			reason:
-				'the picture comes back byte for byte; only the media part is renamed (image-1-1.png to image1.png), and a part name carries no meaning',
-		},
-	},
+	text('addText.fill.image.data', { fill: { image: { data: PNG } } }),
 	textOn(
 		'addText.fill.image.crop',
 		{ fill: { image: { data: PNG } } },
@@ -819,14 +812,7 @@ export const PROBES: Probe[] = [
 		'addShape.fill.pattern.fgColor',
 		'addShape.fill.pattern.bgColor',
 	]),
-	{
-		...shape('addShape.fill.image.data', { fill: { image: { data: PNG } } }),
-		accepted: {
-			kind: 'equivalent',
-			reason:
-				'the picture comes back byte for byte; only the media part is renamed (image-1-1.png to image1.png), and a part name carries no meaning',
-		},
-	},
+	shape('addShape.fill.image.data', { fill: { image: { data: PNG } } }),
 	shapeOn(
 		'addShape.fill.image.crop',
 		'rect',

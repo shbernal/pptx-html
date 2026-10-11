@@ -32,6 +32,7 @@
  * relationship survived.
  */
 
+import { createHash } from 'node:crypto'
 import { readZip } from 'pptx-ts/zip'
 
 const decoder = new TextDecoder()
@@ -65,9 +66,20 @@ const IGNORED_PARTS = [
 	/^ppt\/tableStyles\.xml$/,
 ]
 
-/** `ppt/slides/slide3.xml` → `ppt/slides/slide#.xml`: parts are compared by kind, not by number. */
+/**
+ * `ppt/slides/slide3.xml` → `ppt/slides/slide#.xml`: parts are compared by kind, not by number.
+ * A media part's name says nothing at all (the slide reaches it through a relationship
+ * whose `Target` is already an identity), so it keeps only its extension:
+ * `ppt/media/image-1-1.png` and `ppt/media/image1.png` are both `ppt/media/*.png`.
+ */
 function partKind(name: string): string {
+	if (name.startsWith('ppt/media/')) return `ppt/media/*${/\.[^./]*$/.exec(name)?.[0] ?? ''}`
 	return name.replace(/\d+/g, '#')
+}
+
+/** A binary part's content, short enough to read: two different images of one size are two facts. */
+function binaryFact(data: Uint8Array): string {
+	return `<binary ${data.byteLength} ${createHash('sha256').update(data).digest('hex').slice(0, 12)}>`
 }
 
 /** Adds the next occurrence of `fact`: itself the first time, `fact ×n` the n-th. */
@@ -111,14 +123,14 @@ function xmlFacts(kind: string, xml: string, into: Map<string, number>): void {
 	}
 }
 
-/** Every fact in a package's XML parts. Binary parts contribute their presence and size. */
+/** Every fact in a package's XML parts. Binary parts contribute their presence, size and content hash. */
 export async function packageFacts(bytes: Uint8Array): Promise<Set<string>> {
 	const counts = new Map<string, number>()
 	for (const [name, data] of await readZip(bytes)) {
 		if (IGNORED_PARTS.some((pattern) => pattern.test(name))) continue
 		const kind = partKind(name)
 		if (/\.(xml|rels)$/i.test(name)) xmlFacts(kind, decoder.decode(data), counts)
-		else addCounted(`${kind}⟩<binary ${data.byteLength}>`, counts)
+		else addCounted(`${kind}⟩${binaryFact(data)}`, counts)
 	}
 	const facts = new Set<string>()
 	for (const [fact, count] of counts) for (let n = 1; n <= count; n++) facts.add(n === 1 ? fact : `${fact} ×${n}`)
