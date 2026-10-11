@@ -141,6 +141,75 @@ function cell(id: string, options: TableCellProps, covers = [id.split(':')[0] as
 	}
 }
 
+/** A 2×2 table with `base` on the first cell on both sides, for options that only mean something on top of another. */
+function cellOn(
+	id: string,
+	base: TableCellProps,
+	options: TableCellProps,
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addTable(
+				[
+					[{ text: 'a', options: { ...base, ...(on ? options : {}) } }, { text: 'b' }],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				{ ...BOX, objectName: 'probe' }
+			)
+		},
+	}
+}
+
+/** A 2×2 table whose first cell holds two runs; `options` go on run `at` only. */
+function cellRun(id: string, at: 0 | 1, options: TableCellProps, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addTable(
+				[
+					[
+						{ text: ['First run', 'Second run'].map((text, i) => ({ text, options: on && i === at ? options : {} })) },
+						{ text: 'b' },
+					],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				{ ...BOX, objectName: 'probe' }
+			)
+		},
+	}
+}
+
+/**
+ * A 2×2 table whose first cell spans into its neighbour when on. Off, the cell it
+ * would cover is present and empty, so the two sides differ by the merge alone.
+ */
+function span(
+	id: string,
+	options: { colspan: number } | { rowspan: number },
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			const across = 'colspan' in options
+			const first = { text: 'a', options: on ? options : {} }
+			pptx
+				.addSlide()
+				.addTable(
+					across
+						? [on ? [first] : [first, { text: '' }], [{ text: 'c' }, { text: 'd' }]]
+						: [[first, { text: 'b' }], on ? [{ text: 'd' }] : [{ text: '' }, { text: 'd' }]],
+					{ ...BOX, objectName: 'probe' }
+				)
+		},
+	}
+}
+
 export const PROBES: Probe[] = [
 	text('addText.bold', { bold: true }),
 	text('addText.italic', { italic: true }),
@@ -1190,6 +1259,350 @@ export const PROBES: Probe[] = [
 		'addShape.shapeAdjust.name',
 		'addShape.shapeAdjust.value',
 	]),
+	cell('addTable.cell.align:center', { align: 'center' }),
+	cell('addTable.cell.anchorCtr', { anchorCtr: true }),
+	{ ...cell('addTable.cell.baseline', { baseline: 30 }), issue: 'https://github.com/shbernal/pptx-ts/issues/55' },
+	cell('addTable.cell.bold', { bold: true }),
+	cell('addTable.cell.border', { border: { type: 'solid', color: '9B1B30', width: 2 } }, [
+		'addTable.cell.border.type',
+		'addTable.cell.border.color',
+		'addTable.cell.border.width',
+	]),
+	{
+		...cellOn(
+			'addTable.cell.border.cap:round',
+			{ border: { type: 'solid', color: '9B1B30', width: 2 } },
+			{ border: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
+	},
+	cellOn(
+		'addTable.cell.border.dashType:dash',
+		{ border: { type: 'solid', color: '9B1B30', width: 2 } },
+		{ border: { type: 'solid', color: '9B1B30', width: 2, dashType: 'dash' } }
+	),
+	{
+		...cellOn(
+			'addTable.cell.border.transparency',
+			{ border: { type: 'solid', color: '9B1B30', width: 2 } },
+			{ border: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
+	},
+	cellRun('addTable.cell.breakLine', 0, { breakLine: true }),
+	cell('addTable.cell.bullet', { bullet: true }),
+	cellOn('addTable.cell.bullet.characterCode', { bullet: true }, { bullet: { characterCode: '25BA' } }),
+	cellOn('addTable.cell.bullet.color', { bullet: true }, { bullet: { color: '9B1B30' } }),
+	cellOn('addTable.cell.bullet.fontFace', { bullet: true }, { bullet: { fontFace: 'Wingdings' } }),
+	{
+		...cellOn('addTable.cell.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer never embeds a picture bullet in a table cell: it warns bullet/image-embed-failed and writes the default glyph, the same buChar as the base side (shbernal/pptx-ts#82)',
+		},
+	},
+	cellOn('addTable.cell.bullet.indent', { bullet: true }, { bullet: { indent: 10 } }),
+	cellOn(
+		'addTable.cell.bullet.numberStartAt',
+		{ bullet: { type: 'number' } },
+		{ bullet: { type: 'number', numberStartAt: 5 } }
+	),
+	cellOn(
+		'addTable.cell.bullet.numberType',
+		{ bullet: { type: 'number' } },
+		{ bullet: { type: 'number', numberType: 'romanLcParenR' } }
+	),
+	cellOn('addTable.cell.bullet.size', { bullet: true }, { bullet: { size: 80 } }),
+	cell('addTable.cell.bullet.type:number', { bullet: { type: 'number' } }),
+	cell('addTable.cell.caps:all', { caps: 'all' }),
+	cell('addTable.cell.cell3D', { cell3D: { preset: 'angle' } }, [
+		'addTable.cell.cell3D',
+		'addTable.cell.cell3D.preset',
+	]),
+	cellOn('addTable.cell.cell3D.height', { cell3D: { preset: 'angle' } }, { cell3D: { preset: 'angle', height: 3 } }),
+	cellOn('addTable.cell.cell3D.width', { cell3D: { preset: 'angle' } }, { cell3D: { preset: 'angle', width: 4 } }),
+	cellOn(
+		'addTable.cell.cell3D.material:metal',
+		{ cell3D: { preset: 'angle' } },
+		{ cell3D: { preset: 'angle', material: 'metal' } }
+	),
+	cellOn(
+		'addTable.cell.cell3D.lightRig',
+		{ cell3D: { preset: 'angle' } },
+		{ cell3D: { preset: 'angle', lightRig: { rig: 'threePt', dir: 't' } } },
+		['addTable.cell.cell3D.lightRig.rig', 'addTable.cell.cell3D.lightRig.dir']
+	),
+	cell('addTable.cell.color', { color: '9B1B30' }),
+	span('addTable.cell.colspan', { colspan: 2 }),
+	span('addTable.cell.rowspan', { rowspan: 2 }),
+	cell('addTable.cell.diagonal.tlToBr', { diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2 } } }, [
+		'addTable.cell.diagonal.tlToBr.type',
+		'addTable.cell.diagonal.tlToBr.color',
+		'addTable.cell.diagonal.tlToBr.width',
+	]),
+	{
+		...cellOn(
+			'addTable.cell.diagonal.tlToBr.cap:round',
+			{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2 } } },
+			{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
+	},
+	cellOn(
+		'addTable.cell.diagonal.tlToBr.dashType:dash',
+		{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2 } } },
+		{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2, dashType: 'dash' } } }
+	),
+	{
+		...cellOn(
+			'addTable.cell.diagonal.tlToBr.transparency',
+			{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2 } } },
+			{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
+	},
+	cell('addTable.cell.diagonal.blToTr', { diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } }, [
+		'addTable.cell.diagonal.blToTr.type',
+		'addTable.cell.diagonal.blToTr.color',
+		'addTable.cell.diagonal.blToTr.width',
+	]),
+	{
+		...cellOn(
+			'addTable.cell.diagonal.blToTr.cap:round',
+			{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } },
+			{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
+	},
+	cellOn(
+		'addTable.cell.diagonal.blToTr.dashType:dash',
+		{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } },
+		{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2, dashType: 'dash' } } }
+	),
+	{
+		...cellOn(
+			'addTable.cell.diagonal.blToTr.transparency',
+			{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } },
+			{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
+	},
+	cell('addTable.cell.fill.type:solid', { fill: { type: 'solid', color: 'F0C808' } }, [
+		'addTable.cell.fill',
+		'addTable.cell.fill.type',
+	]),
+	cellOn('addTable.cell.fill.type:none', { fill: { color: 'F0C808' } }, { fill: { type: 'none' } }),
+	cellOn(
+		'addTable.cell.fill.transparency',
+		{ fill: { color: 'F0C808' } },
+		{ fill: { color: 'F0C808', transparency: 40 } }
+	),
+	cell(
+		'addTable.cell.fill.gradient.linear',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B', transparency: 30 },
+					],
+				},
+			},
+		},
+		[
+			'addTable.cell.fill.gradient.kind',
+			'addTable.cell.fill.gradient.angle',
+			'addTable.cell.fill.gradient.stops.color',
+			'addTable.cell.fill.gradient.stops.position',
+			'addTable.cell.fill.gradient.stops.transparency',
+		]
+	),
+	{
+		...cellOn(
+			'addTable.cell.fill.gradient.scaled',
+			{
+				fill: {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+			{
+				fill: {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						scaled: true,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...cellOn(
+			'addTable.cell.fill.gradient.rotateWithShape',
+			{
+				fill: {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+			{
+				fill: {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						rotateWithShape: false,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...cell(
+			'addTable.cell.fill.gradient.center',
+			{
+				fill: {
+					gradient: {
+						kind: 'radial',
+						center: { x: 20, y: 70 },
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+			['addTable.cell.fill.gradient.center.x', 'addTable.cell.fill.gradient.center.y']
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	cell(
+		'addTable.cell.fill.pattern',
+		{ fill: { pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
+		['addTable.cell.fill.pattern.preset', 'addTable.cell.fill.pattern.fgColor', 'addTable.cell.fill.pattern.bgColor']
+	),
+	cell('addTable.cell.fill.image.data', { fill: { image: { data: PNG } } }),
+	cellOn(
+		'addTable.cell.fill.image.crop',
+		{ fill: { image: { data: PNG } } },
+		{ fill: { image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } } },
+		[
+			'addTable.cell.fill.image.crop.l',
+			'addTable.cell.fill.image.crop.t',
+			'addTable.cell.fill.image.crop.r',
+			'addTable.cell.fill.image.crop.b',
+		]
+	),
+	{
+		...cell('addTable.cell.fit:shrink', { fit: 'shrink' }),
+		accepted: {
+			kind: 'inert',
+			reason: 'a table cell leaves a:bodyPr empty, so fit writes nothing there, silently (shbernal/pptx-ts#84)',
+		},
+	},
+	{
+		...cell('addTable.cell.fit.shrink', { fit: { type: 'shrink', fontScale: 80, lnSpcReduction: 10 } }, [
+			'addTable.cell.fit.type',
+			'addTable.cell.fit.fontScale',
+			'addTable.cell.fit.lnSpcReduction',
+		]),
+		accepted: {
+			kind: 'inert',
+			reason: 'a table cell leaves a:bodyPr empty, so fit writes nothing there, silently (shbernal/pptx-ts#84)',
+		},
+	},
+	cell('addTable.cell.fontFace', { fontFace: 'Georgia' }),
+	{
+		...cellOn('addTable.cell.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	cell('addTable.cell.fontSize', { fontSize: 28 }),
+	cell('addTable.cell.highlight', { highlight: 'FFFF00' }),
+	cell('addTable.cell.horzOverflow:overflow', { horzOverflow: 'overflow' }),
+	{
+		...cell('addTable.cell.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
+			'addTable.cell.hyperlink.url',
+			'addTable.cell.hyperlink.tooltip',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+	},
+	{
+		...cell('addTable.cell.hyperlink.slide', { hyperlink: { slide: 1 } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+	},
+	{
+		...cell('addTable.cell.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+	},
+	cell('addTable.cell.indentLevel', { indentLevel: 2 }),
+	cell('addTable.cell.italic', { italic: true }),
+	{ ...cell('addTable.cell.lang', { lang: 'fr-FR' }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
+	cell('addTable.cell.lineSpacing', { lineSpacing: 30 }),
+	cell('addTable.cell.lineSpacingMultiple', { lineSpacingMultiple: 1.5 }),
+	cell('addTable.cell.margin', { margin: [10, 20, 10, 20] }),
+	cell('addTable.cell.paraIndent', { paraIndent: 12 }),
+	cell('addTable.cell.paraMarginLeft', { paraMarginLeft: 18 }),
+	cell('addTable.cell.paraSpaceAfter', { paraSpaceAfter: 12 }),
+	cell('addTable.cell.paraSpaceBefore', { paraSpaceBefore: 12 }),
+	{
+		...cellRun('addTable.cell.softBreakBefore', 1, { softBreakBefore: true }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	cell('addTable.cell.strike:dblStrike', { strike: 'dblStrike' }),
+	{
+		...cell('addTable.cell.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
+			'addTable.cell.tabStops.position',
+			'addTable.cell.tabStops.alignment',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	cell('addTable.cell.textDirection:vert270', { textDirection: 'vert270' }),
+	{
+		...cell('addTable.cell.textWarp', { textWarp: 'textArchUp' }),
+		accepted: {
+			kind: 'inert',
+			reason: 'a table cell leaves a:bodyPr empty, so textWarp writes nothing there, silently (shbernal/pptx-ts#84)',
+		},
+	},
+	{
+		...cell('addTable.cell.transparency', { transparency: 40 }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	cell('addTable.cell.underline.style:dbl', { underline: { style: 'dbl' } }),
+	{
+		...cellOn(
+			'addTable.cell.underline.color',
+			{ underline: { style: 'sng' } },
+			{ underline: { style: 'sng', color: '9B1B30' } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	cell('addTable.cell.valign:bottom', { valign: 'bottom' }),
 ]
 
 /**
@@ -1206,4 +1619,10 @@ export const SKIPPED: Record<string, string> = {
 		'the file-path spelling of the bullet picture source; the bullet it writes is exercised by addText.bullet.image.data',
 	'addShape.fill.image.path':
 		'the file-path spelling of the picture source; the picture it writes is exercised by addShape.fill.image.data',
+	'addTable.cell.fill.image.path':
+		'the file-path spelling of the picture source; the picture it writes is exercised by addTable.cell.fill.image.data',
+	'addTable.cell.bullet.image.path':
+		'the file-path spelling of the bullet picture source; the bullet it writes is exercised by addTable.cell.bullet.image.data',
+	'addTable.cell.autoPageCharWeight':
+		'an auto-paging knob that only weighs where autoPage splits a table, and writes no XML of its own',
 }
