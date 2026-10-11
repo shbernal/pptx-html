@@ -1,0 +1,14 @@
+{
+	"addShape.line.dashType:dash": "survives/authored",
+	"addShape.rotate": "survives/authored",
+	"addTable.border.color": "survives/authored",
+	"addTable.cell.fill.color": "survives/authored",
+	"addText.bold": "survives/authored",
+	"addText.charSpacing": "upstream/authored",
+	"addText.italic": "survives/authored",
+	"addText.lineSpacingMultiple": "survives/authored",
+	"addText.margin": "survives/authored",
+	"addText.strike:dblStrike": "survives/authored",
+	"addText.underline.style:dbl": "survives/authored",
+	"addText.valign:bottom": "survives/authored"
+}

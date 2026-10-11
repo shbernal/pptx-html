@@ -49,7 +49,7 @@ export interface CorpusDeck {
 }
 
 /** A writer with deterministic deck properties: no clock, no host, no defaults that drift. */
-function newDeck(): TsPptx {
+export function newDeck(): TsPptx {
 	const pptx = new TsPptx()
 	pptx.layout = 'LAYOUT_16x9'
 	pptx.author = 'pptx-html corpus'

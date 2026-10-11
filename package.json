@@ -52,6 +52,7 @@
 		"test": "pnpm run build && vitest run",
 		"test:unit": "vitest run --project unit",
 		"test:oracle": "vitest run --project oracle",
+		"oracle:score": "node test/surface/score.ts",
 		"test:browser": "vitest run --project browser",
 		"test:watch": "vitest --watch --project unit",
 		"site:prepare": "node site/scripts/sync-docs.ts && node site/scripts/check-samples.ts && node site/scripts/build-ledger.ts",

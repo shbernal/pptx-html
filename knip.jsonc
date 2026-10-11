@@ -10,6 +10,8 @@
 		// Never imported and never run: it exists to be typechecked against
 		// `dist/index.d.ts`. See the header of the file.
 		"test/public-surface.ts",
+		// Run by Claude Code as a hook, named in `.claude/settings.json`.
+		".claude/hooks/coverage-loop.mjs",
 	],
 
 	// The site lives in `site/`, not at the root where the plugin looks by default.

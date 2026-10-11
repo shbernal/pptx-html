@@ -117,6 +117,37 @@ The preview is not affected by any of this: `RenderIr` is built from the read mo
 directly and never passes through `DeckIr`. That is the two-IR split paying for
 itself in the direction it was not designed for.
 
+## The surface probes
+
+The corpus asks whether *decks* survive. The surface probes ask the same question
+of each writer *option*, and judge it on the XML instead of on `DeckIr`. That is
+the response to the blind spot above, generalized: instead of waiting to find
+the next value that both sides lose alike, every option the writer accepts gets
+its own probe.
+
+- **The denominator is the writer's.** `test/surface/inventory.ts` reads every
+  option path out of the installed `pptx-ts` type declarations, so a release
+  that adds an option grows the frontier without anyone noticing it first.
+- **The signature is the writer's too.** A probe writes the same deck with and
+  without one option. The XML facts that differ are what the option wrote, so
+  nobody has to state what correct OOXML looks like. The probe then checks that
+  the loop's output still holds them.
+- **Two lanes make it a triage.** A loss the script lane takes too is upstream's,
+  and needs an issue. A loss only the HTML lane takes is this repo's. A probe
+  that loses facts while `diffDeckIr` reports nothing has found a value the
+  read model does not carry. That is the blind spot, now visible.
+- **Every loss is accounted for, and so is every fix.** A probe that loses
+  something carries an `issue` or an `accepted` reason. A probe that carries one
+  and then survives fails, so a fix that ships upstream is noticed on the bump.
+- **It is a ratchet, not a gate on the corpus.** `test/surface/ledger.json`
+  records each probe's last accepted state, and `pnpm run oracle:score` fails
+  when one gets worse or disappears.
+
+What a probe does *not* prove: facts are compared without position, so it can
+miss a value that moved to the wrong run. It also covers decks the writer
+authored, one option at a time, which is narrower than the corpus. Combinations
+of options are the corpus's job.
+
 ## Assert on the lane, not just the file
 
 Three bugs in the return path each made the system *quietly do nothing* and each

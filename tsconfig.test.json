@@ -10,6 +10,8 @@
 	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
 		"noEmit": true,
+		// `test/surface/score.ts` runs under plain `node`, which needs the extension.
+		"allowImportingTsExtensions": true,
 		"types": ["node"]
 	},
 	"include": ["test/**/*.ts"]
