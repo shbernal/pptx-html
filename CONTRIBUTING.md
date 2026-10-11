@@ -284,11 +284,12 @@ Two things are load-bearing and easy to break while tidying:
   Renaming the file revokes the package's ability to publish until the
   configuration on npmjs.com is changed to match, and the failure arrives at
   publish time, not at lint time.
-- **The trigger.** Publishing the GitHub *release* is what starts it, not pushing
-  the tag. A tag travels on a `git push --follow-tags` and can be cut by a script
-  or by accident; publishing a release is a decision, and it is also the act that
-  produces the notes a consumer reads. So the deliberate half stays human and the
-  irreversible half follows it.
+- **The trigger.** Publishing the GitHub *release* is what starts a release, not
+  pushing the tag. A tag travels on a `git push --follow-tags` and can be cut by a
+  script or by accident; publishing a release is a decision, and it is also the
+  act that produces the notes a consumer reads. So the deliberate half stays human
+  and the irreversible half follows it. A push to `main` publishes too, but only
+  to `next`; see below.
 
 The workflow re-checks that the tag matches `package.json` and that the changelog
 has a section for the version, then runs `pnpm run test`, the browser layer
@@ -333,6 +334,32 @@ with a provenance badge. If the job fails after the release exists, re-run it
 from the Actions tab; the release does not need cutting again. If it failed
 *after* the upload, the version is gone for good, because npm does not reuse a
 version number, so the fix is the next patch, not a retry.
+
+### Prereleases on `next`
+
+Every push to `main` that changes what goes into the tarball publishes a
+prerelease under the `next` dist-tag, from the same workflow and through the same
+gates as a release. Nothing has to be done for it; it is how a fix that has
+merged but not been released gets to someone who needs it, with
+`pnpm add pptx-html@next` instead of a git URL.
+
+- **The version is derived, not committed.** If `package.json` names a version
+  already on npm, the patch is bumped; otherwise it is used as it stands. Then
+  `-next.<run number>.g<short sha>` is appended. So `0.2.1` on `main` publishes
+  `0.2.2-next.N.g1a2b3c4`, and after the bump to `0.3.0` lands ahead of its tag,
+  `main` publishes `0.3.0-next.N.g…`. The run number orders them; the sha only
+  says which commit it is, and its `g` keeps an all-digit sha from being read as
+  a number, which semver refuses when it starts with a zero. Either way it sorts
+  above `latest` and below the release it leads to. The edit to `package.json`
+  happens in the runner and is never committed.
+- **`latest` never moves.** Only a published release moves it. After a release,
+  `next` points at an older prerelease than `latest` until the next push that
+  qualifies, which is the normal state for that tag, not a stale one.
+- **The `paths:` filter decides what qualifies.** It lists the tarball's inputs:
+  `src/`, the manifest and lockfile, the build config and the files npm packs.
+  A test-, docs- or site-only push publishes nothing. A new file that changes
+  `dist/` without being under one of those paths has to be added to the list,
+  or its changes wait for the next push that does qualify.
 
 ## Commits
 
