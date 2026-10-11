@@ -18,7 +18,15 @@
  */
 
 import type TsPptx from 'pptx-ts'
-import type { SHAPE_NAME, ShapeProps, TableCellProps, TableProps, TextPropsOptions } from 'pptx-ts'
+import type {
+	SHAPE_NAME,
+	ShapeProps,
+	Slide,
+	SlideNumberProps,
+	TableCellProps,
+	TableProps,
+	TextPropsOptions,
+} from 'pptx-ts'
 import type { Probe } from './probe'
 
 const BOX = { x: 1, y: 1, w: 5, h: 1.5 }
@@ -209,6 +217,54 @@ function span(
 		},
 	}
 }
+
+/** A slide holding the probe text box; `apply` sets the slide's own properties on the probe side only. */
+function slide(id: string, apply: (slide: Slide) => void, covers = [id.split(':')[0] as string]): Probe {
+	return slideOn(id, () => {}, apply, covers)
+}
+
+/** A slide holding the probe text box, with `base` on both sides and `apply` on the probe side only. */
+function slideOn(
+	id: string,
+	base: (slide: Slide) => void,
+	apply: (slide: Slide) => void,
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			const target = pptx.addSlide()
+			target.addText('Probe text', { ...BOX, objectName: 'probe' })
+			base(target)
+			if (on) apply(target)
+		},
+	}
+}
+
+const NUMBER_BOX = { x: 0.5, y: 6.5, w: 1, h: 0.4 }
+
+/** A slide number in a fixed box, with `base` on both sides and `options` merged in on the probe side. */
+function slideNumber(
+	id: string,
+	options: SlideNumberProps,
+	base: SlideNumberProps = {},
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return slideOn(
+		id,
+		(target) => {
+			target.slideNumber = { ...NUMBER_BOX, ...base }
+		},
+		(target) => {
+			target.slideNumber = { ...NUMBER_BOX, ...base, ...options }
+		},
+		covers
+	)
+}
+
+/** A silent eight-sample WAV, for transition sounds. */
+const WAV = 'audio/wav;base64,UklGRiwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQgAAACAgICAgICAgA=='
 
 export const PROBES: Probe[] = [
 	text('addText.bold', { bold: true }),
@@ -1603,6 +1659,503 @@ export const PROBES: Probe[] = [
 		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
 	},
 	cell('addTable.cell.valign:bottom', { valign: 'bottom' }),
+	slide(
+		'slide.background.color',
+		(target) => {
+			target.background = { color: 'F0C808' }
+		},
+		['slide.background', 'slide.background.color']
+	),
+	slide('slide.background:shorthand', (target) => {
+		target.background = '250F6B'
+	}),
+	slideOn(
+		'slide.background.transparency',
+		(target) => {
+			target.background = { color: 'F0C808' }
+		},
+		(target) => {
+			target.background = { color: 'F0C808', transparency: 40 }
+		}
+	),
+	{
+		...slideOn(
+			'slide.background.type:none',
+			(target) => {
+				target.background = { color: 'F0C808' }
+			},
+			(target) => {
+				target.background = { color: 'F0C808', type: 'none' }
+			},
+			['slide.background.type']
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/87',
+	},
+	slide(
+		'slide.background.gradient.linear',
+		(target) => {
+			target.background = {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B', transparency: 30 },
+					],
+				},
+			}
+		},
+		[
+			'slide.background.gradient.kind',
+			'slide.background.gradient.angle',
+			'slide.background.gradient.stops.color',
+			'slide.background.gradient.stops.position',
+			'slide.background.gradient.stops.transparency',
+		]
+	),
+	{
+		...slideOn(
+			'slide.background.gradient.scaled',
+			(target) => {
+				target.background = {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				}
+			},
+			(target) => {
+				target.background = {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						scaled: true,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				}
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...slideOn(
+			'slide.background.gradient.rotateWithShape',
+			(target) => {
+				target.background = {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				}
+			},
+			(target) => {
+				target.background = {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						rotateWithShape: false,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				}
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...slide(
+			'slide.background.gradient.center',
+			(target) => {
+				target.background = {
+					gradient: {
+						kind: 'radial',
+						center: { x: 20, y: 70 },
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				}
+			},
+			['slide.background.gradient.center.x', 'slide.background.gradient.center.y']
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	slide(
+		'slide.background.pattern',
+		(target) => {
+			target.background = { pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } }
+		},
+		['slide.background.pattern.preset', 'slide.background.pattern.fgColor', 'slide.background.pattern.bgColor']
+	),
+	slide('slide.background.data', (target) => {
+		target.background = { data: PNG }
+	}),
+	{
+		...slide('slide.background.image.data', (target) => {
+			target.background = { image: { data: PNG } }
+		}),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/86',
+	},
+	{
+		...slideOn(
+			'slide.background.image.crop',
+			(target) => {
+				target.background = { image: { data: PNG } }
+			},
+			(target) => {
+				target.background = { image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } }
+			},
+			[
+				'slide.background.image.crop.l',
+				'slide.background.image.crop.t',
+				'slide.background.image.crop.r',
+				'slide.background.image.crop.b',
+			]
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the slide background writer ignores `image` and writes a:noFill, so the crop has nothing to sit on: shbernal/pptx-ts#86',
+		},
+	},
+	{
+		...slide('slide.color', (target) => {
+			target.color = '9B1B30'
+		}),
+		accepted: {
+			kind: 'inert',
+			reason: 'Slide.color is stored and never written: shbernal/pptx-ts#88',
+		},
+	},
+	slide('slide.hidden', (target) => {
+		target.hidden = true
+	}),
+	slide('slide.transition.type', (target) => {
+		target.transition = { type: 'push' }
+	}),
+	slideOn(
+		'slide.transition.durationMs',
+		(target) => {
+			target.transition = { type: 'fade' }
+		},
+		(target) => {
+			target.transition = { type: 'fade', durationMs: 1250 }
+		}
+	),
+	slideOn(
+		'slide.transition.speed:slow',
+		(target) => {
+			target.transition = { type: 'fade' }
+		},
+		(target) => {
+			target.transition = { type: 'fade', speed: 'slow' }
+		},
+		['slide.transition.speed']
+	),
+	slideOn(
+		'slide.transition.advanceOnClick',
+		(target) => {
+			target.transition = { type: 'fade' }
+		},
+		(target) => {
+			target.transition = { type: 'fade', advanceOnClick: false }
+		}
+	),
+	slideOn(
+		'slide.transition.advanceAfterMs',
+		(target) => {
+			target.transition = { type: 'fade' }
+		},
+		(target) => {
+			target.transition = { type: 'fade', advanceAfterMs: 3000 }
+		}
+	),
+	slideOn(
+		'slide.transition.variant',
+		(target) => {
+			target.transition = { type: 'push' }
+		},
+		(target) => {
+			target.transition = { type: 'push', variant: { dir: 'u' } }
+		}
+	),
+	{
+		...slideOn(
+			'slide.transition.sound.data',
+			(target) => {
+				target.transition = { type: 'fade' }
+			},
+			(target) => {
+				target.transition = { type: 'fade', sound: { data: WAV } }
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/91',
+	},
+	{
+		...slideOn(
+			'slide.transition.sound.name',
+			(target) => {
+				target.transition = { type: 'fade', sound: { data: WAV } }
+			},
+			(target) => {
+				target.transition = { type: 'fade', sound: { data: WAV, name: 'chime.wav' } }
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/91',
+	},
+	{
+		...slideOn(
+			'slide.transition.sound.loop',
+			(target) => {
+				target.transition = { type: 'fade', sound: { data: WAV } }
+			},
+			(target) => {
+				target.transition = { type: 'fade', sound: { data: WAV, loop: true } }
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/91',
+	},
+	slideOn(
+		'slide.transition.sound.stopPrevious',
+		(target) => {
+			target.transition = { type: 'fade' }
+		},
+		(target) => {
+			target.transition = { type: 'fade', sound: { stopPrevious: true } }
+		}
+	),
+	slideNumber('slide.slideNumber.x', { x: 2 }),
+	slideNumber('slide.slideNumber.y', { y: 5 }),
+	slideNumber('slide.slideNumber.w', { w: 2 }),
+	slideNumber('slide.slideNumber.h', { h: 0.8 }),
+	{
+		...slideNumber('slide.slideNumber.align:center', { align: 'center' }, {}, ['slide.slideNumber.align']),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
+	},
+	{
+		...slideNumber('slide.slideNumber.valign:bottom', { valign: 'bottom' }, {}, ['slide.slideNumber.valign']),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
+	},
+	{
+		...slideNumber('slide.slideNumber.bold', { bold: true }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
+	},
+	{
+		...slideNumber('slide.slideNumber.italic', { italic: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.caps:all', { caps: 'all' }, {}, ['slide.slideNumber.caps']),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.color', { color: '9B1B30' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
+	},
+	{
+		...slideNumber('slide.slideNumber.fontFace', { fontFace: 'Georgia' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
+	},
+	{
+		...slideNumber('slide.slideNumber.fontFaceEA', { fontFaceEA: 'MS Mincho' }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.fontSize', { fontSize: 20 }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
+	},
+	{
+		...slideNumber('slide.slideNumber.highlight', { highlight: 'F0C808' }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.lang', { lang: 'fr-FR' }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.margin', { margin: [0.1, 0.2, 0.1, 0.2] }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
+	},
+	{
+		...slideNumber('slide.slideNumber.transparency', { transparency: 40 }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.underline', { underline: { style: 'dbl', color: '9B1B30' } }, {}, [
+			'slide.slideNumber.underline.style',
+			'slide.slideNumber.underline.color',
+		]),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.textDirection:vert', { textDirection: 'vert' }, {}, [
+			'slide.slideNumber.textDirection',
+		]),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.textWarp', { textWarp: 'textArchUp' }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.paraIndent', { paraIndent: 12 }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.paraMarginLeft', { paraMarginLeft: 18 }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.breakLine', { breakLine: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.softBreakBefore', { softBreakBefore: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.tabStops', { tabStops: [{ position: 1, alignment: 'r' }] }, {}, [
+			'slide.slideNumber.tabStops.position',
+			'slide.slideNumber.tabStops.alignment',
+		]),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.bullet', { bullet: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.bullet.characterCode', { bullet: { characterCode: '25BA' } }, { bullet: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.bullet.color', { bullet: { color: '9B1B30' } }, { bullet: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.bullet.fontFace', { bullet: { fontFace: 'Wingdings' } }, { bullet: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.bullet.image.data', { bullet: { image: { data: PNG } } }, { bullet: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.bullet.indent', { bullet: { indent: 10 } }, { bullet: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.bullet.size', { bullet: { size: 80 } }, { bullet: true }),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber('slide.slideNumber.bullet.type:number', { bullet: { type: 'number' } }, {}, [
+			'slide.slideNumber.bullet.type',
+		]),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber(
+			'slide.slideNumber.bullet.numberStartAt',
+			{ bullet: { type: 'number', numberStartAt: 5 } },
+			{ bullet: { type: 'number' } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
+	{
+		...slideNumber(
+			'slide.slideNumber.bullet.numberType',
+			{ bullet: { type: 'number', numberType: 'romanLcParenR' } },
+			{ bullet: { type: 'number' } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
+		},
+	},
 ]
 
 /**
@@ -1625,4 +2178,12 @@ export const SKIPPED: Record<string, string> = {
 		'the file-path spelling of the bullet picture source; the bullet it writes is exercised by addTable.cell.bullet.image.data',
 	'addTable.cell.autoPageCharWeight':
 		'an auto-paging knob that only weighs where autoPage splits a table, and writes no XML of its own',
+	'slide.background.path':
+		'the file-path spelling of the background picture source; the picture it writes is exercised by slide.background.data',
+	'slide.background.image.path':
+		'the file-path spelling of the picture source; the picture it writes is exercised by slide.background.image.data',
+	'slide.slideNumber.bullet.image.path':
+		'the file-path spelling of the bullet picture source; the bullet it writes is exercised by slide.slideNumber.bullet.image.data',
+	'slide.transition.sound.path':
+		'the file-path spelling of the sound source; the sound it writes is exercised by slide.transition.sound.data',
 }
