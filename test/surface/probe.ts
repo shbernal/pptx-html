@@ -31,7 +31,7 @@ import { lost, packageFacts, type Signature, signature } from './facts'
 
 /** Why a loss is accepted without an upstream issue. */
 type AcceptedKind =
-	/** The option writes nothing distinguishable (a default, or authoring-time only). */
+	/** The option writes nothing distinguishable by design (a default, or authoring-time only). A writer that drops it is `unwritten`. */
 	| 'inert'
 	/** The output says the same thing in a different spelling. The reason must say how. */
 	| 'equivalent'
@@ -49,6 +49,13 @@ export interface Probe {
 	author: (pptx: TsPptx, on: boolean) => void | Promise<void>
 	/** The `shbernal/pptx-ts` issue for a loss in the upstream legs. Required for one, forbidden without one. */
 	issue?: string
+	/**
+	 * The `shbernal/pptx-ts` issue for a writer that drops this option, so the probe is
+	 * inert until it is fixed. Kept apart from `issue` so the fix cannot pass unnoticed:
+	 * once the option writes, the probe fails and points here, whatever the round trip
+	 * then does with it.
+	 */
+	unwritten?: string
 	/** A loss accepted without an issue, and why. */
 	accepted?: { kind: AcceptedKind; reason: string }
 }
@@ -144,17 +151,22 @@ const ISSUE_URL = /^https:\/\/github\.com\/shbernal\/pptx-ts\/issues\/\d+$/
  * failure `docs/round-trip.md` says a pinning test exists to prevent.
  */
 export function disagreement(probe: Probe, seen: Observation): string | null {
-	const { issue, accepted } = probe
+	const { issue, unwritten, accepted } = probe
 	if (issue && !ISSUE_URL.test(issue)) return `issue must be a shbernal/pptx-ts issue URL, got ${issue}`
+	if (unwritten && !ISSUE_URL.test(unwritten)) return `unwritten must be a shbernal/pptx-ts issue URL, got ${unwritten}`
+	if (unwritten && (issue || accepted))
+		return '`unwritten` accounts for the probe on its own: drop `issue` and `accepted`'
+	if (unwritten && seen.status !== 'inert')
+		return `the option writes now (${seen.status}): remove \`unwritten\`, close ${unwritten} citing this probe, then classify the round trip`
 	switch (seen.status) {
 		case 'survives':
 			if (issue) return `survives now: the pinned loss is gone. Remove \`issue\`, then close ${issue} citing this probe`
 			if (accepted) return `survives now: remove \`accepted\` (${accepted.kind})`
 			return null
 		case 'inert':
-			return accepted?.kind === 'inert'
+			return unwritten || accepted?.kind === 'inert'
 				? null
-				: 'the option wrote nothing: pick a non-default value, or accept it as `inert` with a reason'
+				: 'the option wrote nothing: pick a non-default value; if the writer drops it, file it and set `unwritten`; if it is authoring-time only, accept it as `inert` with a reason'
 		case 'upstream':
 			return issue || accepted?.kind === 'unsupported' || accepted?.kind === 'equivalent'
 				? null

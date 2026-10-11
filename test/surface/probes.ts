@@ -1185,11 +1185,7 @@ export const PROBES: Probe[] = [
 	cellOn('addTable.cell.bullet.fontFace', { bullet: true }, { bullet: { fontFace: 'Wingdings' } }),
 	{
 		...cellOn('addTable.cell.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
-		accepted: {
-			kind: 'inert',
-			reason:
-				'the writer never embeds a picture bullet in a table cell: it warns bullet/image-embed-failed and writes the default glyph, the same buChar as the base side (shbernal/pptx-ts#82)',
-		},
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/82',
 	},
 	cellOn('addTable.cell.bullet.indent', { bullet: true }, { bullet: { indent: 10 } }),
 	cellOn(
@@ -1400,10 +1396,7 @@ export const PROBES: Probe[] = [
 	),
 	{
 		...cell('addTable.cell.fit:shrink', { fit: 'shrink' }),
-		accepted: {
-			kind: 'inert',
-			reason: 'a table cell leaves a:bodyPr empty, so fit writes nothing there, silently (shbernal/pptx-ts#84)',
-		},
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/84',
 	},
 	{
 		...cell('addTable.cell.fit.shrink', { fit: { type: 'shrink', fontScale: 80, lnSpcReduction: 10 } }, [
@@ -1411,10 +1404,7 @@ export const PROBES: Probe[] = [
 			'addTable.cell.fit.fontScale',
 			'addTable.cell.fit.lnSpcReduction',
 		]),
-		accepted: {
-			kind: 'inert',
-			reason: 'a table cell leaves a:bodyPr empty, so fit writes nothing there, silently (shbernal/pptx-ts#84)',
-		},
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/84',
 	},
 	cell('addTable.cell.fontFace', { fontFace: 'Georgia' }),
 	cellOn('addTable.cell.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
@@ -1455,10 +1445,7 @@ export const PROBES: Probe[] = [
 	cell('addTable.cell.textDirection:vert270', { textDirection: 'vert270' }),
 	{
 		...cell('addTable.cell.textWarp', { textWarp: 'textArchUp' }),
-		accepted: {
-			kind: 'inert',
-			reason: 'a table cell leaves a:bodyPr empty, so textWarp writes nothing there, silently (shbernal/pptx-ts#84)',
-		},
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/84',
 	},
 	cell('addTable.cell.transparency', { transparency: 40 }),
 	cell('addTable.cell.underline.style:dbl', { underline: { style: 'dbl' } }),
@@ -1626,10 +1613,7 @@ export const PROBES: Probe[] = [
 		...slide('slide.color', (target) => {
 			target.color = '9B1B30'
 		}),
-		accepted: {
-			kind: 'inert',
-			reason: 'Slide.color is stored and never written: shbernal/pptx-ts#88',
-		},
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/88',
 	},
 	slide('slide.hidden', (target) => {
 		target.hidden = true

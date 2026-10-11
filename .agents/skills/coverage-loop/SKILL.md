@@ -29,7 +29,7 @@ explains why the probe judges XML rather than `DeckIr`.
    | `survives` | the option's XML came back | nothing |
    | `upstream` | the script lane, upstream code end to end, loses it too | reduce it to a pptx-ts-only script in `.tmp/`, file it (below), set `issue` |
    | `local` | only the HTML lane loses it | fix it in `src/` (render, parse, emit); if it cannot be fixed this iteration, set `accepted: { kind: 'local', reason }` |
-   | `inert` | the option wrote nothing | try a non-default value; if it truly writes nothing (authoring-time only), set `accepted: { kind: 'inert', reason }` |
+   | `inert` | the option wrote nothing | try a non-default value; if the writer drops it, file it (below) and set `unwritten`; if it truly writes nothing (authoring-time only), set `accepted: { kind: 'inert', reason }` |
    | `crash` | a lane threw | the error class says whose bug it is (see the upstream skill); fix or file |
 
    `accepted: { kind: 'equivalent' }` is for an output that says the same thing in
