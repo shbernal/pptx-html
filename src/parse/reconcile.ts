@@ -37,7 +37,6 @@ import {
 	EDITABLE_RUN_PROPS,
 	type ProjectedParagraph,
 	type ProjectedRun,
-	project,
 	sameSurfaceValue,
 } from '../ir/surface'
 import type { SurfaceReading } from './surface'
@@ -215,15 +214,4 @@ function slideNumberIn(text: string): number | null {
 	const match = /\bs(\d+)\.(?:sp|dom)/.exec(text)
 	const digits = match?.[1]
 	return digits === undefined ? null : Number(digits)
-}
-
-/**
- * Whether a reading changed anything at all, without applying it.
- *
- * The same comparison the lane decision makes, over the serialized projections —
- * which is what {@link Integrity.surfaceHash} is a hash *of*, so this and the hash
- * can never disagree about whether a document was edited.
- */
-export function surfaceChanged(ir: RenderIr, reading: SurfaceReading): boolean {
-	return JSON.stringify(project(ir)) !== JSON.stringify(reading.projection)
 }

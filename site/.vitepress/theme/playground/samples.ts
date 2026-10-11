@@ -17,7 +17,7 @@ import { CORPUS, type CorpusDeck } from '../../../../test/corpus/decks.ts'
  * would be a wall of near-identical names, and these are the ones whose
  * differences a visitor can see.
  */
-export const SAMPLE_NAMES = ['text-box', 'autoshape', 'custgeom', 'table', 'bullet', 'gradient', 'chart'] as const
+const SAMPLE_NAMES = ['text-box', 'autoshape', 'custgeom', 'table', 'bullet', 'gradient', 'chart'] as const
 
 export interface Sample {
 	name: string

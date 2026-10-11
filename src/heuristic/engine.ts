@@ -346,6 +346,3 @@ export async function convertSlide(
 	const rendered = await renderSlideModel(headHTML, slide, opts.lang || 'en', size, opts)
 	return { model: rendered.model, warnings: rendered.warnings.map((message) => ({ message })) }
 }
-
-/** Version tag for the engine. */
-export const ENGINE_VERSION = 'quality-browser-v1'

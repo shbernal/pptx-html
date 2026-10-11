@@ -55,7 +55,7 @@ export interface ResolvedAssets {
  * store, or the reverse — rather than being limited to the precedence
  * {@link resolveAssets} applies.
  */
-export function inlineAssetResolver(blockText: string | null): AssetResolver | null {
+function inlineAssetResolver(blockText: string | null): AssetResolver | null {
 	if (blockText === null) return null
 	const encoded = JSON.parse(blockText) as Record<string, string>
 	return (entry) => {

@@ -75,7 +75,7 @@ export interface Integrity {
  * (no `undefined`, no `Map`, no `Uint8Array` — see `ir/render`), so this needs no
  * replacer.
  */
-export function serializeIsland(ir: RenderIr): string {
+function serializeIsland(ir: RenderIr): string {
 	return JSON.stringify(ir)
 }
 

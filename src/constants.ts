@@ -1,9 +1,9 @@
 /**
  * The pixel/point constants and the default font mapping.
  *
- * NOTE: the browser extractor (`heuristic/extractor.ts`) redefines PX_PER_IN /
- * PT_PER_PX internally on purpose — it is stringified and `eval`'d in another
- * realm, so it cannot import these. Keeping local constants with the same names
+ * NOTE: the browser extractor (`heuristic/extractor.ts`) redefines PX_PER_IN
+ * internally on purpose — it is stringified and `eval`'d in another
+ * realm, so it cannot import it. Keeping a local constant with the same name
  * is what makes that comment checkable against something.
  *
  * ## Where the EMU constants are, and why they are not here
@@ -21,13 +21,11 @@
  *   `EMU_PER_INCH` from `pptx-ts`, which is the library that owns the
  *   format. `src/render/geometry.ts` does the same for `ANGLE_UNITS_PER_DEGREE`.
  *
- * `PX_PER_IN` and `PT_PER_PX` stay here rather than becoming upstream's
- * `DEFAULT_PX_PER_INCH` and `POINTS_PER_INCH / DEFAULT_PX_PER_INCH`, for the
- * extractor reason above.
+ * `PX_PER_IN` stays here rather than becoming upstream's `DEFAULT_PX_PER_INCH`,
+ * for the extractor reason above.
  */
 
 export const PX_PER_IN = 96
-export const PT_PER_PX = 0.75
 
 export const DEFAULT_FONT = {
 	latin: 'Carlito',

@@ -17,8 +17,8 @@
 
 import { emitDeck, IslandError, importDeck, type ParsedDeck, parseDeck, renderDeck } from 'pptx-html'
 
-export type StageName = 'importDeck' | 'renderDeck' | 'parseDeck' | 'emitDeck'
-export type StageStatus = 'idle' | 'running' | 'ok' | 'failed' | 'blocked'
+type StageName = 'importDeck' | 'renderDeck' | 'parseDeck' | 'emitDeck'
+type StageStatus = 'idle' | 'running' | 'ok' | 'failed' | 'blocked'
 
 export interface Stage {
 	name: StageName
@@ -30,7 +30,7 @@ export interface Stage {
 	error: string | null
 }
 
-export const STAGE_NAMES: readonly StageName[] = ['importDeck', 'renderDeck', 'parseDeck', 'emitDeck']
+const STAGE_NAMES: readonly StageName[] = ['importDeck', 'renderDeck', 'parseDeck', 'emitDeck']
 
 export function idleStages(): Stage[] {
 	return STAGE_NAMES.map((name) => ({ name, status: 'idle', ms: null, note: '', error: null }))

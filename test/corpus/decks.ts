@@ -37,7 +37,7 @@ const PIXEL_PNG =
 const GLYPH_SVG =
 	'image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjYiIGZpbGw9IiMyNTBGNkIiLz48L3N2Zz4='
 
-export type CorpusTier = 'primitive' | 'hard'
+type CorpusTier = 'primitive' | 'hard'
 
 export interface CorpusDeck {
 	/** Stable id — used as a snapshot key, so renaming one rewrites history. */
@@ -821,9 +821,6 @@ export const CORPUS = [
 		slide.addText('Themed text', { x: 1, y: 3.2, w: 3, h: 0.6, color: 'accent2', objectName: 'themed-copy' })
 	}),
 ] as const satisfies readonly CorpusDeck[]
-
-export const PRIMITIVES: CorpusDeck[] = CORPUS.filter((entry) => entry.tier === 'primitive')
-export const HARD: CorpusDeck[] = CORPUS.filter((entry) => entry.tier === 'hard')
 
 /**
  * A deck of one labelled slide per entry, for the ordering checks: slide

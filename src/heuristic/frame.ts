@@ -25,7 +25,7 @@ export function escapeAttr(value: unknown): string {
 		.replace(/>/g, '&gt;')
 }
 
-export function withBaseHref(html: string): string {
+function withBaseHref(html: string): string {
 	if (/<base\b/i.test(html)) return html
 	const href = (document.baseURI || window.location.href || '').split('#')[0]
 	const tag = '<base href="' + escapeAttr(href) + '">'

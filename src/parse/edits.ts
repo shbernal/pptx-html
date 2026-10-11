@@ -195,7 +195,7 @@ export interface EditSet {
 	deleted: Set<NodeId>
 }
 
-export function isEmpty(edits: EditSet): boolean {
+function isEmpty(edits: EditSet): boolean {
 	return edits.runs.size === 0 && edits.paragraphs.size === 0 && edits.deleted.size === 0
 }
 

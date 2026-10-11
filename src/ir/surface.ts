@@ -196,14 +196,14 @@ export interface ProjectedParagraph {
 	props: Pick<ParagraphProperties, EditableParaProp>
 }
 
-export interface ProjectedNode {
+interface ProjectedNode {
 	id: NodeId
 	kind: NodeKind
 	paragraphs: ProjectedParagraph[]
 	runs: ProjectedRun[]
 }
 
-export interface ProjectedSlide {
+interface ProjectedSlide {
 	number: number
 	/** In document order, so the projection is stable for hashing. */
 	nodes: ProjectedNode[]

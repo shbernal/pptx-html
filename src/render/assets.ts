@@ -37,7 +37,7 @@ import { ASSETS_ID, escapeForScript, ISLAND_ID } from './island'
 export type AssetSource = (name: string) => Uint8Array | undefined
 
 /** Bytes past which `'ref'` is worth suggesting. Base64 adds a third on top of this. */
-export const ASSET_SIZE_WARN_BYTES = 10_000_000
+const ASSET_SIZE_WARN_BYTES = 10_000_000
 
 export interface AssetBlock {
 	/** The `<script>` element, or `''` under `assets: 'ref'`. */

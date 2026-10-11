@@ -68,7 +68,7 @@ export async function viewDeck(bytes: Uint8Array): Promise<DeckView> {
  * Omitting `notes` therefore means something specific: *this lane claims to lose
  * nothing*. Both lanes below claim exactly that.
  */
-export interface LoopOutput {
+interface LoopOutput {
 	bytes: Uint8Array
 	notes?: FidelityNote[]
 }

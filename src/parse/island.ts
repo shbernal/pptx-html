@@ -181,18 +181,6 @@ export async function openIsland(blocks: DocumentBlocks): Promise<OpenedIsland |
 }
 
 /**
- * The surface hash of an arbitrary IR, in the one spelling both sides use.
- *
- * Here rather than inlined at each call site so the renderer's hash and the
- * parser's comparison can never be taken over differently-serialized forms of the
- * same projection — the failure that would report every untouched document as
- * edited.
- */
-export async function surfaceHashOf(ir: RenderIr): Promise<string> {
-	return sha256Hex(JSON.stringify(project(ir)))
-}
-
-/**
  * Re-derive `modelHash` for an IR, for a caller checking a package against a
  * document. Over {@link islandTextOf}, because that is the form the hash covers.
  */

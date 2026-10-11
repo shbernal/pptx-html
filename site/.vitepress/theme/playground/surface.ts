@@ -55,7 +55,7 @@ export type ControlKind = 'toggle' | 'decoration' | 'number' | 'color' | 'align'
  * while the surface names a property it does not. The panel iterates these
  * entries, so the list is also the render order.
  */
-export const CONTROL_OF: Record<EditableRunProp, ControlKind> = {
+const CONTROL_OF: Record<EditableRunProp, ControlKind> = {
 	bold: 'toggle',
 	italic: 'toggle',
 	underline: 'decoration',
@@ -75,7 +75,7 @@ export const CONTROLS: readonly { prop: EditableRunProp; kind: ControlKind }[] =
  * not given a control here is a `site:typecheck` error rather than a missing input
  * nobody notices.
  */
-export const PARA_CONTROL_OF: Record<EditableParaProp, ControlKind> = {
+const PARA_CONTROL_OF: Record<EditableParaProp, ControlKind> = {
 	align: 'align',
 	bullet: 'bullet',
 	marginLeftPt: 'points',
@@ -180,7 +180,7 @@ export interface ParagraphRow {
 	runs: RunRow[]
 }
 
-export interface NodeRow {
+interface NodeRow {
 	id: string
 	kind: string
 	paragraphs: ParagraphRow[]

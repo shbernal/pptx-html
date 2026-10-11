@@ -25,9 +25,3 @@ export function only<T>(items: ArrayLike<T>, what = 'element'): T {
 	if (items.length !== 1) throw new Error(`expected exactly one ${what}, found ${items.length}`)
 	return at(items, 0, what)
 }
-
-/** `value`, or a failure when it is absent. */
-export function present<T>(value: T | undefined | null, what = 'value'): T {
-	if (value === undefined || value === null) throw new Error(`expected a ${what}, found none`)
-	return value
-}
