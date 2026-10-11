@@ -20,10 +20,17 @@ carry anyway: a git URL in `dependencies` travels to consumers and would make
 every installer build the writer from source, which `prepublishOnly` does not
 check for.
 
+The range can name a prerelease from upstream's `next` dist-tag, which publishes
+every green push to its `main` as `<base>-next.<run>.g<sha>`. That is how a fix
+this repo filed reaches it before upstream cuts a release, and the bump is the
+same three commands with `pptx-ts@next` in place of a version. A caret on a
+prerelease admits later prereleases of the same base and every stable release
+above it, so the next upstream release satisfies it without an edit.
+
 To move to a newer release:
 
 ```bash
-pnpm add "pptx-ts@^<version>"
+pnpm add "pptx-ts@^<version>"   # or pptx-ts@next
 npx skills add ./node_modules/pptx-ts -s '*' -a claude-code -a codex -a universal -y
 pnpm run test:oracle
 ```
@@ -43,10 +50,10 @@ Two things the sha era left behind in `pnpm-workspace.yaml`, both still live:
   a registry publish date and a git tarball has none. It is now the thing that
   keeps a same-day bump installable.
 
-If a fix is needed before it is released, `npm i github:shbernal/ts-pptx#<sha>`
-works. That install builds from source and pulls upstream's `devDependencies`, so
-it is for trying an unreleased fix, not for staying on. Going back to a sha means
-restoring `allowBuilds` to `true`.
+A `github:shbernal/pptx-ts#<sha>` install is no longer needed for an unreleased
+fix, since `next` carries it. It still works for a commit `next` skipped, but it
+builds from source and pulls upstream's `devDependencies`, so it is for trying a
+fix, not for staying on, and it needs `allowBuilds` back at `true`.
 
 `lefthook`'s postinstall is denied on purpose in `pnpm-workspace.yaml`, and there
 is deliberately no `prepare: lefthook install` script. That postinstall syncs git

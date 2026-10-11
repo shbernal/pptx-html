@@ -1230,7 +1230,7 @@ function newDeck(title: string): TsPptx {
 }
 
 async function bytesOf(pptx: TsPptx): Promise<Uint8Array> {
-	return (await pptx.write({ outputType: 'uint8array' })) as Uint8Array
+	return pptx.write({ outputType: 'uint8array' })
 }
 
 export const SHOWCASE: readonly ShowcaseDeck[] = [

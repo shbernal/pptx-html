@@ -35,8 +35,8 @@ theme-color         hard       slides=1 (1a/0c)  calls=2
 # fidelity notes by disposition × cause (whole corpus)
              unread       unwritable   unsupported  
 dropped      30           29           9            
-flattened    0            29           12           
-approximated 29           0            7            
+flattened    0            35           6            
+approximated 29           0            6            
 
 # constructs named, by deck
 text-box            deck.docProps, master.background, master.txStyles, theme.fmtScheme
@@ -55,7 +55,7 @@ group               deck.docProps, master.background, master.txStyles, theme.fmt
 nested-group        deck.docProps, master.background, master.txStyles, theme.fmtScheme
 hyperlink           deck.docProps, master.background, master.txStyles, theme.fmtScheme
 line-cap            deck.docProps, master.background, master.txStyles, theme.fmtScheme
-bullet              deck.docProps, master.background, master.txStyles, text.bullet.picture, theme.fmtScheme
+bullet              deck.docProps, master.background, master.txStyles, theme.fmtScheme
 autofit-shrink      deck.docProps, master.background, master.txStyles, theme.fmtScheme
 text-decoration     deck.docProps, master.background, master.txStyles, theme.fmtScheme
 paragraph-align     deck.docProps, master.background, master.txStyles, theme.fmtScheme

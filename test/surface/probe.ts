@@ -83,7 +83,7 @@ export interface Observation {
 async function build(probe: Probe, on: boolean): Promise<Uint8Array> {
 	const pptx = newDeck()
 	await probe.author(pptx, on)
-	return (await pptx.write({ outputType: 'uint8array' })) as Uint8Array
+	return pptx.write({ outputType: 'uint8array' })
 }
 
 /** Run one probe through both lanes. Never throws: a crash is an observation. */

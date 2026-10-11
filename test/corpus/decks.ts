@@ -60,7 +60,7 @@ export function newDeck(): TsPptx {
 }
 
 async function bytesOf(pptx: TsPptx): Promise<Uint8Array> {
-	return (await pptx.write({ outputType: 'uint8array' })) as Uint8Array
+	return pptx.write({ outputType: 'uint8array' })
 }
 
 function deck(name: string, tier: CorpusTier, why: string, author: (pptx: TsPptx) => void | Promise<void>): CorpusDeck {

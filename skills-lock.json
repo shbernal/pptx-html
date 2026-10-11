@@ -4,7 +4,7 @@
     "ts-pptx-upstream": {
       "source": "./node_modules/pptx-ts",
       "sourceType": "local",
-      "computedHash": "2b188148a980ff4fd434ac8e5a3ec531dc05925c2ea6712c264de21b0e45fd55"
+      "computedHash": "3fa5244f526c21ed967ee9d7b4647022926656e7dafe424f33713d385ecb6851"
     }
   }
 }

@@ -271,7 +271,7 @@ export const PROBES: Probe[] = [
 	text('addText.italic', { italic: true }),
 	text('addText.underline.style:dbl', { underline: { style: 'dbl' } }),
 	text('addText.strike:dblStrike', { strike: 'dblStrike' }),
-	{ ...text('addText.charSpacing', { charSpacing: 4 }), issue: 'https://github.com/shbernal/pptx-ts/issues/53' },
+	text('addText.charSpacing', { charSpacing: 4 }),
 	text('addText.lineSpacingMultiple', { lineSpacingMultiple: 1.5 }),
 	text('addText.valign:bottom', { valign: 'bottom' }),
 	text('addText.margin', { margin: [10, 20, 10, 20] }),
@@ -285,16 +285,13 @@ export const PROBES: Probe[] = [
 	text('addText.altText', { altText: 'A probe description' }),
 	textOn('addText.angleRange', { shape: 'blockArc' }, { angleRange: [30, 200] }),
 	textOn('addText.arcThicknessRatio', { shape: 'blockArc', angleRange: [30, 200] }, { arcThicknessRatio: 0.3 }),
-	{ ...text('addText.baseline', { baseline: 30 }), issue: 'https://github.com/shbernal/pptx-ts/issues/55' },
+	text('addText.baseline', { baseline: 30 }),
 	run('addText.breakLine', 0, { breakLine: true }),
 	text('addText.bullet', { bullet: true }),
 	textOn('addText.bullet.characterCode', { bullet: true }, { bullet: { characterCode: '25BA' } }),
 	textOn('addText.bullet.color', { bullet: true }, { bullet: { color: '9B1B30' } }),
 	textOn('addText.bullet.fontFace', { bullet: true }, { bullet: { fontFace: 'Wingdings' } }),
-	{
-		...textOn('addText.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/58',
-	},
+	textOn('addText.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
 	textOn('addText.bullet.indent', { bullet: true }, { bullet: { indent: 10 } }),
 	textOn(
 		'addText.bullet.numberStartAt',
@@ -310,24 +307,11 @@ export const PROBES: Probe[] = [
 	text('addText.bullet.type:number', { bullet: { type: 'number' } }),
 	text('addText.caps:all', { caps: 'all' }),
 	text('addText.color', { color: '9B1B30' }),
-	{ ...text('addText.columns', { columns: 2 }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
-	{
-		...textOn('addText.columnSpacing', { columns: 2 }, { columnSpacing: 0.5 }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	text('addText.columns', { columns: 2 }),
+	textOn('addText.columnSpacing', { columns: 2 }, { columnSpacing: 0.5 }),
 	text('addText.fill.color', { fill: { color: 'F0C808' } }, ['addText.fill', 'addText.fill.color']),
-	{
-		...textOn(
-			'addText.fill.transparency',
-			{ fill: { color: 'F0C808' } },
-			{ fill: { color: 'F0C808', transparency: 40 } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...text('addText.fill.type:inherit', { fill: { type: 'inherit' } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
+	textOn('addText.fill.transparency', { fill: { color: 'F0C808' } }, { fill: { color: 'F0C808', transparency: 40 } }),
+	text('addText.fill.type:inherit', { fill: { type: 'inherit' } }),
 	text(
 		'addText.fill.gradient.linear',
 		{
@@ -350,87 +334,78 @@ export const PROBES: Probe[] = [
 			'addText.fill.gradient.stops.transparency',
 		]
 	),
-	{
-		...textOn(
-			'addText.fill.gradient.scaled',
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+	textOn(
+		'addText.fill.gradient.scaled',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						scaled: true,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...textOn(
-			'addText.fill.gradient.rotateWithShape',
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		},
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					scaled: true,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						rotateWithShape: false,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...text(
-			'addText.fill.gradient.center',
-			{
-				fill: {
-					gradient: {
-						kind: 'radial',
-						center: { x: 20, y: 70 },
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		}
+	),
+	textOn(
+		'addText.fill.gradient.rotateWithShape',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			['addText.fill.gradient.center.x', 'addText.fill.gradient.center.y']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
+		},
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	text(
+		'addText.fill.gradient.center',
+		{
+			fill: {
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		['addText.fill.gradient.center.x', 'addText.fill.gradient.center.y']
+	),
 	text('addText.fill.pattern', { fill: { pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } }, [
 		'addText.fill.pattern.preset',
 		'addText.fill.pattern.fgColor',
@@ -453,42 +428,30 @@ export const PROBES: Probe[] = [
 	text('addText.flipH', { flipH: true }),
 	text('addText.flipV', { flipV: true }),
 	text('addText.fontFace', { fontFace: 'Georgia' }),
-	{
-		...textOn('addText.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	textOn('addText.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
 	text('addText.fontSize', { fontSize: 28 }),
-	{
-		...text('addText.glow', { glow: { size: 8, opacity: 0.5, color: 'FF00FF' } }, [
-			'addText.glow.size',
-			'addText.glow.opacity',
-			'addText.glow.color',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	text('addText.glow', { glow: { size: 8, opacity: 0.5, color: 'FF00FF' } }, [
+		'addText.glow.size',
+		'addText.glow.opacity',
+		'addText.glow.color',
+	]),
 	text('addText.x', { x: 2 }),
 	text('addText.y', { y: 2 }),
 	text('addText.w', { w: 6 }),
 	text('addText.h', { h: 2 }),
 	text('addText.highlight', { highlight: 'FFFF00' }),
-	{
-		...text('addText.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
-			'addText.hyperlink.url',
-			'addText.hyperlink.tooltip',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
-	},
-	{
-		...text('addText.hyperlink.slide', { hyperlink: { slide: 1 } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
-	},
+	text('addText.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
+		'addText.hyperlink.url',
+		'addText.hyperlink.tooltip',
+	]),
+	text('addText.hyperlink.slide', { hyperlink: { slide: 1 } }),
 	{
 		...text('addText.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/100',
 	},
 	text('addText.indentLevel', { indentLevel: 2 }),
 	text('addText.isTextBox', { isTextBox: true }),
-	{ ...text('addText.lang', { lang: 'fr-FR' }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
+	{ ...text('addText.lang', { lang: 'fr-FR' }), issue: 'https://github.com/shbernal/pptx-ts/issues/102' },
 	text('addText.line', { line: { color: '250F6B', width: 2 } }, ['addText.line.color', 'addText.line.width']),
 	textOn(
 		'addText.line.dashType:dash',
@@ -520,142 +483,115 @@ export const PROBES: Probe[] = [
 		{ line: { color: '250F6B', width: 2 } },
 		{ line: { color: '250F6B', width: 2, type: 'none' } }
 	),
-	{
-		...text(
-			'addText.line.gradient.linear',
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B', transparency: 30 },
-						],
-					},
+	text(
+		'addText.line.gradient.linear',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B', transparency: 30 },
+					],
 				},
 			},
-			[
-				'addText.line.gradient.kind',
-				'addText.line.gradient.angle',
-				'addText.line.gradient.stops.color',
-				'addText.line.gradient.stops.position',
-				'addText.line.gradient.stops.transparency',
-			]
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...textOn(
-			'addText.line.gradient.scaled',
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		},
+		[
+			'addText.line.gradient.kind',
+			'addText.line.gradient.angle',
+			'addText.line.gradient.stops.color',
+			'addText.line.gradient.stops.position',
+			'addText.line.gradient.stops.transparency',
+		]
+	),
+	textOn(
+		'addText.line.gradient.scaled',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						scaled: true,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...textOn(
-			'addText.line.gradient.rotateWithShape',
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		},
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					scaled: true,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						rotateWithShape: false,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...text(
-			'addText.line.gradient.center',
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'radial',
-						center: { x: 20, y: 70 },
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		}
+	),
+	textOn(
+		'addText.line.gradient.rotateWithShape',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			['addText.line.gradient.center.x', 'addText.line.gradient.center.y']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...text(
-			'addText.line.pattern',
-			{ line: { width: 3, pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
-			['addText.line.pattern.preset', 'addText.line.pattern.fgColor', 'addText.line.pattern.bgColor']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...text('addText.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...text('addText.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...text('addText.objectLock.noChangeAspect', { objectLock: { noChangeAspect: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...text('addText.objectLock.noChangeShapeType', { objectLock: { noChangeShapeType: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
+		},
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	text(
+		'addText.line.gradient.center',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		['addText.line.gradient.center.x', 'addText.line.gradient.center.y']
+	),
+	text(
+		'addText.line.pattern',
+		{ line: { width: 3, pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
+		['addText.line.pattern.preset', 'addText.line.pattern.fgColor', 'addText.line.pattern.bgColor']
+	),
+	text('addText.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
+	text('addText.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
+	text('addText.objectLock.noChangeAspect', { objectLock: { noChangeAspect: true } }),
+	text('addText.objectLock.noChangeShapeType', { objectLock: { noChangeShapeType: true } }),
 	{
 		...text('addText.objectLock.noCrop', { objectLock: { noCrop: true } }),
 		accepted: {
@@ -672,42 +608,18 @@ export const PROBES: Probe[] = [
 				'the writer warns that noDrilldown is not valid on a:spLocks and drops it: it is a graphic-frame/group lock, which a text box does not have',
 		},
 	},
-	{
-		...text('addText.objectLock.noEditPoints', { objectLock: { noEditPoints: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...text('addText.objectLock.noGrp', { objectLock: { noGrp: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...text('addText.objectLock.noMove', { objectLock: { noMove: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...text('addText.objectLock.noResize', { objectLock: { noResize: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...text('addText.objectLock.noRot', { objectLock: { noRot: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...text('addText.objectLock.noSelect', { objectLock: { noSelect: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...text('addText.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
+	text('addText.objectLock.noEditPoints', { objectLock: { noEditPoints: true } }),
+	text('addText.objectLock.noGrp', { objectLock: { noGrp: true } }),
+	text('addText.objectLock.noMove', { objectLock: { noMove: true } }),
+	text('addText.objectLock.noResize', { objectLock: { noResize: true } }),
+	text('addText.objectLock.noRot', { objectLock: { noRot: true } }),
+	text('addText.objectLock.noSelect', { objectLock: { noSelect: true } }),
+	text('addText.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
 	text('addText.objectName', { objectName: 'Renamed probe' }),
-	{
-		...text('addText.outline', { outline: { color: '9B1B30', size: 1.5 } }, [
-			'addText.outline.color',
-			'addText.outline.size',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	text('addText.outline', { outline: { color: '9B1B30', size: 1.5 } }, [
+		'addText.outline.color',
+		'addText.outline.size',
+	]),
 	text('addText.paraIndent', { paraIndent: 12 }),
 	text('addText.paraMarginLeft', { paraMarginLeft: 18 }),
 	text('addText.paraSpaceAfter', { paraSpaceAfter: 12 }),
@@ -756,7 +668,7 @@ export const PROBES: Probe[] = [
 	),
 	textOn('addText.rectRadius', { shape: 'roundRect' }, { rectRadius: 0.3 }),
 	text('addText.rotate', { rotate: 30 }),
-	{ ...text('addText.rtlMode', { rtlMode: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
+	text('addText.rtlMode', { rtlMode: true }),
 	text(
 		'addText.shadow.outer',
 		{ shadow: { type: 'outer', angle: 60, blur: 6, color: '250F6B', offset: 4, transparency: 40 } },
@@ -769,47 +681,31 @@ export const PROBES: Probe[] = [
 			'addText.shadow.transparency',
 		]
 	),
-	{
-		...textOn(
-			'addText.shadow.rotateWithShape',
-			{ shadow: { type: 'outer', blur: 6 } },
-			{ shadow: { type: 'outer', blur: 6, rotateWithShape: true } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
+	textOn(
+		'addText.shadow.rotateWithShape',
+		{ shadow: { type: 'outer', blur: 6 } },
+		{ shadow: { type: 'outer', blur: 6, rotateWithShape: true } }
+	),
 	text('addText.shape:ellipse', { shape: 'ellipse' }),
 	textOn('addText.shapeAdjust', { shape: 'roundRect' }, { shapeAdjust: { name: 'adj', value: 0.4 } }, [
 		'addText.shapeAdjust.name',
 		'addText.shapeAdjust.value',
 	]),
-	{
-		...run('addText.softBreakBefore', 1, { softBreakBefore: true }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	run('addText.softBreakBefore', 1, { softBreakBefore: true }),
 	text('addText.strike', { strike: true }),
-	{ ...text('addText.subscript', { subscript: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/55' },
-	{ ...text('addText.superscript', { superscript: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/55' },
-	{
-		...text('addText.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
-			'addText.tabStops.position',
-			'addText.tabStops.alignment',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	text('addText.subscript', { subscript: true }),
+	text('addText.superscript', { superscript: true }),
+	text('addText.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
+		'addText.tabStops.position',
+		'addText.tabStops.alignment',
+	]),
 	text('addText.textDirection:vert', { textDirection: 'vert' }),
-	{ ...text('addText.textWarp', { textWarp: 'textArchUp' }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
-	{ ...text('addText.transparency', { transparency: 40 }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
-	{
-		...textOn(
-			'addText.underline.color',
-			{ underline: { style: 'sng' } },
-			{ underline: { style: 'sng', color: '9B1B30' } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	text('addText.textWarp', { textWarp: 'textArchUp' }),
+	text('addText.transparency', { transparency: 40 }),
+	textOn('addText.underline.color', { underline: { style: 'sng' } }, { underline: { style: 'sng', color: '9B1B30' } }),
 	text('addText.vert:eaVert', { vert: 'eaVert' }),
 	text('addText.wrap', { wrap: false }),
-	{ ...text('addText.placeholder', { placeholder: 'body' }), issue: 'https://github.com/shbernal/pptx-ts/issues/61' },
+	{ ...text('addText.placeholder', { placeholder: 'body' }), issue: 'https://github.com/shbernal/pptx-ts/issues/100' },
 	{
 		...shape('addShape.align:center', { align: 'center' }),
 		accepted: {
@@ -822,10 +718,7 @@ export const PROBES: Probe[] = [
 	shapeOn('addShape.angleRange', 'blockArc', {}, { angleRange: [30, 200] }),
 	shapeOn('addShape.arcThicknessRatio', 'blockArc', { angleRange: [30, 200] }, { arcThicknessRatio: 0.3 }),
 	shape('addShape.fill.color', { fill: { color: 'F0C808' } }, ['addShape.fill', 'addShape.fill.color']),
-	{
-		...shape('addShape.fill.transparency', { fill: { color: 'DDE3F0', transparency: 40 } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
+	shape('addShape.fill.transparency', { fill: { color: 'DDE3F0', transparency: 40 } }),
 	shape('addShape.fill.type:none', { fill: { type: 'none' } }, ['addShape.fill.type']),
 	shape(
 		'addShape.fill.gradient.linear',
@@ -849,89 +742,80 @@ export const PROBES: Probe[] = [
 			'addShape.fill.gradient.stops.transparency',
 		]
 	),
-	{
-		...shapeOn(
-			'addShape.fill.gradient.scaled',
-			'rect',
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+	shapeOn(
+		'addShape.fill.gradient.scaled',
+		'rect',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						scaled: true,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...shapeOn(
-			'addShape.fill.gradient.rotateWithShape',
-			'rect',
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		},
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					scaled: true,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						rotateWithShape: false,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...shape(
-			'addShape.fill.gradient.center',
-			{
-				fill: {
-					gradient: {
-						kind: 'radial',
-						center: { x: 20, y: 70 },
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		}
+	),
+	shapeOn(
+		'addShape.fill.gradient.rotateWithShape',
+		'rect',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			['addShape.fill.gradient.center.x', 'addShape.fill.gradient.center.y']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
+		},
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	shape(
+		'addShape.fill.gradient.center',
+		{
+			fill: {
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		['addShape.fill.gradient.center.x', 'addShape.fill.gradient.center.y']
+	),
 	shape('addShape.fill.pattern', { fill: { pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } }, [
 		'addShape.fill.pattern.preset',
 		'addShape.fill.pattern.fgColor',
@@ -993,144 +877,117 @@ export const PROBES: Probe[] = [
 		{ line: { color: '250F6B', width: 2 } },
 		{ line: { color: '250F6B', width: 2, type: 'none' } }
 	),
-	{
-		...shape(
-			'addShape.line.gradient.linear',
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B', transparency: 30 },
-						],
-					},
+	shape(
+		'addShape.line.gradient.linear',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B', transparency: 30 },
+					],
 				},
 			},
-			[
-				'addShape.line.gradient.kind',
-				'addShape.line.gradient.angle',
-				'addShape.line.gradient.stops.color',
-				'addShape.line.gradient.stops.position',
-				'addShape.line.gradient.stops.transparency',
-			]
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...shapeOn(
-			'addShape.line.gradient.scaled',
-			'rect',
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		},
+		[
+			'addShape.line.gradient.kind',
+			'addShape.line.gradient.angle',
+			'addShape.line.gradient.stops.color',
+			'addShape.line.gradient.stops.position',
+			'addShape.line.gradient.stops.transparency',
+		]
+	),
+	shapeOn(
+		'addShape.line.gradient.scaled',
+		'rect',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						scaled: true,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...shapeOn(
-			'addShape.line.gradient.rotateWithShape',
-			'rect',
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		},
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					scaled: true,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						rotateWithShape: false,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...shape(
-			'addShape.line.gradient.center',
-			{
-				line: {
-					width: 3,
-					gradient: {
-						kind: 'radial',
-						center: { x: 20, y: 70 },
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		}
+	),
+	shapeOn(
+		'addShape.line.gradient.rotateWithShape',
+		'rect',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			['addShape.line.gradient.center.x', 'addShape.line.gradient.center.y']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...shape(
-			'addShape.line.pattern',
-			{ line: { width: 3, pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
-			['addShape.line.pattern.preset', 'addShape.line.pattern.fgColor', 'addShape.line.pattern.bgColor']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...shape('addShape.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...shape('addShape.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...shape('addShape.objectLock.noChangeAspect', { objectLock: { noChangeAspect: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...shape('addShape.objectLock.noChangeShapeType', { objectLock: { noChangeShapeType: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
+		},
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	shape(
+		'addShape.line.gradient.center',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		['addShape.line.gradient.center.x', 'addShape.line.gradient.center.y']
+	),
+	shape(
+		'addShape.line.pattern',
+		{ line: { width: 3, pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
+		['addShape.line.pattern.preset', 'addShape.line.pattern.fgColor', 'addShape.line.pattern.bgColor']
+	),
+	shape('addShape.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
+	shape('addShape.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
+	shape('addShape.objectLock.noChangeAspect', { objectLock: { noChangeAspect: true } }),
+	shape('addShape.objectLock.noChangeShapeType', { objectLock: { noChangeShapeType: true } }),
 	{
 		...shape('addShape.objectLock.noCrop', { objectLock: { noCrop: true } }),
 		accepted: {
@@ -1147,34 +1004,13 @@ export const PROBES: Probe[] = [
 				'the writer warns that noDrilldown is not valid on a:spLocks and drops it: it is a graphic-frame/group lock, which a shape does not have',
 		},
 	},
-	{
-		...shape('addShape.objectLock.noEditPoints', { objectLock: { noEditPoints: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...shape('addShape.objectLock.noGrp', { objectLock: { noGrp: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...shape('addShape.objectLock.noMove', { objectLock: { noMove: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...shape('addShape.objectLock.noResize', { objectLock: { noResize: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...shape('addShape.objectLock.noRot', { objectLock: { noRot: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...shape('addShape.objectLock.noSelect', { objectLock: { noSelect: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
-	{
-		...shape('addShape.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
-	},
+	shape('addShape.objectLock.noEditPoints', { objectLock: { noEditPoints: true } }),
+	shape('addShape.objectLock.noGrp', { objectLock: { noGrp: true } }),
+	shape('addShape.objectLock.noMove', { objectLock: { noMove: true } }),
+	shape('addShape.objectLock.noResize', { objectLock: { noResize: true } }),
+	shape('addShape.objectLock.noRot', { objectLock: { noRot: true } }),
+	shape('addShape.objectLock.noSelect', { objectLock: { noSelect: true } }),
+	shape('addShape.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
 	shape('addShape.objectName', { objectName: 'Renamed probe' }),
 	shapeOn(
 		'addShape.points',
@@ -1302,22 +1138,19 @@ export const PROBES: Probe[] = [
 			'addShape.shadow.transparency',
 		]
 	),
-	{
-		...shapeOn(
-			'addShape.shadow.rotateWithShape',
-			'rect',
-			{ shadow: { type: 'outer', blur: 6 } },
-			{ shadow: { type: 'outer', blur: 6, rotateWithShape: true } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
+	shapeOn(
+		'addShape.shadow.rotateWithShape',
+		'rect',
+		{ shadow: { type: 'outer', blur: 6 } },
+		{ shadow: { type: 'outer', blur: 6, rotateWithShape: true } }
+	),
 	shapeOn('addShape.shapeAdjust', 'roundRect', {}, { shapeAdjust: { name: 'adj', value: 0.4 } }, [
 		'addShape.shapeAdjust.name',
 		'addShape.shapeAdjust.value',
 	]),
 	cell('addTable.cell.align:center', { align: 'center' }),
 	cell('addTable.cell.anchorCtr', { anchorCtr: true }),
-	{ ...cell('addTable.cell.baseline', { baseline: 30 }), issue: 'https://github.com/shbernal/pptx-ts/issues/55' },
+	cell('addTable.cell.baseline', { baseline: 30 }),
 	cell('addTable.cell.bold', { bold: true }),
 	cell('addTable.cell.border', { border: { type: 'solid', color: '9B1B30', width: 2 } }, [
 		'addTable.cell.border.type',
@@ -1476,87 +1309,78 @@ export const PROBES: Probe[] = [
 			'addTable.cell.fill.gradient.stops.transparency',
 		]
 	),
-	{
-		...cellOn(
-			'addTable.cell.fill.gradient.scaled',
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+	cellOn(
+		'addTable.cell.fill.gradient.scaled',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						scaled: true,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...cellOn(
-			'addTable.cell.fill.gradient.rotateWithShape',
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		},
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					scaled: true,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			{
-				fill: {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						rotateWithShape: false,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				},
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...cell(
-			'addTable.cell.fill.gradient.center',
-			{
-				fill: {
-					gradient: {
-						kind: 'radial',
-						center: { x: 20, y: 70 },
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
+		}
+	),
+	cellOn(
+		'addTable.cell.fill.gradient.rotateWithShape',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
 				},
 			},
-			['addTable.cell.fill.gradient.center.x', 'addTable.cell.fill.gradient.center.y']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
+		},
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	cell(
+		'addTable.cell.fill.gradient.center',
+		{
+			fill: {
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		['addTable.cell.fill.gradient.center.x', 'addTable.cell.fill.gradient.center.y']
+	),
 	cell(
 		'addTable.cell.fill.pattern',
 		{ fill: { pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
@@ -1593,10 +1417,7 @@ export const PROBES: Probe[] = [
 		},
 	},
 	cell('addTable.cell.fontFace', { fontFace: 'Georgia' }),
-	{
-		...cellOn('addTable.cell.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	cellOn('addTable.cell.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
 	cell('addTable.cell.fontSize', { fontSize: 28 }),
 	cell('addTable.cell.highlight', { highlight: 'FFFF00' }),
 	cell('addTable.cell.horzOverflow:overflow', { horzOverflow: 'overflow' }),
@@ -1605,19 +1426,19 @@ export const PROBES: Probe[] = [
 			'addTable.cell.hyperlink.url',
 			'addTable.cell.hyperlink.tooltip',
 		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/100',
 	},
 	{
 		...cell('addTable.cell.hyperlink.slide', { hyperlink: { slide: 1 } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/100',
 	},
 	{
 		...cell('addTable.cell.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/100',
 	},
 	cell('addTable.cell.indentLevel', { indentLevel: 2 }),
 	cell('addTable.cell.italic', { italic: true }),
-	{ ...cell('addTable.cell.lang', { lang: 'fr-FR' }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
+	cell('addTable.cell.lang', { lang: 'fr-FR' }),
 	cell('addTable.cell.lineSpacing', { lineSpacing: 30 }),
 	cell('addTable.cell.lineSpacingMultiple', { lineSpacingMultiple: 1.5 }),
 	cell('addTable.cell.margin', { margin: [10, 20, 10, 20] }),
@@ -1625,18 +1446,12 @@ export const PROBES: Probe[] = [
 	cell('addTable.cell.paraMarginLeft', { paraMarginLeft: 18 }),
 	cell('addTable.cell.paraSpaceAfter', { paraSpaceAfter: 12 }),
 	cell('addTable.cell.paraSpaceBefore', { paraSpaceBefore: 12 }),
-	{
-		...cellRun('addTable.cell.softBreakBefore', 1, { softBreakBefore: true }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	cellRun('addTable.cell.softBreakBefore', 1, { softBreakBefore: true }),
 	cell('addTable.cell.strike:dblStrike', { strike: 'dblStrike' }),
-	{
-		...cell('addTable.cell.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
-			'addTable.cell.tabStops.position',
-			'addTable.cell.tabStops.alignment',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	cell('addTable.cell.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
+		'addTable.cell.tabStops.position',
+		'addTable.cell.tabStops.alignment',
+	]),
 	cell('addTable.cell.textDirection:vert270', { textDirection: 'vert270' }),
 	{
 		...cell('addTable.cell.textWarp', { textWarp: 'textArchUp' }),
@@ -1645,19 +1460,13 @@ export const PROBES: Probe[] = [
 			reason: 'a table cell leaves a:bodyPr empty, so textWarp writes nothing there, silently (shbernal/pptx-ts#84)',
 		},
 	},
-	{
-		...cell('addTable.cell.transparency', { transparency: 40 }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	cell('addTable.cell.transparency', { transparency: 40 }),
 	cell('addTable.cell.underline.style:dbl', { underline: { style: 'dbl' } }),
-	{
-		...cellOn(
-			'addTable.cell.underline.color',
-			{ underline: { style: 'sng' } },
-			{ underline: { style: 'sng', color: '9B1B30' } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
-	},
+	cellOn(
+		'addTable.cell.underline.color',
+		{ underline: { style: 'sng' } },
+		{ underline: { style: 'sng', color: '9B1B30' } }
+	),
 	cell('addTable.cell.valign:bottom', { valign: 'bottom' }),
 	slide(
 		'slide.background.color',
@@ -1678,19 +1487,16 @@ export const PROBES: Probe[] = [
 			target.background = { color: 'F0C808', transparency: 40 }
 		}
 	),
-	{
-		...slideOn(
-			'slide.background.type:none',
-			(target) => {
-				target.background = { color: 'F0C808' }
-			},
-			(target) => {
-				target.background = { color: 'F0C808', type: 'none' }
-			},
-			['slide.background.type']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/87',
-	},
+	slideOn(
+		'slide.background.type:none',
+		(target) => {
+			target.background = { color: 'F0C808' }
+		},
+		(target) => {
+			target.background = { color: 'F0C808', type: 'none' }
+		},
+		['slide.background.type']
+	),
 	slide(
 		'slide.background.gradient.linear',
 		(target) => {
@@ -1713,87 +1519,78 @@ export const PROBES: Probe[] = [
 			'slide.background.gradient.stops.transparency',
 		]
 	),
-	{
-		...slideOn(
-			'slide.background.gradient.scaled',
-			(target) => {
-				target.background = {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				}
-			},
-			(target) => {
-				target.background = {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						scaled: true,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				}
+	slideOn(
+		'slide.background.gradient.scaled',
+		(target) => {
+			target.background = {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
 			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...slideOn(
-			'slide.background.gradient.rotateWithShape',
-			(target) => {
-				target.background = {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				}
-			},
-			(target) => {
-				target.background = {
-					gradient: {
-						kind: 'linear',
-						angle: 45,
-						rotateWithShape: false,
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				}
+		},
+		(target) => {
+			target.background = {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					scaled: true,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
 			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
-	{
-		...slide(
-			'slide.background.gradient.center',
-			(target) => {
-				target.background = {
-					gradient: {
-						kind: 'radial',
-						center: { x: 20, y: 70 },
-						stops: [
-							{ position: 0, color: 'F0C808' },
-							{ position: 100, color: '250F6B' },
-						],
-					},
-				}
-			},
-			['slide.background.gradient.center.x', 'slide.background.gradient.center.y']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
-	},
+		}
+	),
+	slideOn(
+		'slide.background.gradient.rotateWithShape',
+		(target) => {
+			target.background = {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			}
+		},
+		(target) => {
+			target.background = {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			}
+		}
+	),
+	slide(
+		'slide.background.gradient.center',
+		(target) => {
+			target.background = {
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			}
+		},
+		['slide.background.gradient.center.x', 'slide.background.gradient.center.y']
+	),
 	slide(
 		'slide.background.pattern',
 		(target) => {
@@ -1804,12 +1601,9 @@ export const PROBES: Probe[] = [
 	slide('slide.background.data', (target) => {
 		target.background = { data: PNG }
 	}),
-	{
-		...slide('slide.background.image.data', (target) => {
-			target.background = { image: { data: PNG } }
-		}),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/86',
-	},
+	slide('slide.background.image.data', (target) => {
+		target.background = { image: { data: PNG } }
+	}),
 	{
 		...slideOn(
 			'slide.background.image.crop',
@@ -1826,11 +1620,7 @@ export const PROBES: Probe[] = [
 				'slide.background.image.crop.b',
 			]
 		),
-		accepted: {
-			kind: 'inert',
-			reason:
-				'the slide background writer ignores `image` and writes a:noFill, so the crop has nothing to sit on: shbernal/pptx-ts#86',
-		},
+		issue: 'https://github.com/shbernal/pptx-ts/issues/97',
 	},
 	{
 		...slide('slide.color', (target) => {
@@ -1893,42 +1683,33 @@ export const PROBES: Probe[] = [
 			target.transition = { type: 'push', variant: { dir: 'u' } }
 		}
 	),
-	{
-		...slideOn(
-			'slide.transition.sound.data',
-			(target) => {
-				target.transition = { type: 'fade' }
-			},
-			(target) => {
-				target.transition = { type: 'fade', sound: { data: WAV } }
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/91',
-	},
-	{
-		...slideOn(
-			'slide.transition.sound.name',
-			(target) => {
-				target.transition = { type: 'fade', sound: { data: WAV } }
-			},
-			(target) => {
-				target.transition = { type: 'fade', sound: { data: WAV, name: 'chime.wav' } }
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/91',
-	},
-	{
-		...slideOn(
-			'slide.transition.sound.loop',
-			(target) => {
-				target.transition = { type: 'fade', sound: { data: WAV } }
-			},
-			(target) => {
-				target.transition = { type: 'fade', sound: { data: WAV, loop: true } }
-			}
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/91',
-	},
+	slideOn(
+		'slide.transition.sound.data',
+		(target) => {
+			target.transition = { type: 'fade' }
+		},
+		(target) => {
+			target.transition = { type: 'fade', sound: { data: WAV } }
+		}
+	),
+	slideOn(
+		'slide.transition.sound.name',
+		(target) => {
+			target.transition = { type: 'fade', sound: { data: WAV } }
+		},
+		(target) => {
+			target.transition = { type: 'fade', sound: { data: WAV, name: 'chime.wav' } }
+		}
+	),
+	slideOn(
+		'slide.transition.sound.loop',
+		(target) => {
+			target.transition = { type: 'fade', sound: { data: WAV } }
+		},
+		(target) => {
+			target.transition = { type: 'fade', sound: { data: WAV, loop: true } }
+		}
+	),
 	slideOn(
 		'slide.transition.sound.stopPrevious',
 		(target) => {
@@ -1942,220 +1723,29 @@ export const PROBES: Probe[] = [
 	slideNumber('slide.slideNumber.y', { y: 5 }),
 	slideNumber('slide.slideNumber.w', { w: 2 }),
 	slideNumber('slide.slideNumber.h', { h: 0.8 }),
-	{
-		...slideNumber('slide.slideNumber.align:center', { align: 'center' }, {}, ['slide.slideNumber.align']),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
-	},
-	{
-		...slideNumber('slide.slideNumber.valign:bottom', { valign: 'bottom' }, {}, ['slide.slideNumber.valign']),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
-	},
-	{
-		...slideNumber('slide.slideNumber.bold', { bold: true }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
-	},
-	{
-		...slideNumber('slide.slideNumber.italic', { italic: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.caps:all', { caps: 'all' }, {}, ['slide.slideNumber.caps']),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.color', { color: '9B1B30' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
-	},
-	{
-		...slideNumber('slide.slideNumber.fontFace', { fontFace: 'Georgia' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
-	},
-	{
-		...slideNumber('slide.slideNumber.fontFaceEA', { fontFaceEA: 'MS Mincho' }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.fontSize', { fontSize: 20 }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
-	},
-	{
-		...slideNumber('slide.slideNumber.highlight', { highlight: 'F0C808' }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.lang', { lang: 'fr-FR' }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.margin', { margin: [0.1, 0.2, 0.1, 0.2] }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/89',
-	},
-	{
-		...slideNumber('slide.slideNumber.transparency', { transparency: 40 }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.underline', { underline: { style: 'dbl', color: '9B1B30' } }, {}, [
-			'slide.slideNumber.underline.style',
-			'slide.slideNumber.underline.color',
-		]),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.textDirection:vert', { textDirection: 'vert' }, {}, [
-			'slide.slideNumber.textDirection',
-		]),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.textWarp', { textWarp: 'textArchUp' }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.paraIndent', { paraIndent: 12 }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.paraMarginLeft', { paraMarginLeft: 18 }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.breakLine', { breakLine: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.softBreakBefore', { softBreakBefore: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.tabStops', { tabStops: [{ position: 1, alignment: 'r' }] }, {}, [
-			'slide.slideNumber.tabStops.position',
-			'slide.slideNumber.tabStops.alignment',
-		]),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.bullet', { bullet: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.bullet.characterCode', { bullet: { characterCode: '25BA' } }, { bullet: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.bullet.color', { bullet: { color: '9B1B30' } }, { bullet: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.bullet.fontFace', { bullet: { fontFace: 'Wingdings' } }, { bullet: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.bullet.image.data', { bullet: { image: { data: PNG } } }, { bullet: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.bullet.indent', { bullet: { indent: 10 } }, { bullet: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.bullet.size', { bullet: { size: 80 } }, { bullet: true }),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber('slide.slideNumber.bullet.type:number', { bullet: { type: 'number' } }, {}, [
-			'slide.slideNumber.bullet.type',
-		]),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber(
-			'slide.slideNumber.bullet.numberStartAt',
-			{ bullet: { type: 'number', numberStartAt: 5 } },
-			{ bullet: { type: 'number' } }
-		),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
-	{
-		...slideNumber(
-			'slide.slideNumber.bullet.numberType',
-			{ bullet: { type: 'number', numberType: 'romanLcParenR' } },
-			{ bullet: { type: 'number' } }
-		),
-		accepted: {
-			kind: 'inert',
-			reason: 'the slide-number writer ignores this TextBaseProps option and writes nothing: shbernal/pptx-ts#90',
-		},
-	},
+	slideNumber('slide.slideNumber.align:center', { align: 'center' }, {}, ['slide.slideNumber.align']),
+	slideNumber('slide.slideNumber.valign:bottom', { valign: 'bottom' }, {}, ['slide.slideNumber.valign']),
+	slideNumber('slide.slideNumber.bold', { bold: true }),
+	slideNumber('slide.slideNumber.italic', { italic: true }),
+	slideNumber('slide.slideNumber.caps:all', { caps: 'all' }, {}, ['slide.slideNumber.caps']),
+	slideNumber('slide.slideNumber.color', { color: '9B1B30' }),
+	slideNumber('slide.slideNumber.fontFace', { fontFace: 'Georgia' }),
+	slideNumber('slide.slideNumber.fontFaceEA', { fontFaceEA: 'MS Mincho' }),
+	slideNumber('slide.slideNumber.fontSize', { fontSize: 20 }),
+	slideNumber('slide.slideNumber.highlight', { highlight: 'F0C808' }),
+	slideNumber('slide.slideNumber.lang', { lang: 'fr-FR' }),
+	slideNumber('slide.slideNumber.margin', { margin: [0.1, 0.2, 0.1, 0.2] }),
+	slideNumber('slide.slideNumber.transparency', { transparency: 40 }, { color: '9B1B30' }),
+	slideNumber('slide.slideNumber.underline', { underline: { style: 'dbl', color: '9B1B30' } }, {}, [
+		'slide.slideNumber.underline.style',
+		'slide.slideNumber.underline.color',
+	]),
+	slideNumber('slide.slideNumber.textDirection:vert', { textDirection: 'vert' }, {}, [
+		'slide.slideNumber.textDirection',
+	]),
+	slideNumber('slide.slideNumber.textWarp', { textWarp: 'textArchUp' }),
+	slideNumber('slide.slideNumber.paraIndent', { paraIndent: 12 }),
+	slideNumber('slide.slideNumber.paraMarginLeft', { paraMarginLeft: 18 }),
 ]
 
 /**
@@ -2182,8 +1772,6 @@ export const SKIPPED: Record<string, string> = {
 		'the file-path spelling of the background picture source; the picture it writes is exercised by slide.background.data',
 	'slide.background.image.path':
 		'the file-path spelling of the picture source; the picture it writes is exercised by slide.background.image.data',
-	'slide.slideNumber.bullet.image.path':
-		'the file-path spelling of the bullet picture source; the bullet it writes is exercised by slide.slideNumber.bullet.image.data',
 	'slide.transition.sound.path':
 		'the file-path spelling of the sound source; the sound it writes is exercised by slide.transition.sound.data',
 }

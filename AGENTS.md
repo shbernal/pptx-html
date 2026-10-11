@@ -134,11 +134,12 @@ Two things it cannot know, because they are this repo's:
   worth filing; `unsupported` is the output tier's own limit and is not.
 
 There is deliberately no local post-write repair layer, so an issue upstream *is*
-the remedy. The half-cycle after the fix is a release rather than a commit, now
-that the dependency is a published range: watch for one with `gh release list
---repo shbernal/pptx-ts`, bump the range, delete the workarounds their comments
-point at, and close each issue with the test that now passes rather than with
-"done". A `github:` install is for *testing* an unreleased fix, not for shipping
+the remedy. The half-cycle after the fix is a publish rather than a commit, now
+that the dependency is a published range: a merged fix reaches upstream's `next`
+dist-tag on its own (`npm view pptx-ts dist-tags`), and a release follows
+(`gh release list --repo shbernal/pptx-ts`). Bump the range, delete the
+workarounds their comments point at, and close each issue with the test that now
+passes rather than with "done". A `github:` install is for *testing* an unreleased fix, not for shipping
 against one. This package is published, and a git URL in `dependencies` travels
 to every consumer.
 

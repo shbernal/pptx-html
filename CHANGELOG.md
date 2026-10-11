@@ -23,6 +23,16 @@ model is expected to move.
   the same library under its new npm name, at the same version, so nothing renders
   or imports differently. A consumer that imported `@shbernal/ts-pptx` alongside
   this package should switch its imports to `pptx-ts` too, or it installs two copies.
+- **`pptx-ts` moves to a prerelease from its `next` channel.** It carries the
+  read-side fixes this repo filed: text options, shape and picture locks, paint
+  details, picture bullets, placeholders, slide backgrounds, transition sounds and
+  slide numbers now survive `readModelToIr`.
+
+### Fixed
+
+- **A slide number survives the loop.** `emitDeck` replays `SlideIr.slideNumber`
+  alongside the slide's background and transition, so a deck's slide-number
+  placeholder, its position and its formatting come back instead of being dropped.
 
 ## [0.2.1] — 2026-09-21
 

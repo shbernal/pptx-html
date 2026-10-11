@@ -135,6 +135,7 @@ function authorSlide(generator: TsPptx, slide: SlideIr, assets: ReadonlyMap<stri
 	if (slide.hidden) properties.hidden = true
 	if (slide.background) properties.background = hydrate(slide.background as unknown as IrValue, assets)
 	if (slide.transition) properties.transition = hydrate(slide.transition as unknown as IrValue, assets)
+	if (slide.slideNumber) properties.slideNumber = hydrate(slide.slideNumber, assets)
 	if (slide.notesText !== undefined) invoke(methods, { method: 'addNotes', args: [slide.notesText] }, assets)
 	for (const call of slide.calls) invoke(methods, call, assets)
 }
