@@ -18,7 +18,7 @@ concurrency:
 jobs:
   validate:
     name: Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -110,7 +110,7 @@ jobs:
   build-site:
     name: Build site
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
@@ -154,7 +154,7 @@ jobs:
     name: Deploy site
     needs: build-site
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     # Kept at job level. The workflow's own `permissions:` stays `contents: read`,
     # so publishing rights belong to the one job that publishes rather than to
