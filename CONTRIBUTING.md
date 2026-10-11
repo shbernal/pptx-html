@@ -67,6 +67,7 @@ pnpm run knip         # unused files, exports and dependencies
 
 pnpm run test:unit    # node, no DOM, fast
 pnpm run test:oracle  # the round-trip gate, no DOM
+pnpm run oracle:score # the gate, plus the surface score, ratchet and frontier
 pnpm run test:browser # Playwright + headless Chromium
 pnpm run test         # build, then all three
 
@@ -148,6 +149,37 @@ that degrades gracefully hides its own bugs; three past return-path bugs each
 produced a plausible, working document while quietly doing nothing. See the end of
 [docs/round-trip.md](./docs/round-trip.md).
 
+## The coverage loop
+
+A long-running agent can work down the surface probe frontier on its own (see
+[docs/round-trip.md](./docs/round-trip.md#the-surface-probes)). The procedure
+it follows is the `coverage-loop` skill in `.agents/skills/`; the feedback is
+`pnpm run oracle:score`; the guard rails are the hooks in `.claude/settings.json`,
+which do nothing unless the session sets `COVERAGE_LOOP=1`. With it set, they
+keep the agent off the harness and the ledger, refuse `vitest -u`, and block it
+from stopping while the tree is dirty, the gate is red, or the ledger is behind.
+
+Run it on its own branch, one family per run:
+
+```bash
+git switch -c coverage/<family>
+COVERAGE_LOOP=1 claude
+```
+
+Switch the session to auto mode so it runs unattended, then:
+
+```text
+/goal Follow the coverage-loop skill for the addText family. Done when
+`pnpm run oracle:score --family addText` printed in this conversation shows
+todo 0 for addText with gate pass, ratchet ok and ledger current, or when the
+skill's stop conditions are met. One probe or fix per commit. Stop after 60 turns.
+```
+
+`/goal`'s evaluator only reads the conversation, which is why the condition asks
+for the score to be printed and why the Stop hook re-checks it independently.
+Review the branch commit by commit. Any `accepted` entry is a claim to check, and
+issues are filed on `shbernal/pptx-ts` as they come up.
+
 ## What to run for which change
 
 | Change | Run |
@@ -155,6 +187,7 @@ produced a plausible, working document while quietly doing nothing. See the end 
 | Any source or test change | `pnpm run build`, `pnpm run typecheck` |
 | Behaviour | `pnpm run test:unit` |
 | Anything touching fidelity | `pnpm run test:oracle`, and update the coverage snapshot deliberately, never a blind `-u` |
+| A surface probe, or a fix one found | `pnpm run oracle:score --accept`, and commit `test/surface/ledger.json` with it |
 | Renderer, surface reading, or the heuristic lane | `pnpm run test:browser` |
 | `docs/`, or anything under `site/` | `pnpm run site:build`; dead-link checking is on, and it is the acceptance test for the docs mirror |
 | Anything at all | `pnpm run check` |

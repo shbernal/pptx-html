@@ -14,6 +14,7 @@ and the routing between them.
 | Anything affecting fidelity, the oracle, the corpus | [docs/round-trip.md](./docs/round-trip.md) |
 | `src/import`, `src/render`, `src/parse`, `src/emit`, `src/ir` | [docs/architecture.md](./docs/architecture.md) |
 | Anything that looks like a missing feature | [docs/decisions.md](./docs/decisions.md) |
+| `test/surface/**`, a coverage run | [the coverage-loop skill](./.agents/skills/coverage-loop/SKILL.md) |
 | Build, tests, verification, upstream asks | [CONTRIBUTING.md](./CONTRIBUTING.md) |
 | `site/**`, the public site | [CONTRIBUTING.md](./CONTRIBUTING.md#the-site) |
 
