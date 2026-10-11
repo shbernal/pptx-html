@@ -24,6 +24,12 @@
  * fact `… ×2`, and so on. Without that, an option whose whole effect is *more of
  * the same* (`breakLine` splitting one paragraph into two alike) writes nothing a
  * set can see, and a loop that merged them back would lose nothing a set can see.
+ *
+ * A relationship is counted within its `Type`, since its `Id` and `Target` are
+ * identities. Counted together, one relationship the loop drops (the empty notes
+ * slide the writer gives every slide) would shift the count of every other, and a
+ * probe that adds a link or a picture would lose `Relationship ×3` while its own
+ * relationship survived.
  */
 
 import { readZip } from 'pptx-ts/zip'
@@ -69,6 +75,12 @@ function addCounted(fact: string, into: Map<string, number>): void {
 	into.set(fact, (into.get(fact) ?? 0) + 1)
 }
 
+/** A relationship's `Type`, last segment only: `…/relationships/hyperlink` → `hyperlink`. */
+function relationshipType(attributes: string): string {
+	const match = /\bType\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(attributes)
+	return (match?.[1] ?? match?.[2] ?? '').split('/').pop() ?? ''
+}
+
 /** Every fact in one XML document. */
 function xmlFacts(kind: string, xml: string, into: Map<string, number>): void {
 	const stack: string[] = []
@@ -86,7 +98,7 @@ function xmlFacts(kind: string, xml: string, into: Map<string, number>): void {
 			stack.pop()
 			continue
 		}
-		stack.push(name)
+		stack.push(name === 'Relationship' ? `Relationship[${relationshipType(attributes ?? '')}]` : name)
 		const path = `${kind}⟩${stack.join('/')}`
 		addCounted(path, into)
 		for (const attribute of (attributes ?? '').matchAll(/([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
