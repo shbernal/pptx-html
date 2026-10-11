@@ -176,9 +176,9 @@ COVERAGE_LOOP=1 claude
 Switch the session to auto mode so it runs unattended, then:
 
 ```text
-/goal Follow the coverage-loop skill for the addText family. Done when
-`pnpm run oracle:score --family addText` printed in this conversation shows
-todo 0 for addText with gate pass, ratchet ok and ledger current, or when the
+/goal Follow the coverage-loop skill for this family: <family>. Done when
+`pnpm run oracle:score --family <family>` printed in this conversation shows
+todo 0 for <family> with gate pass, ratchet ok and ledger current, or when the
 skill's stop conditions are met. One probe or fix per commit. Stop after 60 turns.
 ```
 
