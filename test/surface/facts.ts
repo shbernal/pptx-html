@@ -19,6 +19,11 @@
  * character data. Positions are dropped (a run's facts do not say *which* run),
  * which costs precision and buys robustness: the loop may reorder parts, renumber
  * them, and renumber ids, and none of that is a loss.
+ *
+ * Repeats are counted, though: the second identical fact in a part kind is the
+ * fact `… ×2`, and so on. Without that, an option whose whole effect is *more of
+ * the same* (`breakLine` splitting one paragraph into two alike) writes nothing a
+ * set can see, and a loop that merged them back would lose nothing a set can see.
  */
 
 import { readZip } from 'pptx-ts/zip'
@@ -59,8 +64,13 @@ function partKind(name: string): string {
 	return name.replace(/\d+/g, '#')
 }
 
+/** Adds the next occurrence of `fact`: itself the first time, `fact ×n` the n-th. */
+function addCounted(fact: string, into: Map<string, number>): void {
+	into.set(fact, (into.get(fact) ?? 0) + 1)
+}
+
 /** Every fact in one XML document. */
-function xmlFacts(kind: string, xml: string, into: Set<string>): void {
+function xmlFacts(kind: string, xml: string, into: Map<string, number>): void {
 	const stack: string[] = []
 	const tag =
 		/<(\/?)([A-Za-z_][\w.:-]*)((?:\s+[^\s=>/]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>|<\?[\s\S]*?\?>|<!--[\s\S]*?-->|<!\[CDATA\[([\s\S]*?)\]\]>/g
@@ -68,9 +78,9 @@ function xmlFacts(kind: string, xml: string, into: Set<string>): void {
 	for (const match of xml.matchAll(tag)) {
 		const between = xml.slice(last, match.index).trim()
 		last = match.index + match[0].length
-		if (between && stack.length > 0) into.add(`${kind}⟩${stack.join('/')}#=${between}`)
+		if (between && stack.length > 0) addCounted(`${kind}⟩${stack.join('/')}#=${between}`, into)
 		const [, close, name, attributes, selfClose, cdata] = match
-		if (cdata !== undefined && stack.length > 0) into.add(`${kind}⟩${stack.join('/')}#=${cdata}`)
+		if (cdata !== undefined && stack.length > 0) addCounted(`${kind}⟩${stack.join('/')}#=${cdata}`, into)
 		if (!name) continue
 		if (close) {
 			stack.pop()
@@ -78,12 +88,12 @@ function xmlFacts(kind: string, xml: string, into: Set<string>): void {
 		}
 		stack.push(name)
 		const path = `${kind}⟩${stack.join('/')}`
-		into.add(path)
+		addCounted(path, into)
 		for (const attribute of (attributes ?? '').matchAll(/([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
 			const key = attribute[1] as string
 			const value = IDENTITY_ATTRIBUTES.has(key) ? '*' : (attribute[2] ?? attribute[3] ?? '')
 			if (key.startsWith('xmlns')) continue
-			into.add(`${path}@${key}=${value}`)
+			addCounted(`${path}@${key}=${value}`, into)
 		}
 		if (selfClose) stack.pop()
 	}
@@ -91,13 +101,15 @@ function xmlFacts(kind: string, xml: string, into: Set<string>): void {
 
 /** Every fact in a package's XML parts. Binary parts contribute their presence and size. */
 export async function packageFacts(bytes: Uint8Array): Promise<Set<string>> {
-	const facts = new Set<string>()
+	const counts = new Map<string, number>()
 	for (const [name, data] of await readZip(bytes)) {
 		if (IGNORED_PARTS.some((pattern) => pattern.test(name))) continue
 		const kind = partKind(name)
-		if (/\.(xml|rels)$/i.test(name)) xmlFacts(kind, decoder.decode(data), facts)
-		else facts.add(`${kind}⟩<binary ${data.byteLength}>`)
+		if (/\.(xml|rels)$/i.test(name)) xmlFacts(kind, decoder.decode(data), counts)
+		else addCounted(`${kind}⟩<binary ${data.byteLength}>`, counts)
 	}
+	const facts = new Set<string>()
+	for (const [fact, count] of counts) for (let n = 1; n <= count; n++) facts.add(n === 1 ? fact : `${fact} ×${n}`)
 	return facts
 }
 
