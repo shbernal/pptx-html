@@ -1,0 +1,20 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+
+	// Entries knip cannot find on its own. `src/index.ts`, the `site/scripts/` and
+	// `examples/` entry points, the vitest projects and the tsdown entry all come from
+	// `package.json` and the plugins; these are the ones nothing references.
+	"entry": [
+		// Loaded by the `charcheck` binary by convention, not imported.
+		"charcheck.config.js",
+		// Never imported and never run: it exists to be typechecked against
+		// `dist/index.d.ts`. See the header of the file.
+		"test/public-surface.ts",
+	],
+
+	// The site lives in `site/`, not at the root where the plugin looks by default.
+	"vitepress": {
+		"config": ["site/.vitepress/config.ts"],
+		"entry": ["site/.vitepress/theme/index.ts"],
+	},
+}

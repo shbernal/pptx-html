@@ -63,6 +63,7 @@ pnpm run build        # tsdown → ESM dist/
 pnpm run typecheck    # tsc --noEmit, over src/, test/ and site/; needs `build` first
 pnpm run check        # oxlint + oxfmt: lint, format and import sorting
 pnpm run check:fix
+pnpm run knip         # unused files, exports and dependencies
 
 pnpm run test:unit    # node, no DOM, fast
 pnpm run test:oracle  # the round-trip gate, no DOM
