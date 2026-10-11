@@ -74,9 +74,18 @@ if (mode === 'guard') {
 			[/\bgit\s+(push|rebase|reset\s+--hard|commit\b[^|;&]*--amend)\b/, 'History stays one item per commit, local, and append-only during a run.'],
 		]
 		for (const [pattern, reason] of rules) if (pattern.test(command)) deny(reason)
-		const mutates = /(^|[\s;&|])(sed\s+-i|rm|mv|cp|tee|truncate|perl|python3?|node\s+-e)\b|>/.test(command)
-		const touched = command.split(/[\s'"=]+/).filter((token) => /[./]/.test(token) && isProtected(token))
-		if (mutates && touched.length > 0) deny(`${touched.join(', ')} is part of the oracle the coverage loop is judged by.`)
+		// Judged per segment and per write target, so reading the oracle through a pipe
+		// (`vitest run test/oracle/surface.test.ts 2>&1 | tail`) is not mistaken for
+		// writing it. A redirect counts only for the file it writes to; `2>&1` and
+		// `>/dev/null` write to none.
+		const protectedIn = (text) => text.split(/[\s'"=]+/).filter((token) => /[./]/.test(token) && isProtected(token))
+		const touched = new Set()
+		for (const [, target] of command.matchAll(/\d*>>?\|?\s*([^\s&|;<>()]+)/g))
+			for (const path of protectedIn(target)) touched.add(path)
+		for (const segment of command.split(/&&|\|\||[;|&\n]/))
+			if (/^\s*(sudo\s+)?(sed\s+(-\w+\s+)*-\w*i|rm|mv|cp|tee|truncate|perl|python3?|node\s+-e)\b/.test(segment))
+				for (const path of protectedIn(segment)) touched.add(path)
+		if (touched.size > 0) deny(`${[...touched].join(', ')} is part of the oracle the coverage loop is judged by.`)
 	}
 	process.exit(0)
 }

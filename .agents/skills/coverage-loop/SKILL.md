@@ -43,7 +43,9 @@ explains why the probe judges XML rather than `DeckIr`.
 6. **Gate.** `pnpm run oracle:score --family <family> --accept`. It refuses while
    the oracle is red or anything regressed.
 7. **Commit** probes, fixes and `test/surface/ledger.json` together, one item per
-   commit, with a conventional subject. Put the score change in the body:
+   commit, with a conventional subject. Put the score change in the body. The
+   "before" is the `coverage` line step 1 printed, before the probe existed;
+   measuring it now counts the new probe on both sides:
 
    ```
    test(surface): probe addText.underline.color
