@@ -11,6 +11,12 @@ model is expected to move.
 
 ## [Unreleased]
 
+### Added
+
+- **Prereleases on the `next` dist-tag.** Every push to `main` that changes the
+  package publishes one, so a merged fix can be installed before its release with
+  `pnpm add pptx-html@next`. `latest` still moves only on a release.
+
 ### Changed
 
 - **The writer dependency is `pptx-ts`, which replaces `@shbernal/ts-pptx`.** It is

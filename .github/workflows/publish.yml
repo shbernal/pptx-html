@@ -10,10 +10,35 @@ name: Publish
 # A draft release triggers nothing until it is published; publishing an edited
 # release re-triggers, and the registry refuses the duplicate version, which is
 # the right answer rather than an error to design around.
+#
+# A push to `main` publishes a prerelease under the `next` dist-tag instead, so
+# an unreleased fix can be installed with `pptx-html@next` rather than from a git
+# URL. It never touches `latest`, and it is not a release: no tag, no notes, no
+# changelog section. The `paths:` filter is the list of what goes into the
+# tarball or decides what `dist/` contains; a push that only moves tests, docs or
+# the site would publish a byte-identical package under a new number, and the
+# coverage loop pushes those by the dozen.
+#
+# It lives in this file rather than one of its own because npm's trusted
+# publisher names one workflow file per package. A second file could not publish.
 on:
   release:
     types:
       - published
+  push:
+    branches:
+      - main
+    paths:
+      - src/**
+      - package.json
+      - pnpm-lock.yaml
+      - tsdown.config.ts
+      - tsconfig.json
+      - tsconfig.base.json
+      - README.md
+      - CHANGELOG.md
+      - LICENSE
+      - .github/workflows/publish.yml
 
 # `id-token: write` is the whole mechanism. It lets this job mint a short-lived
 # OIDC token that npm exchanges for a credential scoped to this package, this
@@ -33,9 +58,11 @@ permissions:
 # Never cancel a publish in flight. Everything else in this repo is safe to
 # supersede — the CI workflow says so itself — but a registry write is not, and
 # a run killed between `prepack` and the upload is the one failure mode with no
-# clean retry.
+# clean retry. Pushes to `main` share one group, so `next` publishes queue in
+# order; GitHub keeps only the newest pending run, which is the one to want,
+# since its commit contains every change the dropped one would have shipped.
 concurrency:
-  group: publish-${{ github.event.release.tag_name }}
+  group: publish-${{ github.event.release.tag_name || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -45,11 +72,13 @@ jobs:
 
     steps:
       # The release event names a tag and nothing else, so check out the tag
-      # rather than trusting the default ref to be the same thing.
-      - name: Checkout the released tag
+      # rather than trusting the default ref to be the same thing. A push names
+      # its commit, and the sha is pinned for the same reason: `main` may have
+      # moved by the time this job starts.
+      - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || github.sha }}
 
       # A release cut against a commit whose `version` was never bumped would
       # publish this tag's contents under the previous number, or be rejected by
@@ -57,21 +86,53 @@ jobs:
       # a good way to find out. The tag is interpolated through the environment
       # rather than into the script, because a `${{ }}` inside `run:` is
       # substituted before the shell ever sees it.
-      - name: Check the tag against package.json
+      #
+      # A push derives its version instead. A prerelease sorts below its own
+      # release, so `0.2.1-next.N` would rank under a `0.2.1` that is already
+      # `latest`; when `package.json` names a published version the patch is
+      # bumped first, and when it names one not yet released (the bump landed
+      # ahead of the tag) that version is the base as it stands. The run number
+      # orders it; a re-run reuses the number, and the registry refuses the
+      # duplicate if the first attempt got as far as the upload. The short sha
+      # names the commit without a trip to the provenance page, and carries a
+      # `g` the way `git describe` does: an all-digit sha with a leading zero
+      # is not a valid semver identifier, and one push in a few hundred would
+      # fail at the registry for it. The list is read rather than `npm view <name>@<version>`, which
+      # exits non-zero on a missing version and would let a registry outage pass
+      # for "not published yet".
+      - name: Resolve the version
         id: version
         env:
+          EVENT: ${{ github.event_name }}
           TAG: ${{ github.event.release.tag_name }}
+          RUN: ${{ github.run_number }}
+          SHA: ${{ github.sha }}
         run: |
           version=$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version")
-          if [ "$TAG" != "v$version" ]; then
-            echo "::error::release tag $TAG does not match package.json version $version"
-            exit 1
+          if [ "$EVENT" = release ]; then
+            if [ "$TAG" != "v$version" ]; then
+              echo "::error::release tag $TAG does not match package.json version $version"
+              exit 1
+            fi
+            dist_tag=latest
+          else
+            published=$(npm view pptx-html versions --json)
+            if VERSION="$version" node -e 'process.exit([].concat(JSON.parse(require("node:fs").readFileSync(0, "utf8"))).includes(process.env.VERSION) ? 0 : 1)' <<< "$published"; then
+              IFS=. read -r major minor patch <<< "$version"
+              version="$major.$minor.$((patch + 1))"
+            fi
+            version="$version-next.$RUN.g${SHA::7}"
+            npm pkg set version="$version"
+            dist_tag=next
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "dist-tag=$dist_tag" >> "$GITHUB_OUTPUT"
 
       # The changelog is the only part of a release that cannot be reconstructed
-      # afterwards from the repository, and it is the part easiest to forget.
+      # afterwards from the repository, and it is the part easiest to forget. A
+      # `next` build has no section to find; its changes sit under `[Unreleased]`.
       - name: Check the changelog has a section for it
+        if: github.event_name == 'release'
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -115,6 +176,12 @@ jobs:
       #
       # The site is not built here. CI builds it on every push to `main`, and a
       # tag that is not on `main` has no site to deploy anyway.
+      #
+      # On a push this duplicates the CI run for the same commit, and that is
+      # what it costs to keep `next` behind the same gate as `latest` without
+      # waiting on another workflow: a `next` that skipped the suite would be the
+      # one install a user reaches for to get a fix, built from a commit nobody
+      # checked.
       - name: Test
         run: pnpm run test
 
@@ -126,17 +193,23 @@ jobs:
       # `prepack` rebuilds `dist/` and `prepublishOnly` re-runs the gates — the
       # same two hooks a publish from a laptop would fire, so the two paths
       # cannot drift apart. `--no-git-checks` is required and not a loosening:
-      # the checkout above is a detached HEAD at a tag, which is precisely what
-      # pnpm's branch check exists to refuse, and here it is the point.
+      # the checkout above is a detached HEAD, which is precisely what pnpm's
+      # branch check exists to refuse, and for `next` the version step has just
+      # edited `package.json`, which its clean-tree check would refuse too. The
+      # dist-tag is passed even for `latest`, so that which tag a run moves is
+      # written in one place.
       - name: Publish
-        run: pnpm publish --no-git-checks
+        env:
+          DIST_TAG: ${{ steps.version.outputs.dist-tag }}
+        run: pnpm publish --no-git-checks --tag "$DIST_TAG"
 
       - name: Summary
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          DIST_TAG: ${{ steps.version.outputs.dist-tag }}
         run: |
           {
-            echo "### Published \`pptx-html@$VERSION\`"
+            echo "### Published \`pptx-html@$VERSION\` as \`$DIST_TAG\`"
             echo
             echo "<https://www.npmjs.com/package/pptx-html/v/$VERSION>"
             echo
