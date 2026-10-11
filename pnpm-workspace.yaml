@@ -18,12 +18,6 @@
 # hooks are per-repo again, so the `prepare` script is both safe and required:
 # `remotes:` in lefthook.yml is only fetched by `lefthook install`.
 #
-# esbuild arrives under vitepress. It ships one prebuilt binary per platform as an
-# optional dependency, and pnpm installs the matching one; its postinstall only
-# re-resolves that same binary, so the site builds without it. Answered rather
-# than left blank because an unanswered build script makes `pnpm install` exit
-# non-zero, and every `pnpm run` performs that check first.
-#
 # The writer flipped from `true` to `false`, and the entry still has to be here.
 # While it was pinned to a git sha it had to be *built* before it could be
 # installed — `dist/` is gitignored upstream, so pnpm packed the checkout and ran
@@ -43,7 +37,6 @@
 # ever returns to a sha.
 allowBuilds:
   'pptx-ts': false
-  esbuild: false
   lefthook: false
 #
 # The writer is excluded from the release-age gate. That gate exists to keep a
