@@ -40,7 +40,7 @@ and the routing between them.
 - **`ts-pptx-upstream` is installed from the dependency, not authored here.** It
   ships inside `pptx-ts`, which is what keeps it matching the installed
   version; editing the copy would only diverge from it, and a change to it belongs
-  in the ts-pptx repo. `skills-lock.json` is the tracked record and the copy is
+  in the `shbernal/pptx-ts` repo. `skills-lock.json` is the tracked record and the copy is
   `.gitignore`d. Install it after a fresh clone, and again after bumping the
   dependency:
 
@@ -135,7 +135,7 @@ Two things it cannot know, because they are this repo's:
 There is deliberately no local post-write repair layer, so an issue upstream *is*
 the remedy. The half-cycle after the fix is a release rather than a commit, now
 that the dependency is a published range: watch for one with `gh release list
---repo shbernal/ts-pptx`, bump the range, delete the workarounds their comments
+--repo shbernal/pptx-ts`, bump the range, delete the workarounds their comments
 point at, and close each issue with the test that now passes rather than with
 "done". A `github:` install is for *testing* an unreleased fix, not for shipping
 against one. This package is published, and a git URL in `dependencies` travels
