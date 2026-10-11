@@ -34,6 +34,40 @@ function text(id: string, options: TextPropsOptions, covers = [id.split(':')[0] 
 	}
 }
 
+/** `addText` on one box with `base` on both sides, for options that only mean something on top of another. */
+function textOn(
+	id: string,
+	base: TextPropsOptions,
+	options: TextPropsOptions,
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addText('Probe text', { ...BOX, objectName: 'probe', ...base, ...(on ? options : {}) })
+		},
+	}
+}
+
+/** `addText` with two runs; `options` go on run `at` only. */
+function run(id: string, at: 0 | 1, options: TextPropsOptions, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addText(
+				['First run', 'Second run'].map((text, i) => ({ text, options: on && i === at ? options : {} })),
+				{ ...BOX, objectName: 'probe' }
+			)
+		},
+	}
+}
+
+/** A one-pixel PNG, for picture fills and picture bullets. */
+const PNG =
+	'image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
 /** `addShape` with a visible fill, so geometry and line options have something to sit on. */
 function shape(id: string, options: ShapeProps, covers = [id.split(':')[0] as string]): Probe {
 	return {
@@ -96,6 +130,542 @@ export const PROBES: Probe[] = [
 	shape('addShape.rotate', { rotate: 30 }),
 	table('addTable.border.color', { border: { type: 'solid', color: '9B1B30', width: 2 } }, ['addTable.border.color']),
 	cell('addTable.cell.fill.color', { fill: { color: 'F0C808' } }),
+	text('addText.align:center', { align: 'center' }),
+	text('addText.altText', { altText: 'A probe description' }),
+	textOn('addText.angleRange', { shape: 'blockArc' }, { angleRange: [30, 200] }),
+	textOn('addText.arcThicknessRatio', { shape: 'blockArc', angleRange: [30, 200] }, { arcThicknessRatio: 0.3 }),
+	{ ...text('addText.baseline', { baseline: 30 }), issue: 'https://github.com/shbernal/pptx-ts/issues/55' },
+	run('addText.breakLine', 0, { breakLine: true }),
+	text('addText.bullet', { bullet: true }),
+	textOn('addText.bullet.characterCode', { bullet: true }, { bullet: { characterCode: '25BA' } }),
+	textOn('addText.bullet.color', { bullet: true }, { bullet: { color: '9B1B30' } }),
+	textOn('addText.bullet.fontFace', { bullet: true }, { bullet: { fontFace: 'Wingdings' } }),
+	{
+		...textOn('addText.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/58',
+	},
+	textOn('addText.bullet.indent', { bullet: true }, { bullet: { indent: 10 } }),
+	textOn(
+		'addText.bullet.numberStartAt',
+		{ bullet: { type: 'number' } },
+		{ bullet: { type: 'number', numberStartAt: 5 } }
+	),
+	textOn(
+		'addText.bullet.numberType',
+		{ bullet: { type: 'number' } },
+		{ bullet: { type: 'number', numberType: 'romanLcParenR' } }
+	),
+	textOn('addText.bullet.size', { bullet: true }, { bullet: { size: 80 } }),
+	text('addText.bullet.type:number', { bullet: { type: 'number' } }),
+	text('addText.caps:all', { caps: 'all' }),
+	text('addText.color', { color: '9B1B30' }),
+	{ ...text('addText.columns', { columns: 2 }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
+	{
+		...textOn('addText.columnSpacing', { columns: 2 }, { columnSpacing: 0.5 }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	text('addText.fill.color', { fill: { color: 'F0C808' } }, ['addText.fill', 'addText.fill.color']),
+	{
+		...textOn(
+			'addText.fill.transparency',
+			{ fill: { color: 'F0C808' } },
+			{ fill: { color: 'F0C808', transparency: 40 } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...text('addText.fill.type:inherit', { fill: { type: 'inherit' } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	text(
+		'addText.fill.gradient.linear',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B', transparency: 30 },
+					],
+				},
+			},
+		},
+		[
+			'addText.fill.gradient.kind',
+			'addText.fill.gradient.angle',
+			'addText.fill.gradient.stops.color',
+			'addText.fill.gradient.stops.position',
+			'addText.fill.gradient.stops.transparency',
+		]
+	),
+	{
+		...textOn(
+			'addText.fill.gradient.scaled',
+			{
+				fill: {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+			{
+				fill: {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						scaled: true,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...textOn(
+			'addText.fill.gradient.rotateWithShape',
+			{
+				fill: {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+			{
+				fill: {
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						rotateWithShape: false,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...text(
+			'addText.fill.gradient.center',
+			{
+				fill: {
+					gradient: {
+						kind: 'radial',
+						center: { x: 20, y: 70 },
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+			['addText.fill.gradient.center.x', 'addText.fill.gradient.center.y']
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	text('addText.fill.pattern', { fill: { pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } }, [
+		'addText.fill.pattern.preset',
+		'addText.fill.pattern.fgColor',
+		'addText.fill.pattern.bgColor',
+	]),
+	{
+		...text('addText.fill.image.data', { fill: { image: { data: PNG } } }),
+		accepted: {
+			kind: 'equivalent',
+			reason:
+				'the picture comes back byte for byte; only the media part is renamed (image-1-1.png to image1.png), and a part name carries no meaning',
+		},
+	},
+	textOn(
+		'addText.fill.image.crop',
+		{ fill: { image: { data: PNG } } },
+		{ fill: { image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } } },
+		['addText.fill.image.crop.l', 'addText.fill.image.crop.t', 'addText.fill.image.crop.r', 'addText.fill.image.crop.b']
+	),
+	text('addText.fit:shrink', { fit: 'shrink' }),
+	text('addText.fit:resize', { fit: 'resize' }),
+	text('addText.fit.shrink', { fit: { type: 'shrink', fontScale: 80, lnSpcReduction: 10 } }, [
+		'addText.fit.type',
+		'addText.fit.fontScale',
+		'addText.fit.lnSpcReduction',
+	]),
+	text('addText.flipH', { flipH: true }),
+	text('addText.flipV', { flipV: true }),
+	text('addText.fontFace', { fontFace: 'Georgia' }),
+	{
+		...textOn('addText.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	text('addText.fontSize', { fontSize: 28 }),
+	{
+		...text('addText.glow', { glow: { size: 8, opacity: 0.5, color: 'FF00FF' } }, [
+			'addText.glow.size',
+			'addText.glow.opacity',
+			'addText.glow.color',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	text('addText.x', { x: 2 }),
+	text('addText.y', { y: 2 }),
+	text('addText.w', { w: 6 }),
+	text('addText.h', { h: 2 }),
+	text('addText.highlight', { highlight: 'FFFF00' }),
+	{
+		...text('addText.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
+			'addText.hyperlink.url',
+			'addText.hyperlink.tooltip',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+	},
+	{
+		...text('addText.hyperlink.slide', { hyperlink: { slide: 1 } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+	},
+	{
+		...text('addText.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/59',
+	},
+	text('addText.indentLevel', { indentLevel: 2 }),
+	text('addText.isTextBox', { isTextBox: true }),
+	{ ...text('addText.lang', { lang: 'fr-FR' }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
+	text('addText.line', { line: { color: '250F6B', width: 2 } }, ['addText.line.color', 'addText.line.width']),
+	textOn(
+		'addText.line.dashType:dash',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, dashType: 'dash' } }
+	),
+	textOn(
+		'addText.line.cap:round',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, cap: 'round' } }
+	),
+	textOn(
+		'addText.line.beginArrowType',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, beginArrowType: 'triangle' } }
+	),
+	textOn(
+		'addText.line.endArrowType',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, endArrowType: 'oval' } }
+	),
+	textOn(
+		'addText.line.transparency',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, transparency: 40 } }
+	),
+	textOn(
+		'addText.line.type:none',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, type: 'none' } }
+	),
+	{
+		...text(
+			'addText.line.gradient.linear',
+			{
+				line: {
+					width: 3,
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B', transparency: 30 },
+						],
+					},
+				},
+			},
+			[
+				'addText.line.gradient.kind',
+				'addText.line.gradient.angle',
+				'addText.line.gradient.stops.color',
+				'addText.line.gradient.stops.position',
+				'addText.line.gradient.stops.transparency',
+			]
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...textOn(
+			'addText.line.gradient.scaled',
+			{
+				line: {
+					width: 3,
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+			{
+				line: {
+					width: 3,
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						scaled: true,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...textOn(
+			'addText.line.gradient.rotateWithShape',
+			{
+				line: {
+					width: 3,
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+			{
+				line: {
+					width: 3,
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						rotateWithShape: false,
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			}
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...text(
+			'addText.line.gradient.center',
+			{
+				line: {
+					width: 3,
+					gradient: {
+						kind: 'radial',
+						center: { x: 20, y: 70 },
+						stops: [
+							{ position: 0, color: 'F0C808' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+			['addText.line.gradient.center.x', 'addText.line.gradient.center.y']
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...text(
+			'addText.line.pattern',
+			{ line: { width: 3, pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
+			['addText.line.pattern.preset', 'addText.line.pattern.fgColor', 'addText.line.pattern.bgColor']
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	{
+		...text('addText.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noChangeAspect', { objectLock: { noChangeAspect: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noChangeShapeType', { objectLock: { noChangeShapeType: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noCrop', { objectLock: { noCrop: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noCrop is not valid on a:spLocks and drops it: it is a picture lock (a:picLocks), which a text box does not have',
+		},
+	},
+	{
+		...text('addText.objectLock.noDrilldown', { objectLock: { noDrilldown: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noDrilldown is not valid on a:spLocks and drops it: it is a graphic-frame/group lock, which a text box does not have',
+		},
+	},
+	{
+		...text('addText.objectLock.noEditPoints', { objectLock: { noEditPoints: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noGrp', { objectLock: { noGrp: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noMove', { objectLock: { noMove: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noResize', { objectLock: { noResize: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noRot', { objectLock: { noRot: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noSelect', { objectLock: { noSelect: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	{
+		...text('addText.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/57',
+	},
+	text('addText.objectName', { objectName: 'Renamed probe' }),
+	{
+		...text('addText.outline', { outline: { color: '9B1B30', size: 1.5 } }, [
+			'addText.outline.color',
+			'addText.outline.size',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	text('addText.paraIndent', { paraIndent: 12 }),
+	text('addText.paraMarginLeft', { paraMarginLeft: 18 }),
+	text('addText.paraSpaceAfter', { paraSpaceAfter: 12 }),
+	text('addText.paraSpaceBefore', { paraSpaceBefore: 12 }),
+	text('addText.lineSpacing', { lineSpacing: 30 }),
+	text(
+		'addText.points',
+		{ shape: 'custGeom', points: [{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 5, y: 1.5 }, { close: true }] },
+		['addText.points.x', 'addText.points.y', 'addText.points.close']
+	),
+	textOn(
+		'addText.points.moveTo',
+		{
+			shape: 'custGeom',
+			points: [
+				{ x: 0, y: 0 },
+				{ x: 5, y: 1.5 },
+			],
+		},
+		{
+			points: [
+				{ x: 0, y: 0 },
+				{ x: 5, y: 1.5 },
+				{ x: 0, y: 1.5, moveTo: true },
+				{ x: 5, y: 0 },
+			],
+		}
+	),
+	textOn(
+		'addText.points.curve',
+		{
+			shape: 'custGeom',
+			points: [
+				{ x: 0, y: 0 },
+				{ x: 5, y: 0 },
+			],
+		},
+		{ points: [{ x: 0, y: 0 }, { x: 5, y: 0 }, { curve: { type: 'arc', hR: 0.75, wR: 2.5, stAng: 0, swAng: 180 } }] },
+		[
+			'addText.points.curve.type',
+			'addText.points.curve.hR',
+			'addText.points.curve.wR',
+			'addText.points.curve.stAng',
+			'addText.points.curve.swAng',
+		]
+	),
+	textOn('addText.rectRadius', { shape: 'roundRect' }, { rectRadius: 0.3 }),
+	text('addText.rotate', { rotate: 30 }),
+	{ ...text('addText.rtlMode', { rtlMode: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
+	text(
+		'addText.shadow.outer',
+		{ shadow: { type: 'outer', angle: 60, blur: 6, color: '250F6B', offset: 4, transparency: 40 } },
+		[
+			'addText.shadow.type',
+			'addText.shadow.angle',
+			'addText.shadow.blur',
+			'addText.shadow.color',
+			'addText.shadow.offset',
+			'addText.shadow.transparency',
+		]
+	),
+	{
+		...textOn(
+			'addText.shadow.rotateWithShape',
+			{ shadow: { type: 'outer', blur: 6 } },
+			{ shadow: { type: 'outer', blur: 6, rotateWithShape: true } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/56',
+	},
+	text('addText.shape:ellipse', { shape: 'ellipse' }),
+	textOn('addText.shapeAdjust', { shape: 'roundRect' }, { shapeAdjust: { name: 'adj', value: 0.4 } }, [
+		'addText.shapeAdjust.name',
+		'addText.shapeAdjust.value',
+	]),
+	{
+		...run('addText.softBreakBefore', 1, { softBreakBefore: true }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	text('addText.strike', { strike: true }),
+	{ ...text('addText.subscript', { subscript: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/55' },
+	{ ...text('addText.superscript', { superscript: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/55' },
+	{
+		...text('addText.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
+			'addText.tabStops.position',
+			'addText.tabStops.alignment',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	text('addText.textDirection:vert', { textDirection: 'vert' }),
+	{ ...text('addText.textWarp', { textWarp: 'textArchUp' }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
+	{ ...text('addText.transparency', { transparency: 40 }), issue: 'https://github.com/shbernal/pptx-ts/issues/54' },
+	{
+		...textOn(
+			'addText.underline.color',
+			{ underline: { style: 'sng' } },
+			{ underline: { style: 'sng', color: '9B1B30' } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/54',
+	},
+	text('addText.vert:eaVert', { vert: 'eaVert' }),
+	text('addText.wrap', { wrap: false }),
+	{ ...text('addText.placeholder', { placeholder: 'body' }), issue: 'https://github.com/shbernal/pptx-ts/issues/61' },
 ]
 
 /**
@@ -106,4 +676,8 @@ export const PROBES: Probe[] = [
 export const SKIPPED: Record<string, string> = {
 	'addText.data': 'an image source for picture-filled text, exercised by addText.fill.image.*',
 	'addText.path': 'an image source for picture-filled text, exercised by addText.fill.image.*',
+	'addText.fill.image.path':
+		'the file-path spelling of the picture source; the picture it writes is exercised by addText.fill.image.data',
+	'addText.bullet.image.path':
+		'the file-path spelling of the bullet picture source; the bullet it writes is exercised by addText.bullet.image.data',
 }
