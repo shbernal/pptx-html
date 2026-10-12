@@ -19,6 +19,8 @@
 
 import type TsPptx from 'pptx-ts'
 import type {
+	ConnectorProps,
+	GroupProps,
 	ImageProps,
 	SHAPE_NAME,
 	ShapeProps,
@@ -27,6 +29,7 @@ import type {
 	TableCellProps,
 	TableProps,
 	TextPropsOptions,
+	ThemeProps,
 } from 'pptx-ts'
 import type { Probe } from './probe'
 
@@ -286,6 +289,82 @@ function imageOn(
 /** `addImage` of the one-pixel PNG in the probe box; `options` is applied only when the probe is on. */
 function image(id: string, options: Omit<ImageProps, 'data' | 'path'>, covers = [id.split(':')[0] as string]): Probe {
 	return imageOn(id, {}, options, covers)
+}
+
+/** `readModelToIr` replays every connector as straight and unbound. */
+const CONNECTOR_IR = 'https://github.com/shbernal/pptx-ts/issues/108'
+
+/** The probe connector's endpoints, on both sides. */
+const LINE = { x1: 1, y1: 1, x2: 5, y2: 3 }
+
+/**
+ * `addConnector` between two named shapes, so endpoint bindings have targets on
+ * both sides. `base` is on both sides; `options` on the probe side only.
+ */
+function connector(
+	id: string,
+	base: Partial<ConnectorProps>,
+	options: Partial<ConnectorProps>,
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			const target = pptx.addSlide()
+			target.addShape('rect', { x: 0.5, y: 0.5, w: 1, h: 1, fill: { color: 'DDE3F0' }, objectName: 'from' })
+			target.addShape('rect', { x: 4.5, y: 2.5, w: 1, h: 1, fill: { color: 'DDE3F0' }, objectName: 'to' })
+			target.addConnector({ ...LINE, objectName: 'probe', ...base, ...(on ? options : {}) })
+		},
+	}
+}
+
+/** `readModelToIr` bakes a group's own rotation and flips into its children. */
+const GROUP_XFRM_IR = 'https://github.com/shbernal/pptx-ts/issues/116'
+
+/** A lock flag with no attribute on `a:grpSpLocks`, which the writer drops on a group. */
+const NOT_A_GROUP_LOCK = {
+	kind: 'inert',
+	reason:
+		'not an attribute of a:grpSpLocks: CT_GroupLocking carries only noGrp, noUngrp, noSelect, noRot, noChangeAspect, noMove and noResize, so a group has nowhere to write it',
+} as const
+
+/** The probe group's explicit frame: the bounding box of its two children. */
+const GROUP_FRAME = { x: 1, y: 1, w: 4, h: 1 }
+
+/**
+ * `addGroup` of two filled rects. `base` is on both sides; `options` on the probe
+ * side only. The frame is all-or-nothing, so a frame probe sets `GROUP_FRAME` as
+ * its base and moves one edge.
+ */
+function group(id: string, base: GroupProps, options: GroupProps, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx
+				.addSlide()
+				.addGroup(
+					[
+						{ rect: { x: 1, y: 1, w: 1, h: 1, fill: { color: 'DDE3F0' } } },
+						{ rect: { x: 4, y: 1, w: 1, h: 1, fill: { color: '250F6B' } } },
+					],
+					{ objectName: 'probe', ...base, ...(on ? options : {}) }
+				)
+		},
+	}
+}
+
+/** `pptx.theme` set on the probe side only, over a slide holding the probe text box. */
+function theme(id: string, options: ThemeProps, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			if (on) pptx.theme = options
+			pptx.addSlide().addText('Probe text', { ...BOX, objectName: 'probe' })
+		},
+	}
 }
 
 export const PROBES: Probe[] = [
@@ -2067,6 +2146,79 @@ export const PROBES: Probe[] = [
 		...image('addImage.transparency', { transparency: 40 }),
 		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
 	},
+	{ ...connector('addConnector.type:elbow', {}, { type: 'elbow' }, ['addConnector.type']), issue: CONNECTOR_IR },
+	{ ...connector('addConnector.bends', { type: 'elbow' }, { bends: 2 }), issue: CONNECTOR_IR },
+	{ ...connector('addConnector.adj', { type: 'elbow' }, { adj: 30 }), issue: CONNECTOR_IR },
+	connector('addConnector.color', {}, { color: '9B1B30' }),
+	connector('addConnector.width', {}, { width: 3 }),
+	connector('addConnector.dashType:dash', {}, { dashType: 'dash' }, ['addConnector.dashType']),
+	connector('addConnector.beginArrowType', {}, { beginArrowType: 'triangle' }),
+	connector('addConnector.endArrowType', {}, { endArrowType: 'triangle' }),
+	{ ...connector('addConnector.startShape', {}, { startShape: 'from' }), issue: CONNECTOR_IR },
+	{ ...connector('addConnector.startShapeIdx', { startShape: 'from' }, { startShapeIdx: 2 }), issue: CONNECTOR_IR },
+	{ ...connector('addConnector.endShape', {}, { endShape: 'to' }), issue: CONNECTOR_IR },
+	{ ...connector('addConnector.endShapeIdx', { endShape: 'to' }, { endShapeIdx: 2 }), issue: CONNECTOR_IR },
+	connector('addConnector.objectName', {}, { objectName: 'Renamed probe' }),
+	connector('addConnector.altText', {}, { altText: 'A connector between two boxes' }),
+	connector('addConnector.x1', {}, { x1: 2 }),
+	connector('addConnector.y1', {}, { y1: 2 }),
+	connector('addConnector.x2', {}, { x2: 6 }),
+	connector('addConnector.y2', {}, { y2: 4 }),
+	group('addGroup.x', GROUP_FRAME, { x: 0.5 }),
+	group('addGroup.y', GROUP_FRAME, { y: 0.5 }),
+	group('addGroup.w', GROUP_FRAME, { w: 5 }),
+	group('addGroup.h', GROUP_FRAME, { h: 2 }),
+	{ ...group('addGroup.rotate', {}, { rotate: 30 }), issue: GROUP_XFRM_IR },
+	{ ...group('addGroup.flipH', {}, { flipH: true }), issue: GROUP_XFRM_IR },
+	{ ...group('addGroup.flipV', {}, { flipV: true }), issue: GROUP_XFRM_IR },
+	group('addGroup.objectName', {}, { objectName: 'Renamed probe' }),
+	group('addGroup.altText', {}, { altText: 'Two boxes, grouped' }),
+	{
+		...group('addGroup.objectLock.noAdjustHandles', {}, { objectLock: { noAdjustHandles: true } }),
+		accepted: NOT_A_GROUP_LOCK,
+	},
+	{
+		...group('addGroup.objectLock.noChangeArrowheads', {}, { objectLock: { noChangeArrowheads: true } }),
+		accepted: NOT_A_GROUP_LOCK,
+	},
+	group('addGroup.objectLock.noChangeAspect', {}, { objectLock: { noChangeAspect: true } }),
+	{
+		...group('addGroup.objectLock.noChangeShapeType', {}, { objectLock: { noChangeShapeType: true } }),
+		accepted: NOT_A_GROUP_LOCK,
+	},
+	{ ...group('addGroup.objectLock.noCrop', {}, { objectLock: { noCrop: true } }), accepted: NOT_A_GROUP_LOCK },
+	{
+		...group('addGroup.objectLock.noDrilldown', {}, { objectLock: { noDrilldown: true } }),
+		accepted: NOT_A_GROUP_LOCK,
+	},
+	{
+		...group('addGroup.objectLock.noEditPoints', {}, { objectLock: { noEditPoints: true } }),
+		accepted: NOT_A_GROUP_LOCK,
+	},
+	group('addGroup.objectLock.noGrp', {}, { objectLock: { noGrp: true } }),
+	group('addGroup.objectLock.noMove', {}, { objectLock: { noMove: true } }),
+	group('addGroup.objectLock.noResize', {}, { objectLock: { noResize: true } }),
+	group('addGroup.objectLock.noRot', {}, { objectLock: { noRot: true } }),
+	group('addGroup.objectLock.noSelect', {}, { objectLock: { noSelect: true } }),
+	{ ...group('addGroup.objectLock.noTextEdit', {}, { objectLock: { noTextEdit: true } }), accepted: NOT_A_GROUP_LOCK },
+	theme('theme.headFontFace', { headFontFace: 'Georgia' }),
+	theme('theme.bodyFontFace', { bodyFontFace: 'Verdana' }),
+	theme('theme.headFontFaceEA', { headFontFaceEA: 'Yu Gothic' }),
+	theme('theme.bodyFontFaceEA', { bodyFontFaceEA: 'MS Mincho' }),
+	theme('theme.headFontFaceCS', { headFontFaceCS: 'Tahoma' }),
+	theme('theme.bodyFontFaceCS', { bodyFontFaceCS: 'Arial' }),
+	theme('theme.colorScheme.dk1', { colorScheme: { dk1: '101820' } }),
+	theme('theme.colorScheme.lt1', { colorScheme: { lt1: 'FAF7F0' } }),
+	theme('theme.colorScheme.dk2', { colorScheme: { dk2: '250F6B' } }),
+	theme('theme.colorScheme.lt2', { colorScheme: { lt2: 'DDE3F0' } }),
+	theme('theme.colorScheme.accent1', { colorScheme: { accent1: '9B1B30' } }),
+	theme('theme.colorScheme.accent2', { colorScheme: { accent2: 'F0C808' } }),
+	theme('theme.colorScheme.accent3', { colorScheme: { accent3: '2E8B57' } }),
+	theme('theme.colorScheme.accent4', { colorScheme: { accent4: '8A2BE2' } }),
+	theme('theme.colorScheme.accent5', { colorScheme: { accent5: 'FF7F50' } }),
+	theme('theme.colorScheme.accent6', { colorScheme: { accent6: '20B2AA' } }),
+	theme('theme.colorScheme.hlink', { colorScheme: { hlink: '0050A0' } }),
+	theme('theme.colorScheme.folHlink', { colorScheme: { folHlink: '7A3E9D' } }),
 ]
 
 /**
