@@ -1,6 +1,7 @@
 {
 	"addNotes.options.bold": "upstream/authored",
 	"addNotes.options.color": "upstream/authored",
+	"addNotes.options.fontSize": "upstream/authored",
 	"addNotes.options.italic": "upstream/authored",
 	"addNotes.text": "survives/authored",
 	"addShape.adjustHandles.polar": "upstream/authored",

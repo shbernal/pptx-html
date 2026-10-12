@@ -1753,6 +1753,7 @@ export const PROBES: Probe[] = [
 	{ ...notes('addNotes.options.bold', { bold: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
 	{ ...notes('addNotes.options.italic', { italic: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
 	{ ...notes('addNotes.options.color', { color: '9B1B30' }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
+	{ ...notes('addNotes.options.fontSize', { fontSize: 20 }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
 ]
 
 /**
