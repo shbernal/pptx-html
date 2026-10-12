@@ -25,6 +25,7 @@ import type {
 	SlideNumberProps,
 	TableCellProps,
 	TableProps,
+	NotesTextOptions,
 	TextPropsOptions,
 } from 'pptx-ts'
 import type { Probe } from './probe'
@@ -68,6 +69,17 @@ function run(id: string, at: 0 | 1, options: TextPropsOptions, covers = [id.spli
 				['First run', 'Second run'].map((text, i) => ({ text, options: on && i === at ? options : {} })),
 				{ ...BOX, objectName: 'probe' }
 			)
+		},
+	}
+}
+
+/** Speaker notes on a plain slide, one run; `options` go on the run only when on. */
+function notes(id: string, options: NotesTextOptions, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addNotes([{ text: 'Probe notes', options: on ? options : {} }])
 		},
 	}
 }
@@ -1738,6 +1750,7 @@ export const PROBES: Probe[] = [
 			if (on) slide.addNotes('Probe notes')
 		},
 	},
+	{ ...notes('addNotes.options.bold', { bold: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
 ]
 
 /**

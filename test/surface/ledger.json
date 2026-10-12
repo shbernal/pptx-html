@@ -1,4 +1,5 @@
 {
+	"addNotes.options.bold": "upstream/authored",
 	"addNotes.text": "survives/authored",
 	"addShape.adjustHandles.polar": "upstream/authored",
 	"addShape.adjustHandles.xy": "upstream/authored",
