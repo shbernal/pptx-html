@@ -1730,6 +1730,14 @@ export const PROBES: Probe[] = [
 	slideNumber('slide.slideNumber.textWarp', { textWarp: 'textArchUp' }),
 	slideNumber('slide.slideNumber.paraIndent', { paraIndent: 12 }),
 	slideNumber('slide.slideNumber.paraMarginLeft', { paraMarginLeft: 18 }),
+	{
+		id: 'addNotes.text',
+		covers: ['addNotes.text'],
+		author: (pptx: TsPptx, on: boolean) => {
+			const slide = pptx.addSlide()
+			if (on) slide.addNotes('Probe notes')
+		},
+	},
 ]
 
 /**
