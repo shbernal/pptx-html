@@ -30,6 +30,11 @@
  * slide the writer gives every slide) would shift the count of every other, and a
  * probe that adds a link or a picture would lose `Relationship ×3` while its own
  * relationship survived.
+ *
+ * An embedded package (a chart's `.xlsx`) is read as a package too, under the same
+ * rules, its part kinds prefixed with its own: `ppt/embeddings/x#.xlsx!xl/worksheets/sheet#.xml`.
+ * Hashed whole, it carried its own `docProps/core.xml` and with it the clock, so two
+ * builds a second apart differed in a fact no loop can reproduce.
  */
 
 import { createHash } from 'node:crypto'
@@ -123,15 +128,29 @@ function xmlFacts(kind: string, xml: string, into: Map<string, number>): void {
 	}
 }
 
-/** Every fact in a package's XML parts. Binary parts contribute their presence, size and content hash. */
-export async function packageFacts(bytes: Uint8Array): Promise<Set<string>> {
-	const counts = new Map<string, number>()
+/** Whether a part is itself a zip package: the local file header signature `PK\x03\x04`. */
+function isPackage(data: Uint8Array): boolean {
+	return data[0] === 0x50 && data[1] === 0x4b && data[2] === 0x03 && data[3] === 0x04
+}
+
+/** Counts the facts of every part in `bytes`, each part kind prefixed with `within` for an embedded package. */
+async function partFacts(bytes: Uint8Array, within: string, into: Map<string, number>): Promise<void> {
 	for (const [name, data] of await readZip(bytes)) {
 		if (IGNORED_PARTS.some((pattern) => pattern.test(name))) continue
-		const kind = partKind(name)
-		if (/\.(xml|rels)$/i.test(name)) xmlFacts(kind, decoder.decode(data), counts)
-		else addCounted(`${kind}⟩${binaryFact(data)}`, counts)
+		const kind = `${within}${partKind(name)}`
+		if (/\.(xml|rels)$/i.test(name)) xmlFacts(kind, decoder.decode(data), into)
+		else if (isPackage(data)) await partFacts(data, `${kind}!`, into)
+		else addCounted(`${kind}⟩${binaryFact(data)}`, into)
 	}
+}
+
+/**
+ * Every fact in a package's XML parts. Binary parts contribute their presence, size
+ * and content hash; an embedded package contributes its own parts' facts.
+ */
+export async function packageFacts(bytes: Uint8Array): Promise<Set<string>> {
+	const counts = new Map<string, number>()
+	await partFacts(bytes, '', counts)
 	const facts = new Set<string>()
 	for (const [fact, count] of counts) for (let n = 1; n <= count; n++) facts.add(n === 1 ? fact : `${fact} ×${n}`)
 	return facts
