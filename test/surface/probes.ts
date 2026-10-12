@@ -1931,27 +1931,26 @@ export const PROBES: Probe[] = [
 			if (on) slide.addNotes('Probe notes')
 		},
 	},
-	{ ...notes('addNotes.options.bold', { bold: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
-	{ ...notes('addNotes.options.italic', { italic: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
-	{ ...notes('addNotes.options.color', { color: '9B1B30' }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
-	{ ...notes('addNotes.options.fontSize', { fontSize: 20 }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
+	notes('addNotes.options.bold', { bold: true }),
+	notes('addNotes.options.italic', { italic: true }),
+	notes('addNotes.options.color', { color: '9B1B30' }),
+	notes('addNotes.options.fontSize', { fontSize: 20 }),
+	notes('addNotes.options.fontFace', { fontFace: 'Georgia' }),
+	notes('addNotes.options.underline', { underline: { style: 'dbl', color: '9B1B30' } }, [
+		'addNotes.options.underline.style',
+		'addNotes.options.underline.color',
+	]),
+	notes('addNotes.options.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
+		'addNotes.options.hyperlink.url',
+		'addNotes.options.hyperlink.tooltip',
+	]),
 	{
-		...notes('addNotes.options.fontFace', { fontFace: 'Georgia' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/129',
+		...notes('addNotes.options.hyperlink.slide', { hyperlink: { slide: 1 } }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/168',
 	},
 	{
-		...notes('addNotes.options.underline', { underline: { style: 'dbl', color: '9B1B30' } }, [
-			'addNotes.options.underline.style',
-			'addNotes.options.underline.color',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/129',
-	},
-	{
-		...notes('addNotes.options.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
-			'addNotes.options.hyperlink.url',
-			'addNotes.options.hyperlink.tooltip',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/129',
+		...notes('addNotes.options.hyperlink.action', { hyperlink: { action: 'nextslide' } }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/168',
 	},
 	master('defineSlideMaster.background.color', { background: { color: 'F0C808' } }, {}, [
 		'defineSlideMaster.background',

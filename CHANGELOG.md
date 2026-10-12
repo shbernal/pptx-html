@@ -39,6 +39,11 @@ model is expected to move.
 - **A slide number survives the loop.** `emitDeck` replays `SlideIr.slideNumber`
   alongside the slide's background and transition, so a deck's slide-number
   placeholder, its position and its formatting come back instead of being dropped.
+- **Formatted speaker notes survive the loop.** `readModelToIr` now states notes
+  as `SlideIr.notesRuns` instead of `notesText` whenever a run is bold, italic,
+  underlined, coloured, sized, set in its own face or links to a URL, and
+  `emitDeck` read only `notesText`, so such a slide came back with no notes at all.
+  It replays the runs, and their formatting comes back with them.
 
 ## [0.2.1] — 2026-09-21
 
