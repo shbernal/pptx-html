@@ -26,11 +26,17 @@ explains why the probe judges XML rather than `DeckIr`.
 
    | status | meaning | what to do |
    | --- | --- | --- |
-   | `survives` | the option's XML came back | nothing |
+   | `survives` | the option's XML came back | nothing; but read the lane (below) |
    | `upstream` | the script lane, upstream code end to end, loses it too | reduce it to a pptx-ts-only script in `.tmp/`, file it (below), set `issue` |
    | `local` | only the HTML lane loses it | fix it in `src/` (render, parse, emit); if it cannot be fixed this iteration, set `accepted: { kind: 'local', reason }` |
    | `inert` | the option wrote nothing | try a non-default value; if the writer drops it, file it (below) and set `unwritten`; if it truly writes nothing (authoring-time only), set `accepted: { kind: 'inert', reason }` |
    | `crash` | a lane threw | the error class says whose bug it is (see the upstream skill); fix or file |
+
+   The lane says what the survival is worth. `authored` went through the HTML.
+   `template` means every fact is in a theme, master or layout part, which
+   `emitDeck` takes from the source package: it proves the template was not
+   destroyed, not that the HTML carries the option. Report it as such, and never
+   count it toward a fidelity claim.
 
    `accepted: { kind: 'equivalent' }` is for an output that says the same thing in
    a different spelling. The reason must say how they are equivalent.

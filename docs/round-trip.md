@@ -148,6 +148,15 @@ miss a value that moved to the wrong run. It also covers decks the writer
 authored, one option at a time, which is narrower than the corpus. Combinations
 of options are the corpus's job.
 
+Nor does every `survives` mean the same thing. `emitDeck` builds on the source
+package, so theme, masters and layouts come back from the input file and never
+pass through the HTML. An option whose signature lives only there survives
+because the template was not destroyed, which says nothing about whether the
+document carries it. The ledger records it as `survives/template`, apart from
+`survives/authored`, and anything that reports fidelity from the ledger, the site
+included, has to keep the two apart: a template survival is not evidence that
+the HTML represents a theme.
+
 ## Assert on the lane, not just the file
 
 Three bugs in the return path each made the system *quietly do nothing* and each

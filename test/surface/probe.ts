@@ -20,6 +20,15 @@
  * `diffDeckIr` report is kept alongside, so a probe can say both *the XML lost
  * this* and *the read model did / did not see it go*. When the XML loses a fact
  * and the report is clean, the probe has found the oracle's blind spot.
+ *
+ * ## Which lane a survival went through
+ *
+ * `emitDeck` builds its output on the source package (`Presentation.fromTemplate`),
+ * so theme, masters and layouts come back from the input file, never through the
+ * HTML (`src/loop.ts`). A signature that lives only in those parts therefore
+ * survives whatever the HTML says, and its `survives` proves the template was not
+ * destroyed, not that the document carries it. {@link laneOf} labels it `template`
+ * so the ledger cannot read as the stronger claim.
  */
 
 import type TsPptx from 'pptx-ts'
@@ -76,8 +85,12 @@ export interface Observation {
 	id: string
 	covers: string[]
 	status: ProbeStatus
-	/** Whether the probe slide went through the authored lane or was carried verbatim. */
-	lane: 'authored' | 'carried' | 'mixed'
+	/**
+	 * What the signature went through. `authored`: the probe slide was authored from
+	 * the IR. `carried`: it was copied verbatim. `template`: every fact is in a part
+	 * the source package supplies, so the HTML never held it. `mixed`: some of each.
+	 */
+	lane: Lane
 	signature: Signature
 	htmlLost: string[]
 	scriptLost: string[]
@@ -85,6 +98,27 @@ export interface Observation {
 	undeclared: number
 	declared: number
 	error?: string
+}
+
+type Lane = 'authored' | 'carried' | 'template' | 'mixed'
+
+/**
+ * The part kinds `emitDeck` takes from the source package rather than writing:
+ * what `fromTemplate` preserves. Media is left out because a slide owns media
+ * too; it is neutral, deciding the lane neither way.
+ */
+const TEMPLATE_PARTS = /^ppt\/(theme|slideMasters|slideLayouts)\//
+const MEDIA_PARTS = /^ppt\/media\//
+
+/** The lane a probe's signature went through, from its facts' part kinds and the slides' sources. */
+function laneOf(sig: Signature, sources: Set<string>): Lane {
+	const kinds = [...sig.added, ...sig.removed]
+		.map((fact) => fact.slice(0, fact.indexOf('⟩')))
+		.filter((kind) => !MEDIA_PARTS.test(kind))
+	const template = kinds.filter((kind) => TEMPLATE_PARTS.test(kind)).length
+	const slide = sources.size > 1 ? 'mixed' : sources.has('carried') ? 'carried' : 'authored'
+	if (template === 0) return slide
+	return template === kinds.length ? 'template' : 'mixed'
 }
 
 async function build(probe: Probe, on: boolean): Promise<Uint8Array> {
@@ -104,7 +138,7 @@ export async function observe(probe: Probe): Promise<Observation> {
 		const html = await roundTrip(probed, htmlLoop)
 		const script = await roundTrip(probed, scriptLoop)
 		const sources = new Set(html.input.ir.slides.map((slide) => slide.source))
-		const lane = sources.size > 1 ? 'mixed' : sources.has('carried') ? 'carried' : 'authored'
+		const lane = laneOf(sig, sources)
 		const htmlLost = lost(sig, await packageFacts(html.output.bytes))
 		const scriptLost = lost(sig, await packageFacts(script.output.bytes))
 		const empty = sig.added.length === 0 && sig.removed.length === 0

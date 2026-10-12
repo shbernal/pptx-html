@@ -33,17 +33,21 @@ interface ObservationRecord {
 	id: string
 	covers: string[]
 	status: 'survives' | 'upstream' | 'local' | 'inert' | 'crash'
-	lane: 'authored' | 'carried' | 'mixed'
+	lane: 'authored' | 'carried' | 'template' | 'mixed'
 }
 
 const ROOT = join(import.meta.dirname, '..', '..')
 const LEDGER = join(ROOT, 'test', 'surface', 'ledger.json')
 const OBSERVATIONS = join(ROOT, '.tmp', 'surface', 'observations.json')
 
-/** Higher is better. A probe may only move up without a human editing the ledger. */
+/**
+ * Higher is better. A probe may only move up without a human editing the ledger.
+ * `survives/template` ranks lowest of the survivals: the HTML never held it, so
+ * relabelling an entry to it is a weaker claim, which a human has to accept.
+ */
 function rank(state: string): number {
 	const [status, lane] = state.split('/')
-	if (status === 'survives') return lane === 'authored' ? 4 : 3
+	if (status === 'survives') return lane === 'authored' ? 4 : lane === 'template' ? 2 : 3
 	if (status === 'upstream' || status === 'local' || status === 'crash') return 1
 	return 0
 }
