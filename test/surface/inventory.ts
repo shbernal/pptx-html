@@ -9,7 +9,7 @@
  *
  * TypeScript 7 ships no compiler API, so this is a small structural reader over
  * declaration files the bundler emitted: top-level `interface` blocks and `type`
- * aliases, their members, `extends` (with `Omit<…>` honoured), inline object types
+ * aliases, their members, `extends` (with `Omit<…>` and `Pick<…>` honoured), inline object types
  * and alias expansion. It does not need to understand TypeScript in general, only
  * the shape tsdown writes, and `surface.test.ts` pins that it still finds the
  * options the corpus is known to use.
@@ -176,7 +176,16 @@ function objectMembers(decls: Declarations, raw: string, seen: Set<string>): Mem
 		for (const key of match[2]?.matchAll(/'(\w+)'/g) ?? []) omitted.add(key[1] as string)
 	}
 
-	const stripped = type.replace(/\{[\s\S]*\}/g, ' ')
+	// `Pick<X, 'a' | 'b'>`: only the picked keys of X, and X is not walked whole below.
+	const PICK = /Pick<\s*(\w+)\s*,\s*([^>]+)>/g
+	for (const match of type.matchAll(PICK)) {
+		const name = match[1] as string
+		if (seen.has(name)) continue
+		const picked = new Set([...(match[2]?.matchAll(/'(\w+)'/g) ?? [])].map((key) => key[1]))
+		add(objectMembers(decls, name, seen).filter((member) => picked.has(member.name)))
+	}
+
+	const stripped = type.replace(/\{[\s\S]*\}/g, ' ').replace(PICK, ' ')
 	for (const match of stripped.matchAll(/\b([A-Z]\w*)\b/g)) {
 		const name = match[1] as string
 		if (seen.has(name) || name === 'Omit' || name === 'Partial' || name === 'Array' || name === 'Record') continue
