@@ -291,9 +291,6 @@ function image(id: string, options: Omit<ImageProps, 'data' | 'path'>, covers = 
 	return imageOn(id, {}, options, covers)
 }
 
-/** `readModelToIr` replays every connector as straight and unbound. */
-const CONNECTOR_IR = 'https://github.com/shbernal/pptx-ts/issues/108'
-
 /** The probe connector's endpoints, on both sides. */
 const LINE = { x1: 1, y1: 1, x2: 5, y2: 3 }
 
@@ -318,9 +315,6 @@ function connector(
 		},
 	}
 }
-
-/** `readModelToIr` bakes a group's own rotation and flips into its children. */
-const GROUP_XFRM_IR = 'https://github.com/shbernal/pptx-ts/issues/116'
 
 /** A lock flag with no attribute on `a:grpSpLocks`, which the writer drops on a group. */
 const NOT_A_GROUP_LOCK = {
@@ -548,11 +542,11 @@ export const PROBES: Probe[] = [
 	text('addText.hyperlink.slide', { hyperlink: { slide: 1 } }),
 	{
 		...text('addText.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/100',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/128',
 	},
 	text('addText.indentLevel', { indentLevel: 2 }),
 	text('addText.isTextBox', { isTextBox: true }),
-	{ ...text('addText.lang', { lang: 'fr-FR' }), issue: 'https://github.com/shbernal/pptx-ts/issues/102' },
+	text('addText.lang', { lang: 'fr-FR' }),
 	text('addText.line', { line: { color: '250F6B', width: 2 } }, ['addText.line.color', 'addText.line.width']),
 	textOn(
 		'addText.line.dashType:dash',
@@ -806,7 +800,7 @@ export const PROBES: Probe[] = [
 	textOn('addText.underline.color', { underline: { style: 'sng' } }, { underline: { style: 'sng', color: '9B1B30' } }),
 	text('addText.vert:eaVert', { vert: 'eaVert' }),
 	text('addText.wrap', { wrap: false }),
-	{ ...text('addText.placeholder', { placeholder: 'body' }), issue: 'https://github.com/shbernal/pptx-ts/issues/100' },
+	text('addText.placeholder', { placeholder: 'body' }),
 	{
 		...shape('addShape.align:center', { align: 'center' }),
 		accepted: {
@@ -1512,20 +1506,14 @@ export const PROBES: Probe[] = [
 	cell('addTable.cell.fontSize', { fontSize: 28 }),
 	cell('addTable.cell.highlight', { highlight: 'FFFF00' }),
 	cell('addTable.cell.horzOverflow:overflow', { horzOverflow: 'overflow' }),
-	{
-		...cell('addTable.cell.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
-			'addTable.cell.hyperlink.url',
-			'addTable.cell.hyperlink.tooltip',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/100',
-	},
-	{
-		...cell('addTable.cell.hyperlink.slide', { hyperlink: { slide: 1 } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/100',
-	},
+	cell('addTable.cell.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
+		'addTable.cell.hyperlink.url',
+		'addTable.cell.hyperlink.tooltip',
+	]),
+	cell('addTable.cell.hyperlink.slide', { hyperlink: { slide: 1 } }),
 	{
 		...cell('addTable.cell.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/100',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/128',
 	},
 	cell('addTable.cell.indentLevel', { indentLevel: 2 }),
 	cell('addTable.cell.italic', { italic: true }),
@@ -1692,30 +1680,24 @@ export const PROBES: Probe[] = [
 	slide('slide.background.image.data', (target) => {
 		target.background = { image: { data: PNG } }
 	}),
-	{
-		...slideOn(
-			'slide.background.image.crop',
-			(target) => {
-				target.background = { image: { data: PNG } }
-			},
-			(target) => {
-				target.background = { image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } }
-			},
-			[
-				'slide.background.image.crop.l',
-				'slide.background.image.crop.t',
-				'slide.background.image.crop.r',
-				'slide.background.image.crop.b',
-			]
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/97',
-	},
-	{
-		...slide('slide.color', (target) => {
-			target.color = '9B1B30'
-		}),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/88',
-	},
+	slideOn(
+		'slide.background.image.crop',
+		(target) => {
+			target.background = { image: { data: PNG } }
+		},
+		(target) => {
+			target.background = { image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } }
+		},
+		[
+			'slide.background.image.crop.l',
+			'slide.background.image.crop.t',
+			'slide.background.image.crop.r',
+			'slide.background.image.crop.b',
+		]
+	),
+	slide('slide.color', (target) => {
+		target.color = '9B1B30'
+	}),
 	slide('slide.hidden', (target) => {
 		target.hidden = true
 	}),
@@ -1832,36 +1814,24 @@ export const PROBES: Probe[] = [
 	slideNumber('slide.slideNumber.paraIndent', { paraIndent: 12 }),
 	slideNumber('slide.slideNumber.paraMarginLeft', { paraMarginLeft: 18 }),
 	image('addImage.altText', { altText: 'A probe description' }),
-	{
-		...image('addImage.biLevel.threshold', { biLevel: { threshold: 0.3 } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
-	},
-	{
-		...image('addImage.clrChange', { clrChange: { from: '000000', to: '9B1B30' } }, [
-			'addImage.clrChange.from',
-			'addImage.clrChange.to',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
-	},
+	image('addImage.biLevel.threshold', { biLevel: { threshold: 0.3 } }),
+	image('addImage.clrChange', { clrChange: { from: '000000', to: '9B1B30' } }, [
+		'addImage.clrChange.from',
+		'addImage.clrChange.to',
+	]),
 	image('addImage.crop', { crop: { l: 10, t: 20, r: 30, b: 15 } }, [
 		'addImage.crop.l',
 		'addImage.crop.t',
 		'addImage.crop.r',
 		'addImage.crop.b',
 	]),
-	{
-		...image('addImage.duotone', { duotone: { shadow: '250F6B', highlight: 'F0C808' } }, [
-			'addImage.duotone.shadow',
-			'addImage.duotone.highlight',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
-	},
+	image('addImage.duotone', { duotone: { shadow: '250F6B', highlight: 'F0C808' } }, [
+		'addImage.duotone.shadow',
+		'addImage.duotone.highlight',
+	]),
 	image('addImage.flipH', { flipH: true }),
 	image('addImage.flipV', { flipV: true }),
-	{
-		...image('addImage.grayscale', { grayscale: true }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
-	},
+	image('addImage.grayscale', { grayscale: true }),
 	image('addImage.x', { x: 2 }),
 	image('addImage.y', { y: 2 }),
 	image('addImage.w', { w: 6 }),
@@ -2054,7 +2024,7 @@ export const PROBES: Probe[] = [
 				.addImage({ data: PNG, ...BOX, objectName: 'probe', ...(on ? { placeholder: 'pic' } : {}) })
 		},
 
-		issue: 'https://github.com/shbernal/pptx-ts/issues/111',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/112',
 	},
 	image('addImage.points', { points: [{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 2.5, y: 1.5 }, { close: true }] }, [
 		'addImage.points.x',
@@ -2142,22 +2112,19 @@ export const PROBES: Probe[] = [
 			pptx.addSlide().addImage(on ? { svg, ...BOX, objectName: 'probe' } : { data: PNG, ...BOX, objectName: 'probe' })
 		},
 	},
-	{
-		...image('addImage.transparency', { transparency: 40 }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
-	},
-	{ ...connector('addConnector.type:elbow', {}, { type: 'elbow' }, ['addConnector.type']), issue: CONNECTOR_IR },
-	{ ...connector('addConnector.bends', { type: 'elbow' }, { bends: 2 }), issue: CONNECTOR_IR },
-	{ ...connector('addConnector.adj', { type: 'elbow' }, { adj: 30 }), issue: CONNECTOR_IR },
+	image('addImage.transparency', { transparency: 40 }),
+	connector('addConnector.type:elbow', {}, { type: 'elbow' }, ['addConnector.type']),
+	connector('addConnector.bends', { type: 'elbow' }, { bends: 2 }),
+	connector('addConnector.adj', { type: 'elbow' }, { adj: 30 }),
 	connector('addConnector.color', {}, { color: '9B1B30' }),
 	connector('addConnector.width', {}, { width: 3 }),
 	connector('addConnector.dashType:dash', {}, { dashType: 'dash' }, ['addConnector.dashType']),
 	connector('addConnector.beginArrowType', {}, { beginArrowType: 'triangle' }),
 	connector('addConnector.endArrowType', {}, { endArrowType: 'triangle' }),
-	{ ...connector('addConnector.startShape', {}, { startShape: 'from' }), issue: CONNECTOR_IR },
-	{ ...connector('addConnector.startShapeIdx', { startShape: 'from' }, { startShapeIdx: 2 }), issue: CONNECTOR_IR },
-	{ ...connector('addConnector.endShape', {}, { endShape: 'to' }), issue: CONNECTOR_IR },
-	{ ...connector('addConnector.endShapeIdx', { endShape: 'to' }, { endShapeIdx: 2 }), issue: CONNECTOR_IR },
+	connector('addConnector.startShape', {}, { startShape: 'from' }),
+	connector('addConnector.startShapeIdx', { startShape: 'from' }, { startShapeIdx: 2 }),
+	connector('addConnector.endShape', {}, { endShape: 'to' }),
+	connector('addConnector.endShapeIdx', { endShape: 'to' }, { endShapeIdx: 2 }),
 	connector('addConnector.objectName', {}, { objectName: 'Renamed probe' }),
 	connector('addConnector.altText', {}, { altText: 'A connector between two boxes' }),
 	connector('addConnector.x1', {}, { x1: 2 }),
@@ -2168,9 +2135,9 @@ export const PROBES: Probe[] = [
 	group('addGroup.y', GROUP_FRAME, { y: 0.5 }),
 	group('addGroup.w', GROUP_FRAME, { w: 5 }),
 	group('addGroup.h', GROUP_FRAME, { h: 2 }),
-	{ ...group('addGroup.rotate', {}, { rotate: 30 }), issue: GROUP_XFRM_IR },
-	{ ...group('addGroup.flipH', {}, { flipH: true }), issue: GROUP_XFRM_IR },
-	{ ...group('addGroup.flipV', {}, { flipV: true }), issue: GROUP_XFRM_IR },
+	group('addGroup.rotate', {}, { rotate: 30 }),
+	group('addGroup.flipH', {}, { flipH: true }),
+	group('addGroup.flipV', {}, { flipV: true }),
 	group('addGroup.objectName', {}, { objectName: 'Renamed probe' }),
 	group('addGroup.altText', {}, { altText: 'Two boxes, grouped' }),
 	{

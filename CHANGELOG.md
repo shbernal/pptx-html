@@ -26,7 +26,10 @@ model is expected to move.
 - **`pptx-ts` moves to a prerelease from its `next` channel.** It carries the
   read-side fixes this repo filed: text options, shape and picture locks, paint
   details, picture bullets, placeholders, slide backgrounds, transition sounds and
-  slide numbers now survive `readModelToIr`.
+  slide numbers now survive `readModelToIr`. A later prerelease adds connector
+  routes and shape bindings, a group's own rotation and flips, a picture's recolour
+  and transparency, a background picture's crop, a paragraph's end language,
+  `slide.color`, and hyperlinked table cells.
 
 ### Fixed
 
