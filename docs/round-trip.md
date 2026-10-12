@@ -142,11 +142,33 @@ its own probe.
 - **It is a ratchet, not a gate on the corpus.** `test/surface/ledger.json`
   records each probe's last accepted state, and `pnpm run oracle:score` fails
   when one gets worse or disappears.
+- **Surviving is not being shown, and the probe says which.** Each probe also
+  compares the paint model (`RenderIr` backgrounds, chrome and nodes) with and
+  without the option, and the ledger marks a probe the renderer never saw
+  `unrendered`. Losing the renderer counts as a regression the same way losing
+  the XML does.
 
 What a probe does *not* prove: facts are compared without position, so it can
 miss a value that moved to the wrong run. It also covers decks the writer
 authored, one option at a time, which is narrower than the corpus. Combinations
 of options are the corpus's job.
+
+Nor does every `survives` mean the same thing. `emitDeck` builds on the source
+package, so theme, masters and layouts come back from the input file and never
+pass through the HTML. An option whose signature lives only there survives
+because the template was not destroyed, which says nothing about whether the
+document carries it. The ledger records it as `survives/template`, apart from
+`survives/authored`, and anything that reports fidelity from the ledger, the site
+included, has to keep the two apart: a template survival is not evidence that
+the HTML represents a theme.
+
+The lane and `unrendered` answer different questions. The lane says where the
+XML lives; `unrendered` says whether the HTML showed the option at all. A master
+rectangle is `survives/template` and drawn, as chrome; a master `other` text
+style is `survives/template/unrendered`, written and inherited by nothing on the
+slide. A slide transition or
+an object lock is `survives/authored/unrendered`: the HTML carries it and has
+nothing to draw.
 
 ## Assert on the lane, not just the file
 
