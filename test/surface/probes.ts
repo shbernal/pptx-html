@@ -21,6 +21,8 @@ import type TsPptx from 'pptx-ts'
 import type {
 	AnimationProps,
 	CommentProps,
+	CHART_NAME,
+	ChartOpts,
 	ConnectorProps,
 	GroupProps,
 	ImageProps,
@@ -403,6 +405,124 @@ function masterStyle(
 				paraMarginLeft: 'inherit',
 				paraIndent: 'inherit',
 			})
+		},
+	}
+}
+
+/** Two series over three categories: enough for axes, legends and per-series options to mean something. */
+const CHART_SERIES: OptsChartData[] = [
+	{ name: 'North', labels: ['Q1', 'Q2', 'Q3'], values: [4, 7, 5] },
+	{ name: 'South', labels: ['Q1', 'Q2', 'Q3'], values: [3, 5, 8] },
+]
+
+/** One series with a negative point, which is what `invertedColors` colours. */
+const NEGATIVE: OptsChartData[] = [{ name: 'Net', labels: ['Q1', 'Q2', 'Q3'], values: [4, -2, 5] }]
+
+/** An X row, then one series with its bubble sizes. */
+const BUBBLES: OptsChartData[] = [
+	{ name: 'X', values: [1, 2, 3] },
+	{ name: 'North', values: [4, 7, 5], sizes: [3, 6, 4] },
+]
+
+/** `addChart` of `type` over `data`, with `base` on both sides; `options` are merged in on the probe side only. */
+function chartWith(
+	id: string,
+	type: CHART_NAME,
+	data: OptsChartData[],
+	base: ChartOpts,
+	options: ChartOpts,
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addChart(data, { ...BOX, h: 4, objectName: 'probe', ...base, ...(on ? options : {}), type })
+		},
+	}
+}
+
+/** `addChart` of `type` over {@link CHART_SERIES}, with `base` on both sides; `options` are merged in on the probe side only. */
+function chartOn(
+	id: string,
+	type: CHART_NAME,
+	base: ChartOpts,
+	options: ChartOpts,
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return chartWith(id, type, CHART_SERIES, base, options, covers)
+}
+
+/** A bar chart; `options` are applied only when the probe is on. */
+function chart(id: string, options: ChartOpts, covers = [id.split(':')[0] as string]): Probe {
+	return chartOn(id, 'bar', {}, options, covers)
+}
+
+/** ISO-dated categories, which a `catLabelFormatCode` turns into a date axis. */
+const DATED: OptsChartData[] = [
+	{ name: 'North', labels: ['2026-01-01', '2026-02-01', '2026-03-01'], values: [4, 7, 5] },
+	{ name: 'South', labels: ['2026-01-01', '2026-02-01', '2026-03-01'], values: [3, 5, 8] },
+]
+
+/** Two category levels, for the multi-level label options. */
+const LEVELS: OptsChartData[] = [
+	{
+		name: 'North',
+		labels: [
+			['Q1', 'Q2', 'Q3', 'Q4'],
+			['H1', '', 'H2', ''],
+		],
+		values: [4, 7, 5, 6],
+	},
+]
+
+/** High, low and close, in the order `stockStyle: 'hlc'` reads them. */
+const STOCK: OptsChartData[] = [
+	{ name: 'High', labels: ['Mon', 'Tue', 'Wed'], values: [12, 14, 13] },
+	{ name: 'Low', labels: ['Mon', 'Tue', 'Wed'], values: [8, 9, 10] },
+	{ name: 'Close', labels: ['Mon', 'Tue', 'Wed'], values: [10, 12, 11] },
+]
+
+/** Raw observations, which a histogram or a box-and-whisker chart summarizes itself. */
+const OBSERVATIONS: OptsChartData[] = [{ name: 'Sample', values: [1, 2, 2, 3, 3, 3, 4, 4, 5, 9, 15] }]
+
+/** Region names, for a region map. */
+const REGIONS: OptsChartData[] = [{ name: 'Sales', labels: ['France', 'Germany', 'Spain'], values: [4, 7, 5] }]
+
+/** The line half of a bar + line combo. */
+const TREND: OptsChartData[] = [{ name: 'Trend', labels: ['Q1', 'Q2', 'Q3'], values: [5, 6, 7] }]
+
+/** A bar + line combo; `options` go on the line subchart only when the probe is on. */
+function chartCombo(id: string, options: ChartOpts, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addChart(
+				[
+					{ type: 'bar', data: CHART_SERIES, options: {} },
+					{ type: 'line', data: TREND, options: on ? options : {} },
+				],
+				{ ...BOX, h: 4, objectName: 'probe' }
+			)
+		},
+	}
+}
+
+/** A bar chart on a slide whose master has a `chart` placeholder; `placeholder` binds it on the probe side, over `base`. */
+function chartPlaceholder(id: string, base: ChartOpts['placeholder'], placeholder: ChartOpts['placeholder']): Probe {
+	return {
+		id,
+		covers: [id.split(':')[0] as string],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.defineSlideMaster({
+				title: 'PROBE_CHART_MASTER',
+				objects: [{ placeholder: { options: { name: 'chart', type: 'chart', x: 1, y: 1, w: 5, h: 4 }, text: '' } }],
+			})
+			const bound = on ? placeholder : base
+			const options: ChartOpts = { ...BOX, h: 4, objectName: 'probe' }
+			if (bound !== undefined) options.placeholder = bound
+			pptx.addSlide({ masterTitle: 'PROBE_CHART_MASTER' }).addChart(CHART_SERIES, { ...options, type: 'bar' })
 		},
 	}
 }
@@ -2865,6 +2985,2080 @@ export const PROBES: Probe[] = [
 		...animation('addAnimation.durationMs', { durationMs: 1700 }, { preset: 'fadeIn', objectName: 'probe' }),
 		issue: 'https://github.com/shbernal/pptx-ts/issues/209',
 	},
+	chart('addChart.altText', { altText: 'A probe description' }),
+	chart('addChart.chartColors', { chartColors: ['9B1B30', '250F6B'] }),
+	chart('addChart.chartColorsOpacity', { chartColorsOpacity: 40 }),
+	chart('addChart.dataBorder.color', { dataBorder: { color: '9B1B30' } }),
+	chart('addChart.dataBorder.width', { dataBorder: { width: 3 } }),
+	chart('addChart.dataBorder.dashType', { dataBorder: { dashType: 'lgDashDot' } }),
+	chart('addChart.dataBorder.cap', { dataBorder: { cap: 'round' } }),
+	chart('addChart.dataBorder.type:dash', { dataBorder: { type: 'dash' } }, ['addChart.dataBorder.type']),
+	chartOn(
+		'addChart.dataBorder.transparency',
+		'bar',
+		{ dataBorder: { color: '9B1B30' } },
+		{ dataBorder: { color: '9B1B30', transparency: 40 } }
+	),
+	chartOn('addChart.displayBlanksAs:zero', 'line', {}, { displayBlanksAs: 'zero' }, ['addChart.displayBlanksAs']),
+	{
+		...chartWith('addChart.invertedColors', 'bar', NEGATIVE, {}, { invertedColors: ['9B1B30', '250F6B', '0B6E4F'] }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/184',
+	},
+	chart('addChart.lang', { lang: 'fr-FR' }),
+	chart('addChart.layout', { layout: { x: 0.1, y: 0.15, w: 0.7, h: 0.6 } }, [
+		'addChart.layout.x',
+		'addChart.layout.y',
+		'addChart.layout.w',
+		'addChart.layout.h',
+	]),
+	chart('addChart.shadow.type:outer', { shadow: { type: 'outer' } }, ['addChart.shadow.type']),
+	chartOn('addChart.shadow.angle', 'bar', { shadow: { type: 'outer' } }, { shadow: { type: 'outer', angle: 120 } }),
+	chartOn('addChart.shadow.blur', 'bar', { shadow: { type: 'outer' } }, { shadow: { type: 'outer', blur: 6 } }),
+	chartOn(
+		'addChart.shadow.color',
+		'bar',
+		{ shadow: { type: 'outer' } },
+		{ shadow: { type: 'outer', color: '9B1B30' } }
+	),
+	chartOn('addChart.shadow.offset', 'bar', { shadow: { type: 'outer' } }, { shadow: { type: 'outer', offset: 5 } }),
+	{
+		...chartOn(
+			'addChart.shadow.rotateWithShape',
+			'bar',
+			{ shadow: { type: 'outer' } },
+			{ shadow: { type: 'outer', rotateWithShape: false } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/185',
+	},
+	chartOn(
+		'addChart.shadow.transparency',
+		'bar',
+		{ shadow: { type: 'outer' } },
+		{ shadow: { type: 'outer', transparency: 40 } }
+	),
+	chartWith('addChart.showBubbleSize', 'bubble', BUBBLES, {}, { showBubbleSize: true }),
+	chartOn('addChart.showLabel', 'pie', {}, { showLabel: true }),
+	chartOn('addChart.showLeaderLines', 'pie', { showValue: true }, { showLeaderLines: true }),
+	chartOn('addChart.leaderLineColor', 'pie', { showValue: true, showLeaderLines: true }, { leaderLineColor: '9B1B30' }),
+	chartOn('addChart.leaderLineSize', 'pie', { showValue: true, showLeaderLines: true }, { leaderLineSize: 2.5 }),
+	chart('addChart.showLegend', { showLegend: true }),
+	chartOn('addChart.showPercent', 'pie', {}, { showPercent: true }),
+	chart('addChart.showSerName', { showSerName: true }),
+	chartOn('addChart.bar3DShape', 'bar3D', {}, { bar3DShape: 'cylinder' }),
+	chart('addChart.barDir', { barDir: 'bar' }),
+	chartOn('addChart.barGapDepthPct', 'bar3D', {}, { barGapDepthPct: 250 }),
+	chart('addChart.barGapWidthPct', { barGapWidthPct: 60 }),
+	chart('addChart.barGrouping', { barGrouping: 'stacked' }),
+	chart('addChart.barOverlapPct', { barOverlapPct: 40 }),
+	chartOn('addChart.barSeriesLine', 'bar', { barGrouping: 'stacked' }, { barSeriesLine: true }),
+	chartOn(
+		'addChart.barSeriesLine.cap',
+		'bar',
+		{ barGrouping: 'stacked', barSeriesLine: { color: '777777' } },
+		{ barSeriesLine: { color: '777777', cap: 'round' } }
+	),
+	chartOn(
+		'addChart.barSeriesLine.color',
+		'bar',
+		{ barGrouping: 'stacked', barSeriesLine: { size: 1 } },
+		{ barSeriesLine: { size: 1, color: '9B1B30' } }
+	),
+	chartOn(
+		'addChart.barSeriesLine.dashType',
+		'bar',
+		{ barGrouping: 'stacked', barSeriesLine: { color: '777777' } },
+		{ barSeriesLine: { color: '777777', dashType: 'lgDashDot' } }
+	),
+	chartOn(
+		'addChart.barSeriesLine.size',
+		'bar',
+		{ barGrouping: 'stacked', barSeriesLine: { color: '777777' } },
+		{ barSeriesLine: { color: '777777', size: 2.5 } }
+	),
+	chartOn(
+		'addChart.barSeriesLine.style',
+		'bar',
+		{ barGrouping: 'stacked', barSeriesLine: { color: '777777' } },
+		{ barSeriesLine: { color: '777777', style: 'dash' } }
+	),
+	chartOn(
+		'addChart.barSeriesLine.transparency',
+		'bar',
+		{ barGrouping: 'stacked', barSeriesLine: { color: '777777' } },
+		{ barSeriesLine: { color: '777777', transparency: 40 } }
+	),
+	chartOn(
+		'addChart.barSeriesLine.type',
+		'bar',
+		{ barGrouping: 'stacked', barSeriesLine: { color: '777777' } },
+		{ barSeriesLine: { color: '777777', type: 'dash' } }
+	),
+	chartOn(
+		'addChart.barSeriesLine.width',
+		'bar',
+		{ barGrouping: 'stacked', barSeriesLine: { color: '777777' } },
+		{ barSeriesLine: { color: '777777', width: 3 } }
+	),
+	chartOn(
+		'addChart.catGridLine.cap',
+		'bar',
+		{ catGridLine: { color: '777777' } },
+		{ catGridLine: { color: '777777', cap: 'round' } }
+	),
+	chartOn(
+		'addChart.catGridLine.color',
+		'bar',
+		{ catGridLine: { width: 2 } },
+		{ catGridLine: { width: 2, color: '9B1B30' } }
+	),
+	chartOn(
+		'addChart.catGridLine.dashType',
+		'bar',
+		{ catGridLine: { color: '777777' } },
+		{ catGridLine: { color: '777777', dashType: 'lgDashDot' } }
+	),
+	chartOn(
+		'addChart.catGridLine.size',
+		'bar',
+		{ catGridLine: { color: '777777' } },
+		{ catGridLine: { color: '777777', size: 2.5 } }
+	),
+	chartOn(
+		'addChart.catGridLine.style',
+		'bar',
+		{ catGridLine: { color: '777777' } },
+		{ catGridLine: { color: '777777', style: 'dash' } }
+	),
+	chartOn(
+		'addChart.catGridLine.transparency',
+		'bar',
+		{ catGridLine: { color: '777777' } },
+		{ catGridLine: { color: '777777', transparency: 40 } }
+	),
+	chartOn(
+		'addChart.catGridLine.type',
+		'bar',
+		{ catGridLine: { color: '777777' } },
+		{ catGridLine: { color: '777777', type: 'dash' } }
+	),
+	chartOn(
+		'addChart.catGridLine.width',
+		'bar',
+		{ catGridLine: { color: '777777' } },
+		{ catGridLine: { color: '777777', width: 3 } }
+	),
+	chartOn(
+		'addChart.valGridLine.cap',
+		'bar',
+		{ valGridLine: { color: '777777' } },
+		{ valGridLine: { color: '777777', cap: 'round' } }
+	),
+	chartOn(
+		'addChart.valGridLine.color',
+		'bar',
+		{ valGridLine: { width: 2 } },
+		{ valGridLine: { width: 2, color: '9B1B30' } }
+	),
+	chartOn(
+		'addChart.valGridLine.dashType',
+		'bar',
+		{ valGridLine: { color: '777777' } },
+		{ valGridLine: { color: '777777', dashType: 'lgDashDot' } }
+	),
+	chartOn(
+		'addChart.valGridLine.size',
+		'bar',
+		{ valGridLine: { color: '777777' } },
+		{ valGridLine: { color: '777777', size: 2.5 } }
+	),
+	chartOn(
+		'addChart.valGridLine.style',
+		'bar',
+		{ valGridLine: { color: '777777' } },
+		{ valGridLine: { color: '777777', style: 'dash' } }
+	),
+	chartOn(
+		'addChart.valGridLine.transparency',
+		'bar',
+		{ valGridLine: { color: '777777' } },
+		{ valGridLine: { color: '777777', transparency: 40 } }
+	),
+	chartOn(
+		'addChart.valGridLine.type',
+		'bar',
+		{ valGridLine: { color: '777777' } },
+		{ valGridLine: { color: '777777', type: 'dash' } }
+	),
+	chartOn(
+		'addChart.valGridLine.width',
+		'bar',
+		{ valGridLine: { color: '777777' } },
+		{ valGridLine: { color: '777777', width: 3 } }
+	),
+	chartOn(
+		'addChart.serGridLine.cap',
+		'bar3D',
+		{ barGrouping: 'standard', serGridLine: { color: '777777' } },
+		{ serGridLine: { color: '777777', cap: 'round' } }
+	),
+	chartOn(
+		'addChart.serGridLine.color',
+		'bar3D',
+		{ barGrouping: 'standard', serGridLine: { width: 2 } },
+		{ serGridLine: { width: 2, color: '9B1B30' } }
+	),
+	chartOn(
+		'addChart.serGridLine.dashType',
+		'bar3D',
+		{ barGrouping: 'standard', serGridLine: { color: '777777' } },
+		{ serGridLine: { color: '777777', dashType: 'lgDashDot' } }
+	),
+	chartOn(
+		'addChart.serGridLine.size',
+		'bar3D',
+		{ barGrouping: 'standard', serGridLine: { color: '777777' } },
+		{ serGridLine: { color: '777777', size: 2.5 } }
+	),
+	chartOn(
+		'addChart.serGridLine.style',
+		'bar3D',
+		{ barGrouping: 'standard', serGridLine: { color: '777777' } },
+		{ serGridLine: { color: '777777', style: 'dash' } }
+	),
+	chartOn(
+		'addChart.serGridLine.transparency',
+		'bar3D',
+		{ barGrouping: 'standard', serGridLine: { color: '777777' } },
+		{ serGridLine: { color: '777777', transparency: 40 } }
+	),
+	chartOn(
+		'addChart.serGridLine.type',
+		'bar3D',
+		{ barGrouping: 'standard', serGridLine: { color: '777777' } },
+		{ serGridLine: { color: '777777', type: 'dash' } }
+	),
+	chartOn(
+		'addChart.serGridLine.width',
+		'bar3D',
+		{ barGrouping: 'standard', serGridLine: { color: '777777' } },
+		{ serGridLine: { color: '777777', width: 3 } }
+	),
+	chartOn(
+		'addChart.catAxisLine.cap',
+		'bar',
+		{ catAxisLine: { color: '777777' } },
+		{ catAxisLine: { color: '777777', cap: 'round' } }
+	),
+	chartOn(
+		'addChart.catAxisLine.color',
+		'bar',
+		{ catAxisLine: { width: 2 } },
+		{ catAxisLine: { width: 2, color: '9B1B30' } }
+	),
+	chartOn(
+		'addChart.catAxisLine.dashType',
+		'bar',
+		{ catAxisLine: { color: '777777' } },
+		{ catAxisLine: { color: '777777', dashType: 'lgDashDot' } }
+	),
+	chartOn(
+		'addChart.catAxisLine.transparency',
+		'bar',
+		{ catAxisLine: { color: '777777' } },
+		{ catAxisLine: { color: '777777', transparency: 40 } }
+	),
+	chartOn(
+		'addChart.catAxisLine.type',
+		'bar',
+		{ catAxisLine: { color: '777777' } },
+		{ catAxisLine: { color: '777777', type: 'dash' } }
+	),
+	chartOn(
+		'addChart.catAxisLine.width',
+		'bar',
+		{ catAxisLine: { color: '777777' } },
+		{ catAxisLine: { color: '777777', width: 3 } }
+	),
+	chartOn(
+		'addChart.valAxisLine.cap',
+		'bar',
+		{ valAxisLine: { color: '777777' } },
+		{ valAxisLine: { color: '777777', cap: 'round' } }
+	),
+	chartOn(
+		'addChart.valAxisLine.color',
+		'bar',
+		{ valAxisLine: { width: 2 } },
+		{ valAxisLine: { width: 2, color: '9B1B30' } }
+	),
+	chartOn(
+		'addChart.valAxisLine.dashType',
+		'bar',
+		{ valAxisLine: { color: '777777' } },
+		{ valAxisLine: { color: '777777', dashType: 'lgDashDot' } }
+	),
+	chartOn(
+		'addChart.valAxisLine.transparency',
+		'bar',
+		{ valAxisLine: { color: '777777' } },
+		{ valAxisLine: { color: '777777', transparency: 40 } }
+	),
+	chartOn(
+		'addChart.valAxisLine.type',
+		'bar',
+		{ valAxisLine: { color: '777777' } },
+		{ valAxisLine: { color: '777777', type: 'dash' } }
+	),
+	chartOn(
+		'addChart.valAxisLine.width',
+		'bar',
+		{ valAxisLine: { color: '777777' } },
+		{ valAxisLine: { color: '777777', width: 3 } }
+	),
+	chartOn(
+		'addChart.serAxisLine.cap',
+		'bar3D',
+		{ barGrouping: 'standard', serAxisLine: { color: '777777' } },
+		{ serAxisLine: { color: '777777', cap: 'round' } }
+	),
+	chartOn(
+		'addChart.serAxisLine.color',
+		'bar3D',
+		{ barGrouping: 'standard', serAxisLine: { width: 2 } },
+		{ serAxisLine: { width: 2, color: '9B1B30' } }
+	),
+	chartOn(
+		'addChart.serAxisLine.dashType',
+		'bar3D',
+		{ barGrouping: 'standard', serAxisLine: { color: '777777' } },
+		{ serAxisLine: { color: '777777', dashType: 'lgDashDot' } }
+	),
+	chartOn(
+		'addChart.serAxisLine.transparency',
+		'bar3D',
+		{ barGrouping: 'standard', serAxisLine: { color: '777777' } },
+		{ serAxisLine: { color: '777777', transparency: 40 } }
+	),
+	chartOn(
+		'addChart.serAxisLine.type',
+		'bar3D',
+		{ barGrouping: 'standard', serAxisLine: { color: '777777' } },
+		{ serAxisLine: { color: '777777', type: 'dash' } }
+	),
+	chartOn(
+		'addChart.serAxisLine.width',
+		'bar3D',
+		{ barGrouping: 'standard', serAxisLine: { color: '777777' } },
+		{ serAxisLine: { color: '777777', width: 3 } }
+	),
+	chart('addChart.catAxisLineColor', { catAxisLineColor: '9B1B30' }),
+	chart('addChart.catAxisLineShow', { catAxisLineShow: false }),
+	chart('addChart.catAxisLineSize', { catAxisLineSize: 3 }),
+	chart('addChart.catAxisLineStyle', { catAxisLineStyle: 'dot' }),
+	chart('addChart.valAxisLineColor', { valAxisLineColor: '9B1B30' }),
+	chart('addChart.valAxisLineShow', { valAxisLineShow: false }),
+	chart('addChart.valAxisLineSize', { valAxisLineSize: 3 }),
+	chart('addChart.valAxisLineStyle', { valAxisLineStyle: 'dot' }),
+	chartOn('addChart.serAxisLineColor', 'bar3D', { barGrouping: 'standard' }, { serAxisLineColor: '9B1B30' }),
+	chartOn('addChart.serAxisLineShow', 'bar3D', { barGrouping: 'standard' }, { serAxisLineShow: false }),
+	chartOn('addChart.serAxisLineSize', 'bar3D', { barGrouping: 'standard' }, { serAxisLineSize: 3 }),
+	chartOn('addChart.serAxisLineStyle', 'bar3D', { barGrouping: 'standard' }, { serAxisLineStyle: 'dot' }),
+	chartOn('addChart.showTitle', 'bar', { title: 'Probe title' }, { showTitle: true }),
+	chartOn('addChart.title', 'bar', { showTitle: true }, { title: 'Probe title' }),
+	chart('addChart.showValue', { showValue: true }),
+	chartOn('addChart.v3DPerspective', 'bar3D', {}, { v3DPerspective: 60 }),
+	chartOn('addChart.v3DRAngAx', 'bar3D', {}, { v3DRAngAx: true }),
+	chartOn('addChart.v3DRotX', 'bar3D', {}, { v3DRotX: 45 }),
+	chartOn('addChart.v3DRotY', 'bar3D', {}, { v3DRotY: 60 }),
+	chart('addChart.chartArea.fill.color', { chartArea: { fill: { color: 'F0C808' } } }, [
+		'addChart.chartArea.fill',
+		'addChart.chartArea.fill.color',
+	]),
+	chartOn(
+		'addChart.chartArea.fill.transparency',
+		'bar',
+		{ chartArea: { fill: { color: 'F0C808' } } },
+		{ chartArea: { fill: { color: 'F0C808', transparency: 40 } } }
+	),
+	{
+		...chart('addChart.chartArea.fill.type:inherit', { chartArea: { fill: { type: 'inherit' } } }, [
+			'addChart.chartArea.fill.type',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/186',
+	},
+	chart(
+		'addChart.chartArea.fill.gradient',
+		{
+			chartArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B', transparency: 30 },
+						],
+					},
+				},
+			},
+		},
+		[
+			'addChart.chartArea.fill.gradient.kind',
+			'addChart.chartArea.fill.gradient.angle',
+			'addChart.chartArea.fill.gradient.stops.color',
+			'addChart.chartArea.fill.gradient.stops.position',
+			'addChart.chartArea.fill.gradient.stops.transparency',
+		]
+	),
+	chartOn(
+		'addChart.chartArea.fill.gradient.rotateWithShape',
+		'bar',
+		{
+			chartArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+		},
+		{
+			chartArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+						rotateWithShape: false,
+					},
+				},
+			},
+		}
+	),
+	chartOn(
+		'addChart.chartArea.fill.gradient.scaled',
+		'bar',
+		{
+			chartArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+		},
+		{
+			chartArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+						scaled: true,
+					},
+				},
+			},
+		}
+	),
+	chart(
+		'addChart.chartArea.fill.pattern',
+		{ chartArea: { fill: { type: 'pattern', pattern: { preset: 'dkDnDiag', fgColor: '9B1B30', bgColor: 'F0C808' } } } },
+		[
+			'addChart.chartArea.fill.pattern.preset',
+			'addChart.chartArea.fill.pattern.fgColor',
+			'addChart.chartArea.fill.pattern.bgColor',
+		]
+	),
+	chart('addChart.chartArea.border.color', { chartArea: { border: { color: '9B1B30' } } }),
+	chart('addChart.chartArea.border.width', { chartArea: { border: { width: 3 } } }),
+	chart('addChart.chartArea.border.dashType', { chartArea: { border: { dashType: 'lgDashDot' } } }),
+	chart('addChart.chartArea.border.cap', { chartArea: { border: { cap: 'round' } } }),
+	chart('addChart.chartArea.border.type:dash', { chartArea: { border: { type: 'dash' } } }, [
+		'addChart.chartArea.border.type',
+	]),
+	chartOn(
+		'addChart.chartArea.border.transparency',
+		'bar',
+		{ chartArea: { border: { color: '9B1B30' } } },
+		{ chartArea: { border: { color: '9B1B30', transparency: 40 } } }
+	),
+	chart('addChart.plotArea.fill.color', { plotArea: { fill: { color: 'F0C808' } } }, [
+		'addChart.plotArea.fill',
+		'addChart.plotArea.fill.color',
+	]),
+	chartOn(
+		'addChart.plotArea.fill.transparency',
+		'bar',
+		{ plotArea: { fill: { color: 'F0C808' } } },
+		{ plotArea: { fill: { color: 'F0C808', transparency: 40 } } }
+	),
+	{
+		...chart('addChart.plotArea.fill.type:inherit', { plotArea: { fill: { type: 'inherit' } } }, [
+			'addChart.plotArea.fill.type',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/186',
+	},
+	chart(
+		'addChart.plotArea.fill.gradient',
+		{
+			plotArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B', transparency: 30 },
+						],
+					},
+				},
+			},
+		},
+		[
+			'addChart.plotArea.fill.gradient.kind',
+			'addChart.plotArea.fill.gradient.angle',
+			'addChart.plotArea.fill.gradient.stops.color',
+			'addChart.plotArea.fill.gradient.stops.position',
+			'addChart.plotArea.fill.gradient.stops.transparency',
+		]
+	),
+	chartOn(
+		'addChart.plotArea.fill.gradient.rotateWithShape',
+		'bar',
+		{
+			plotArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+		},
+		{
+			plotArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+						rotateWithShape: false,
+					},
+				},
+			},
+		}
+	),
+	chartOn(
+		'addChart.plotArea.fill.gradient.scaled',
+		'bar',
+		{
+			plotArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+		},
+		{
+			plotArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'linear',
+						angle: 45,
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+						scaled: true,
+					},
+				},
+			},
+		}
+	),
+	chart(
+		'addChart.plotArea.fill.pattern',
+		{ plotArea: { fill: { type: 'pattern', pattern: { preset: 'dkDnDiag', fgColor: '9B1B30', bgColor: 'F0C808' } } } },
+		[
+			'addChart.plotArea.fill.pattern.preset',
+			'addChart.plotArea.fill.pattern.fgColor',
+			'addChart.plotArea.fill.pattern.bgColor',
+		]
+	),
+	chart('addChart.plotArea.border.color', { plotArea: { border: { color: '9B1B30' } } }),
+	chart('addChart.plotArea.border.width', { plotArea: { border: { width: 3 } } }),
+	chart('addChart.plotArea.border.dashType', { plotArea: { border: { dashType: 'lgDashDot' } } }),
+	chart('addChart.plotArea.border.cap', { plotArea: { border: { cap: 'round' } } }),
+	chart('addChart.plotArea.border.type:dash', { plotArea: { border: { type: 'dash' } } }, [
+		'addChart.plotArea.border.type',
+	]),
+	chartOn(
+		'addChart.plotArea.border.transparency',
+		'bar',
+		{ plotArea: { border: { color: '9B1B30' } } },
+		{ plotArea: { border: { color: '9B1B30', transparency: 40 } } }
+	),
+	chartOn(
+		'addChart.chartArea.roundedCorners',
+		'bar',
+		{ chartArea: { fill: { color: 'F0C808' } } },
+		{ chartArea: { fill: { color: 'F0C808' }, roundedCorners: false } }
+	),
+	chartOn(
+		'addChart.seriesOptions.color',
+		'bar',
+		{ showValue: true },
+		{ showValue: true, seriesOptions: [{ color: '9B1B30' }] }
+	),
+	chartOn(
+		'addChart.seriesOptions.dataLabelColor',
+		'bar',
+		{ showValue: true },
+		{ showValue: true, seriesOptions: [{ dataLabelColor: '9B1B30' }] }
+	),
+	chartOn(
+		'addChart.seriesOptions.dataLabelFontBold',
+		'bar',
+		{ showValue: true },
+		{ showValue: true, seriesOptions: [{ dataLabelFontBold: true }] }
+	),
+	chartOn(
+		'addChart.seriesOptions.dataLabelFontFace',
+		'bar',
+		{ showValue: true },
+		{ showValue: true, seriesOptions: [{ dataLabelFontFace: 'Georgia' }] }
+	),
+	chartOn(
+		'addChart.seriesOptions.dataLabelFontItalic',
+		'bar',
+		{ showValue: true },
+		{ showValue: true, seriesOptions: [{ dataLabelFontItalic: true }] }
+	),
+	chartOn(
+		'addChart.seriesOptions.dataLabelFontSize',
+		'bar',
+		{ showValue: true },
+		{ showValue: true, seriesOptions: [{ dataLabelFontSize: 18 }] }
+	),
+	chartOn(
+		'addChart.seriesOptions.dataLabelFormatCode',
+		'bar',
+		{ showValue: true },
+		{ showValue: true, seriesOptions: [{ dataLabelFormatCode: '0.00' }] }
+	),
+	chartOn('addChart.seriesOptions.lineSize', 'line', {}, { seriesOptions: [{ lineSize: 5 }] }),
+	chartOn('addChart.dataLabelBkgrdColors', 'bar', { showValue: true }, { dataLabelBkgrdColors: true }),
+	chartOn('addChart.dataLabelColor', 'bar', { showValue: true }, { dataLabelColor: '9B1B30' }),
+	chartOn('addChart.dataLabelFontBold', 'bar', { showValue: true }, { dataLabelFontBold: true }),
+	chartOn('addChart.dataLabelFontFace', 'bar', { showValue: true }, { dataLabelFontFace: 'Georgia' }),
+	chartOn('addChart.dataLabelFontItalic', 'bar', { showValue: true }, { dataLabelFontItalic: true }),
+	chartOn('addChart.dataLabelFontSize', 'bar', { showValue: true }, { dataLabelFontSize: 18 }),
+	chartOn('addChart.dataLabelFormatCode', 'bar', { showValue: true }, { dataLabelFormatCode: '0.00' }),
+	chartOn('addChart.dataLabelPosition:inEnd', 'bar', { showValue: true }, { dataLabelPosition: 'inEnd' }, [
+		'addChart.dataLabelPosition',
+	]),
+	chartOn('addChart.dataLabelFormatScatter:XY', 'scatter', { showLabel: true }, { dataLabelFormatScatter: 'XY' }, [
+		'addChart.dataLabelFormatScatter',
+	]),
+	chart('addChart.showDataTable', { showDataTable: true }),
+	chartOn('addChart.dataTableFontSize', 'bar', { showDataTable: true }, { dataTableFontSize: 16 }),
+	{
+		...chartOn('addChart.dataTableFormatCode', 'bar', { showDataTable: true }, { dataTableFormatCode: '0.00' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/189',
+	},
+	chartOn('addChart.showDataTableHorzBorder', 'bar', { showDataTable: true }, { showDataTableHorzBorder: true }),
+	chartOn('addChart.showDataTableKeys', 'bar', { showDataTable: true }, { showDataTableKeys: true }),
+	chartOn('addChart.showDataTableOutline', 'bar', { showDataTable: true }, { showDataTableOutline: true }),
+	chartOn('addChart.showDataTableVertBorder', 'bar', { showDataTable: true }, { showDataTableVertBorder: true }),
+	chartOn('addChart.legendColor', 'bar', { showLegend: true }, { legendColor: '9B1B30' }),
+	chartOn('addChart.legendFontFace', 'bar', { showLegend: true }, { legendFontFace: 'Georgia' }),
+	chartOn('addChart.legendFontSize', 'bar', { showLegend: true }, { legendFontSize: 18 }),
+	chartOn('addChart.legendPos:t', 'bar', { showLegend: true }, { legendPos: 't' }, ['addChart.legendPos']),
+	chartOn('addChart.legendLayout', 'bar', { showLegend: true }, { legendLayout: { x: 0.7, y: 0.3, w: 0.25, h: 0.4 } }, [
+		'addChart.legendLayout.x',
+		'addChart.legendLayout.y',
+		'addChart.legendLayout.w',
+		'addChart.legendLayout.h',
+	]),
+	chartOn('addChart.titleAlign', 'bar', { showTitle: true, title: 'Probe title' }, { titleAlign: 'left' }),
+	chartOn('addChart.titleBold', 'bar', { showTitle: true, title: 'Probe title' }, { titleBold: true }),
+	chartOn('addChart.titleColor', 'bar', { showTitle: true, title: 'Probe title' }, { titleColor: '9B1B30' }),
+	chartOn('addChart.titleFontFace', 'bar', { showTitle: true, title: 'Probe title' }, { titleFontFace: 'Georgia' }),
+	chartOn('addChart.titleFontSize', 'bar', { showTitle: true, title: 'Probe title' }, { titleFontSize: 28 }),
+	chartOn('addChart.titleItalic', 'bar', { showTitle: true, title: 'Probe title' }, { titleItalic: true }),
+	chartOn('addChart.titleRotate', 'bar', { showTitle: true, title: 'Probe title' }, { titleRotate: 20 }),
+	chartOn('addChart.titleUnderline', 'bar', { showTitle: true, title: 'Probe title' }, { titleUnderline: true }),
+	{
+		...chartOn(
+			'addChart.titlePos',
+			'bar',
+			{ showTitle: true, title: 'Probe title' },
+			{ titlePos: { x: 0.5, y: 0.3 } },
+			['addChart.titlePos.x', 'addChart.titlePos.y']
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/187',
+	},
+	chartOn('addChart.lineCap', 'line', {}, { lineCap: 'round' }),
+	chartOn('addChart.lineDash:dash', 'line', {}, { lineDash: 'dash' }, ['addChart.lineDash']),
+	chartOn('addChart.lineDashValues', 'line', {}, { lineDashValues: ['lgDash', 'sysDot'] }),
+	chartOn('addChart.lineDataSymbol:diamond', 'line', {}, { lineDataSymbol: 'diamond' }, ['addChart.lineDataSymbol']),
+	{
+		...chartOn('addChart.lineDataSymbolLineColor', 'line', {}, { lineDataSymbolLineColor: '9B1B30' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/188',
+	},
+	{
+		...chartOn('addChart.lineDataSymbolLineSize', 'line', {}, { lineDataSymbolLineSize: 3 }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/188',
+	},
+	chartOn('addChart.lineDataSymbolSize', 'line', {}, { lineDataSymbolSize: 12 }),
+	chartOn('addChart.lineSize', 'line', {}, { lineSize: 5 }),
+	chartOn('addChart.lineSmooth', 'line', {}, { lineSmooth: true }),
+	chartOn('addChart.firstSliceAng', 'pie', {}, { firstSliceAng: 90 }),
+	chartOn('addChart.dataNoEffects', 'pie', { shadow: { type: 'outer' } }, { dataNoEffects: true }),
+	chartOn('addChart.holeSize', 'doughnut', {}, { holeSize: 75 }),
+	chartOn('addChart.radarStyle:filled', 'radar', {}, { radarStyle: 'filled' }, ['addChart.radarStyle']),
+	chart('addChart.metadata', { metadata: { sourceId: 'probe' } }),
+	chart('addChart.objectName', { objectName: 'renamed' }),
+	chart('addChart.catAxisHidden', { catAxisHidden: true }),
+	chart('addChart.catAxisCrossesAt', { catAxisCrossesAt: 2 }),
+	chart('addChart.catAxisLabelColor', { catAxisLabelColor: '9B1B30' }),
+	chart('addChart.catAxisLabelFontBold', { catAxisLabelFontBold: true }),
+	chart('addChart.catAxisLabelFontFace', { catAxisLabelFontFace: 'Georgia' }),
+	chart('addChart.catAxisLabelFontItalic', { catAxisLabelFontItalic: true }),
+	chart('addChart.catAxisLabelFontSize', { catAxisLabelFontSize: 18 }),
+	chart('addChart.catAxisLabelFrequency', { catAxisLabelFrequency: 2 }),
+	chart('addChart.catAxisLabelRotate', { catAxisLabelRotate: 45 }),
+	chart('addChart.catAxisLabelPos:high', { catAxisLabelPos: 'high' }, ['addChart.catAxisLabelPos']),
+	chart('addChart.catAxisMajorTickMark:cross', { catAxisMajorTickMark: 'cross' }, ['addChart.catAxisMajorTickMark']),
+	chart('addChart.catAxisMinorTickMark:in', { catAxisMinorTickMark: 'in' }, ['addChart.catAxisMinorTickMark']),
+	chart('addChart.catAxisOrientation:maxMin', { catAxisOrientation: 'maxMin' }, ['addChart.catAxisOrientation']),
+	{
+		...chartOn('addChart.catAxisLabelFormatCode', 'scatter', {}, { catAxisLabelFormatCode: '0.00' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/190',
+	},
+	chartOn('addChart.catAxisMajorUnit', 'scatter', {}, { catAxisMajorUnit: 2 }),
+	chartOn('addChart.catAxisMinorUnit', 'scatter', {}, { catAxisMinorUnit: 0.5 }),
+	chartOn('addChart.catAxisMaxVal', 'scatter', {}, { catAxisMaxVal: 10 }),
+	chartOn('addChart.catAxisMinVal', 'scatter', {}, { catAxisMinVal: 1 }),
+	chartWith('addChart.catLabelFormatCode', 'bar', DATED, {}, { catLabelFormatCode: 'yyyy-mm-dd' }),
+	chartWith(
+		'addChart.catAxisBaseTimeUnit:months',
+		'bar',
+		DATED,
+		{ catLabelFormatCode: 'yyyy-mm-dd' },
+		{ catAxisBaseTimeUnit: 'months' },
+		['addChart.catAxisBaseTimeUnit']
+	),
+	chartWith(
+		'addChart.catAxisMajorTimeUnit:months',
+		'bar',
+		DATED,
+		{ catLabelFormatCode: 'yyyy-mm-dd' },
+		{ catAxisMajorTimeUnit: 'months' },
+		['addChart.catAxisMajorTimeUnit']
+	),
+	chartWith(
+		'addChart.catAxisMinorTimeUnit:days',
+		'bar',
+		DATED,
+		{ catLabelFormatCode: 'yyyy-mm-dd' },
+		{ catAxisMinorTimeUnit: 'days' },
+		['addChart.catAxisMinorTimeUnit']
+	),
+	chartWith('addChart.catAxisMultiLevelLabels', 'bar', LEVELS, {}, { catAxisMultiLevelLabels: true }),
+	chartOn('addChart.showCatAxisTitle', 'bar', { catAxisTitle: 'Category' }, { showCatAxisTitle: true }),
+	chartOn('addChart.catAxisTitle', 'bar', { showCatAxisTitle: true }, { catAxisTitle: 'Category' }),
+	chartOn(
+		'addChart.catAxisTitleColor',
+		'bar',
+		{ showCatAxisTitle: true, catAxisTitle: 'Category' },
+		{ catAxisTitleColor: '9B1B30' }
+	),
+	chartOn(
+		'addChart.catAxisTitleFontFace',
+		'bar',
+		{ showCatAxisTitle: true, catAxisTitle: 'Category' },
+		{ catAxisTitleFontFace: 'Georgia' }
+	),
+	chartOn(
+		'addChart.catAxisTitleFontSize',
+		'bar',
+		{ showCatAxisTitle: true, catAxisTitle: 'Category' },
+		{ catAxisTitleFontSize: 20 }
+	),
+	chartOn(
+		'addChart.catAxisTitleRotate',
+		'bar',
+		{ showCatAxisTitle: true, catAxisTitle: 'Category' },
+		{ catAxisTitleRotate: 45 }
+	),
+	chart('addChart.valAxisHidden', { valAxisHidden: true }),
+	chart('addChart.valAxisCrossesAt', { valAxisCrossesAt: 2 }),
+	chartOn(
+		'addChart.valAxisDisplayUnitLabel',
+		'bar',
+		{ valAxisDisplayUnit: 'thousands' },
+		{ valAxisDisplayUnitLabel: true }
+	),
+	chart('addChart.valAxisLabelColor', { valAxisLabelColor: '9B1B30' }),
+	chart('addChart.valAxisLabelFontBold', { valAxisLabelFontBold: true }),
+	chart('addChart.valAxisLabelFontFace', { valAxisLabelFontFace: 'Georgia' }),
+	chart('addChart.valAxisLabelFontItalic', { valAxisLabelFontItalic: true }),
+	chart('addChart.valAxisLabelFontSize', { valAxisLabelFontSize: 18 }),
+	chart('addChart.valAxisLabelFormatCode', { valAxisLabelFormatCode: '0.00' }),
+	chart('addChart.valAxisLabelRotate', { valAxisLabelRotate: 45 }),
+	chart('addChart.valAxisLogScaleBase', { valAxisLogScaleBase: 10 }),
+	chart('addChart.valAxisMajorUnit', { valAxisMajorUnit: 2 }),
+	chart('addChart.valAxisMaxVal', { valAxisMaxVal: 12 }),
+	chart('addChart.valAxisMinorUnit', { valAxisMinorUnit: 0.5 }),
+	chart('addChart.valAxisMinVal', { valAxisMinVal: 1 }),
+	{
+		...chart('addChart.valLabelFormatCode', { valLabelFormatCode: '0.0%' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/189',
+	},
+	chart('addChart.valAxisCrossBetween:midCat', { valAxisCrossBetween: 'midCat' }, ['addChart.valAxisCrossBetween']),
+	chart('addChart.valAxisDisplayUnit:thousands', { valAxisDisplayUnit: 'thousands' }, ['addChart.valAxisDisplayUnit']),
+	chart('addChart.valAxisLabelPos:high', { valAxisLabelPos: 'high' }, ['addChart.valAxisLabelPos']),
+	chart('addChart.valAxisMajorTickMark:cross', { valAxisMajorTickMark: 'cross' }, ['addChart.valAxisMajorTickMark']),
+	chart('addChart.valAxisMinorTickMark:in', { valAxisMinorTickMark: 'in' }, ['addChart.valAxisMinorTickMark']),
+	chart('addChart.valAxisOrientation:maxMin', { valAxisOrientation: 'maxMin' }, ['addChart.valAxisOrientation']),
+	chartOn('addChart.showValAxisTitle', 'bar', { valAxisTitle: 'Value' }, { showValAxisTitle: true }),
+	chartOn('addChart.valAxisTitle', 'bar', { showValAxisTitle: true }, { valAxisTitle: 'Value' }),
+	chartOn(
+		'addChart.valAxisTitleColor',
+		'bar',
+		{ showValAxisTitle: true, valAxisTitle: 'Value' },
+		{ valAxisTitleColor: '9B1B30' }
+	),
+	chartOn(
+		'addChart.valAxisTitleFontFace',
+		'bar',
+		{ showValAxisTitle: true, valAxisTitle: 'Value' },
+		{ valAxisTitleFontFace: 'Georgia' }
+	),
+	chartOn(
+		'addChart.valAxisTitleFontSize',
+		'bar',
+		{ showValAxisTitle: true, valAxisTitle: 'Value' },
+		{ valAxisTitleFontSize: 20 }
+	),
+	chartOn(
+		'addChart.valAxisTitleRotate',
+		'bar',
+		{ showValAxisTitle: true, valAxisTitle: 'Value' },
+		{ valAxisTitleRotate: 45 }
+	),
+	chartOn('addChart.serAxisHidden', 'bar3D', {}, { serAxisHidden: true }),
+	chartOn('addChart.serAxisLabelColor', 'bar3D', {}, { serAxisLabelColor: '9B1B30' }),
+	chartOn('addChart.serAxisLabelFontBold', 'bar3D', {}, { serAxisLabelFontBold: true }),
+	chartOn('addChart.serAxisLabelFontFace', 'bar3D', {}, { serAxisLabelFontFace: 'Georgia' }),
+	chartOn('addChart.serAxisLabelFontItalic', 'bar3D', {}, { serAxisLabelFontItalic: true }),
+	chartOn('addChart.serAxisLabelFontSize', 'bar3D', {}, { serAxisLabelFontSize: 18 }),
+	chartOn('addChart.serAxisLabelFrequency', 'bar3D', {}, { serAxisLabelFrequency: 2 }),
+	chartOn('addChart.serLabelFormatCode', 'bar3D', {}, { serLabelFormatCode: '0.00' }),
+	chartOn('addChart.serAxisLabelPos:high', 'bar3D', {}, { serAxisLabelPos: 'high' }, ['addChart.serAxisLabelPos']),
+	chartOn('addChart.serAxisOrientation:maxMin', 'bar3D', {}, { serAxisOrientation: 'maxMin' }, [
+		'addChart.serAxisOrientation',
+	]),
+	chartOn('addChart.showSerAxisTitle', 'bar3D', { serAxisTitle: 'Series' }, { showSerAxisTitle: true }),
+	chartOn('addChart.serAxisTitle', 'bar3D', { showSerAxisTitle: true }, { serAxisTitle: 'Series' }),
+	chartOn(
+		'addChart.serAxisTitleColor',
+		'bar3D',
+		{ showSerAxisTitle: true, serAxisTitle: 'Series' },
+		{ serAxisTitleColor: '9B1B30' }
+	),
+	chartOn(
+		'addChart.serAxisTitleFontFace',
+		'bar3D',
+		{ showSerAxisTitle: true, serAxisTitle: 'Series' },
+		{ serAxisTitleFontFace: 'Georgia' }
+	),
+	chartOn(
+		'addChart.serAxisTitleFontSize',
+		'bar3D',
+		{ showSerAxisTitle: true, serAxisTitle: 'Series' },
+		{ serAxisTitleFontSize: 20 }
+	),
+	chartOn(
+		'addChart.serAxisTitleRotate',
+		'bar3D',
+		{ showSerAxisTitle: true, serAxisTitle: 'Series' },
+		{ serAxisTitleRotate: 45 }
+	),
+	chartWith(
+		'addChart.stockStyle:ohlc',
+		'stock',
+		[{ name: 'Open', labels: ['Mon', 'Tue', 'Wed'], values: [9, 11, 12] }, ...STOCK],
+		{},
+		{ stockStyle: 'ohlc' },
+		['addChart.stockStyle']
+	),
+	chartOn('addChart.surface3D', 'surface', {}, { surface3D: false }),
+	chartOn('addChart.surfaceWireframe', 'surface', {}, { surfaceWireframe: true }),
+	chartWith('addChart.subtotals', 'waterfall', [CHART_SERIES[0] as OptsChartData], {}, { subtotals: [2] }),
+	chartWith('addChart.binning.intervalClosed:l', 'histogram', OBSERVATIONS, {}, { binning: { intervalClosed: 'l' } }, [
+		'addChart.binning.intervalClosed',
+	]),
+	chartWith(
+		'addChart.statistics.quartileMethod:inclusive',
+		'boxWhisker',
+		OBSERVATIONS,
+		{},
+		{ statistics: { quartileMethod: 'inclusive' } },
+		['addChart.statistics.quartileMethod']
+	),
+	chartWith('addChart.statistics.meanLine', 'boxWhisker', OBSERVATIONS, {}, { statistics: { meanLine: true } }),
+	chartWith('addChart.statistics.meanMarker', 'boxWhisker', OBSERVATIONS, {}, { statistics: { meanMarker: false } }),
+	chartWith('addChart.statistics.outliers', 'boxWhisker', OBSERVATIONS, {}, { statistics: { outliers: false } }),
+	chartWith('addChart.statistics.nonoutliers', 'boxWhisker', OBSERVATIONS, {}, { statistics: { nonoutliers: true } }),
+	chartWith(
+		'addChart.geography.cultureLanguage',
+		'regionMap',
+		REGIONS,
+		{},
+		{ geography: { cultureLanguage: 'fr-FR' } }
+	),
+	chartWith('addChart.geography.cultureRegion', 'regionMap', REGIONS, {}, { geography: { cultureRegion: 'FR' } }),
+	chart('addChart.x', { x: 2 }),
+	chart('addChart.y', { y: 0.5 }),
+	chart('addChart.w', { w: 6 }),
+	chart('addChart.h', { h: 3 }),
+	{
+		...chart('addChart.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'CT_GraphicalObjectFrameLocking has no noAdjustHandles attribute, so a chart frame cannot carry it; ObjectLockProps is shared with shapes, where it applies',
+		},
+	},
+	{
+		...chart('addChart.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'CT_GraphicalObjectFrameLocking has no noChangeArrowheads attribute, so a chart frame cannot carry it; ObjectLockProps is shared with shapes, where it applies',
+		},
+	},
+	chart('addChart.objectLock.noChangeAspect', { objectLock: { noChangeAspect: true } }),
+	{
+		...chart('addChart.objectLock.noChangeShapeType', { objectLock: { noChangeShapeType: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'CT_GraphicalObjectFrameLocking has no noChangeShapeType attribute, so a chart frame cannot carry it; ObjectLockProps is shared with shapes, where it applies',
+		},
+	},
+	{
+		...chart('addChart.objectLock.noCrop', { objectLock: { noCrop: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'CT_GraphicalObjectFrameLocking has no noCrop attribute, so a chart frame cannot carry it; ObjectLockProps is shared with shapes, where it applies',
+		},
+	},
+	chart('addChart.objectLock.noDrilldown', { objectLock: { noDrilldown: true } }),
+	{
+		...chart('addChart.objectLock.noEditPoints', { objectLock: { noEditPoints: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'CT_GraphicalObjectFrameLocking has no noEditPoints attribute, so a chart frame cannot carry it; ObjectLockProps is shared with shapes, where it applies',
+		},
+	},
+	chart('addChart.objectLock.noGrp', { objectLock: { noGrp: true } }),
+	chart('addChart.objectLock.noMove', { objectLock: { noMove: true } }),
+	chart('addChart.objectLock.noResize', { objectLock: { noResize: true } }),
+	{
+		...chart('addChart.objectLock.noRot', { objectLock: { noRot: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'CT_GraphicalObjectFrameLocking has no noRot attribute, so a chart frame cannot carry it; ObjectLockProps is shared with shapes, where it applies',
+		},
+	},
+	chart('addChart.objectLock.noSelect', { objectLock: { noSelect: true } }),
+	{
+		...chart('addChart.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'CT_GraphicalObjectFrameLocking has no noTextEdit attribute, so a chart frame cannot carry it; ObjectLockProps is shared with shapes, where it applies',
+		},
+	},
+	{
+		...chartOn('addChart.align', 'bar', { showTitle: true, title: 'Probe title' }, { align: 'right' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.bold', 'bar', { showTitle: true, title: 'Probe title' }, { bold: true }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.breakLine', 'bar', { showTitle: true, title: 'Probe title' }, { breakLine: true }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.caps', 'bar', { showTitle: true, title: 'Probe title' }, { caps: 'all' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.color', 'bar', { showTitle: true, title: 'Probe title' }, { color: '9B1B30' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.fontFace', 'bar', { showTitle: true, title: 'Probe title' }, { fontFace: 'Georgia' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.fontFaceEA', 'bar', { showTitle: true, title: 'Probe title' }, { fontFaceEA: 'MS Mincho' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.fontSize', 'bar', { showTitle: true, title: 'Probe title' }, { fontSize: 30 }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.highlight', 'bar', { showTitle: true, title: 'Probe title' }, { highlight: 'F0C808' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.italic', 'bar', { showTitle: true, title: 'Probe title' }, { italic: true }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.paraIndent', 'bar', { showTitle: true, title: 'Probe title' }, { paraIndent: 12 }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.paraMarginLeft', 'bar', { showTitle: true, title: 'Probe title' }, { paraMarginLeft: 18 }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.softBreakBefore', 'bar', { showTitle: true, title: 'Probe title' }, { softBreakBefore: true }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.textDirection', 'bar', { showTitle: true, title: 'Probe title' }, { textDirection: 'vert' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.textWarp', 'bar', { showTitle: true, title: 'Probe title' }, { textWarp: 'textArchUp' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.transparency', 'bar', { showTitle: true, title: 'Probe title' }, { transparency: 40 }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.valign', 'bar', { showTitle: true, title: 'Probe title' }, { valign: 'bottom' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.bullet', 'bar', { showTitle: true, title: 'Probe title' }, { bullet: true }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.bullet.characterCode',
+			'bar',
+			{ showTitle: true, title: 'Probe title', bullet: true },
+			{ bullet: { characterCode: '25BA' } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.bullet.color',
+			'bar',
+			{ showTitle: true, title: 'Probe title', bullet: true },
+			{ bullet: { color: '9B1B30' } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.bullet.fontFace',
+			'bar',
+			{ showTitle: true, title: 'Probe title', bullet: true },
+			{ bullet: { fontFace: 'Wingdings' } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.bullet.indent',
+			'bar',
+			{ showTitle: true, title: 'Probe title', bullet: true },
+			{ bullet: { indent: 10 } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.bullet.size',
+			'bar',
+			{ showTitle: true, title: 'Probe title', bullet: true },
+			{ bullet: { size: 80 } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.bullet.image.data',
+			'bar',
+			{ showTitle: true, title: 'Probe title', bullet: true },
+			{ bullet: { image: { data: PNG } } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.bullet.type:number',
+			'bar',
+			{ showTitle: true, title: 'Probe title' },
+			{ bullet: { type: 'number' } },
+			['addChart.bullet.type']
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.bullet.numberStartAt',
+			'bar',
+			{ showTitle: true, title: 'Probe title', bullet: { type: 'number' } },
+			{ bullet: { type: 'number', numberStartAt: 5 } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.bullet.numberType',
+			'bar',
+			{ showTitle: true, title: 'Probe title', bullet: { type: 'number' } },
+			{ bullet: { type: 'number', numberType: 'romanLcParenR' } }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.underline',
+			'bar',
+			{ showTitle: true, title: 'Probe title' },
+			{ underline: { style: 'dbl', color: '9B1B30' } },
+			['addChart.underline.style', 'addChart.underline.color']
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.tabStops',
+			'bar',
+			{ showTitle: true, title: 'Probe title' },
+			{ tabStops: [{ position: 1, alignment: 'r' }] },
+			['addChart.tabStops.position', 'addChart.tabStops.alignment']
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	chartOn(
+		'addChart.chartArea.fill.gradient.center',
+		'bar',
+		{
+			chartArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'radial',
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+		},
+		{
+			chartArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'radial',
+						center: { x: 20, y: 80 },
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+		},
+		['addChart.chartArea.fill.gradient.center.x', 'addChart.chartArea.fill.gradient.center.y']
+	),
+	chart('addChart.chartArea.fill.image.data', { chartArea: { fill: { type: 'image', image: { data: PNG } } } }),
+	chartOn(
+		'addChart.chartArea.fill.image.crop',
+		'bar',
+		{ chartArea: { fill: { type: 'image', image: { data: PNG } } } },
+		{ chartArea: { fill: { type: 'image', image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } } } },
+		[
+			'addChart.chartArea.fill.image.crop.l',
+			'addChart.chartArea.fill.image.crop.t',
+			'addChart.chartArea.fill.image.crop.r',
+			'addChart.chartArea.fill.image.crop.b',
+		]
+	),
+	chartOn(
+		'addChart.plotArea.fill.gradient.center',
+		'bar',
+		{
+			plotArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'radial',
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+		},
+		{
+			plotArea: {
+				fill: {
+					type: 'gradient',
+					gradient: {
+						kind: 'radial',
+						center: { x: 20, y: 80 },
+						stops: [
+							{ position: 0, color: '9B1B30' },
+							{ position: 100, color: '250F6B' },
+						],
+					},
+				},
+			},
+		},
+		['addChart.plotArea.fill.gradient.center.x', 'addChart.plotArea.fill.gradient.center.y']
+	),
+	chart('addChart.plotArea.fill.image.data', { plotArea: { fill: { type: 'image', image: { data: PNG } } } }),
+	chartOn(
+		'addChart.plotArea.fill.image.crop',
+		'bar',
+		{ plotArea: { fill: { type: 'image', image: { data: PNG } } } },
+		{ plotArea: { fill: { type: 'image', image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } } } },
+		[
+			'addChart.plotArea.fill.image.crop.l',
+			'addChart.plotArea.fill.image.crop.t',
+			'addChart.plotArea.fill.image.crop.r',
+			'addChart.plotArea.fill.image.crop.b',
+		]
+	),
+	chartOn(
+		'addChart.catAxes.catAxisHidden',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisHidden: true }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisCrossesAt',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisCrossesAt: 2 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLabelColor',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLabelColor: '9B1B30' }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLabelFontBold',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLabelFontBold: true }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLabelFontFace',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLabelFontFace: 'Georgia' }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLabelFontItalic',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLabelFontItalic: true }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLabelFontSize',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLabelFontSize: 18 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLabelFrequency',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLabelFrequency: 2 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLabelRotate',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLabelRotate: 45 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLineColor',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLineColor: '9B1B30' }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLineShow',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLineShow: false }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLineSize',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLineSize: 3 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLabelPos:high',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLabelPos: 'high' }], valAxes: [{}] },
+		['addChart.catAxes.catAxisLabelPos']
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLineStyle:dash',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLineStyle: 'dash' }], valAxes: [{}] },
+		['addChart.catAxes.catAxisLineStyle']
+	),
+	chartOn(
+		'addChart.catAxes.catAxisMajorTickMark:cross',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisMajorTickMark: 'cross' }], valAxes: [{}] },
+		['addChart.catAxes.catAxisMajorTickMark']
+	),
+	chartOn(
+		'addChart.catAxes.catAxisMinorTickMark:in',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisMinorTickMark: 'in' }], valAxes: [{}] },
+		['addChart.catAxes.catAxisMinorTickMark']
+	),
+	chartOn(
+		'addChart.catAxes.catAxisOrientation:maxMin',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisOrientation: 'maxMin' }], valAxes: [{}] },
+		['addChart.catAxes.catAxisOrientation']
+	),
+	{
+		...chartOn(
+			'addChart.catAxes.catAxisLabelFormatCode',
+			'scatter',
+			{ catAxes: [{}], valAxes: [{}] },
+			{ catAxes: [{ catAxisLabelFormatCode: '0.00' }], valAxes: [{}] }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/190',
+	},
+	chartOn(
+		'addChart.catAxes.catAxisMajorUnit',
+		'scatter',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisMajorUnit: 2 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisMinorUnit',
+		'scatter',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisMinorUnit: 0.5 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisMaxVal',
+		'scatter',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisMaxVal: 10 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisMinVal',
+		'scatter',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisMinVal: 1 }], valAxes: [{}] }
+	),
+	chartWith(
+		'addChart.catAxes.catLabelFormatCode',
+		'bar',
+		DATED,
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catLabelFormatCode: 'yyyy-mm-dd' }], valAxes: [{}] }
+	),
+	chartWith(
+		'addChart.catAxes.catAxisBaseTimeUnit:months',
+		'bar',
+		DATED,
+		{ catAxes: [{ catLabelFormatCode: 'yyyy-mm-dd' }], valAxes: [{}] },
+		{ catAxes: [{ catLabelFormatCode: 'yyyy-mm-dd', catAxisBaseTimeUnit: 'months' }], valAxes: [{}] },
+		['addChart.catAxes.catAxisBaseTimeUnit']
+	),
+	chartWith(
+		'addChart.catAxes.catAxisMajorTimeUnit:months',
+		'bar',
+		DATED,
+		{ catAxes: [{ catLabelFormatCode: 'yyyy-mm-dd' }], valAxes: [{}] },
+		{ catAxes: [{ catLabelFormatCode: 'yyyy-mm-dd', catAxisMajorTimeUnit: 'months' }], valAxes: [{}] },
+		['addChart.catAxes.catAxisMajorTimeUnit']
+	),
+	chartWith(
+		'addChart.catAxes.catAxisMinorTimeUnit:days',
+		'bar',
+		DATED,
+		{ catAxes: [{ catLabelFormatCode: 'yyyy-mm-dd' }], valAxes: [{}] },
+		{ catAxes: [{ catLabelFormatCode: 'yyyy-mm-dd', catAxisMinorTimeUnit: 'days' }], valAxes: [{}] },
+		['addChart.catAxes.catAxisMinorTimeUnit']
+	),
+	chartWith(
+		'addChart.catAxes.catAxisMultiLevelLabels',
+		'bar',
+		LEVELS,
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisMultiLevelLabels: true }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.showCatAxisTitle',
+		'bar',
+		{ catAxes: [{ catAxisTitle: 'Category' }], valAxes: [{}] },
+		{ catAxes: [{ catAxisTitle: 'Category', showCatAxisTitle: true }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisTitle',
+		'bar',
+		{ catAxes: [{ showCatAxisTitle: true }], valAxes: [{}] },
+		{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Category' }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisTitleColor',
+		'bar',
+		{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Category' }], valAxes: [{}] },
+		{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Category', catAxisTitleColor: '9B1B30' }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisTitleFontFace',
+		'bar',
+		{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Category' }], valAxes: [{}] },
+		{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Category', catAxisTitleFontFace: 'Georgia' }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisTitleFontSize',
+		'bar',
+		{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Category' }], valAxes: [{}] },
+		{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Category', catAxisTitleFontSize: 20 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisTitleRotate',
+		'bar',
+		{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Category' }], valAxes: [{}] },
+		{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Category', catAxisTitleRotate: 45 }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLine.cap',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLine: { cap: 'round' } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLine.color',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLine: { color: '9B1B30' } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLine.dashType',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLine: { dashType: 'lgDashDot' } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLine.width',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLine: { width: 3 } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLine.type:dash',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLine: { type: 'dash' } }], valAxes: [{}] },
+		['addChart.catAxes.catAxisLine.type']
+	),
+	chartOn(
+		'addChart.catAxes.catAxisLine.transparency',
+		'bar',
+		{ catAxes: [{ catAxisLine: { color: '9B1B30' } }], valAxes: [{}] },
+		{ catAxes: [{ catAxisLine: { color: '9B1B30', transparency: 40 } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catGridLine.cap',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catGridLine: { cap: 'round' } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catGridLine.color',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catGridLine: { color: '9B1B30' } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catGridLine.dashType',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catGridLine: { dashType: 'lgDashDot' } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catGridLine.width',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catGridLine: { width: 3 } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catGridLine.size',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catGridLine: { size: 3 } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.catAxes.catGridLine.type:dash',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catGridLine: { type: 'dash' } }], valAxes: [{}] },
+		['addChart.catAxes.catGridLine.type']
+	),
+	chartOn(
+		'addChart.catAxes.catGridLine.style:dash',
+		'bar',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catGridLine: { style: 'dash' } }], valAxes: [{}] },
+		['addChart.catAxes.catGridLine.style']
+	),
+	chartOn(
+		'addChart.catAxes.catGridLine.transparency',
+		'bar',
+		{ catAxes: [{ catGridLine: { color: '9B1B30' } }], valAxes: [{}] },
+		{ catAxes: [{ catGridLine: { color: '9B1B30', transparency: 40 } }], valAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisHidden',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisHidden: true }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisCrossesAt',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisCrossesAt: 2 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisDisplayUnitLabel',
+		'bar',
+		{ valAxes: [{ valAxisDisplayUnit: 'thousands' }], catAxes: [{}] },
+		{ valAxes: [{ valAxisDisplayUnit: 'thousands', valAxisDisplayUnitLabel: true }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLabelColor',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLabelColor: '9B1B30' }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLabelFontBold',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLabelFontBold: true }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLabelFontFace',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLabelFontFace: 'Georgia' }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLabelFontItalic',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLabelFontItalic: true }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLabelFontSize',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLabelFontSize: 18 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLabelFormatCode',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLabelFormatCode: '0.00' }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLabelRotate',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLabelRotate: 45 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLineColor',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLineColor: '9B1B30' }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLineShow',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLineShow: false }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLineSize',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLineSize: 3 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLogScaleBase',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLogScaleBase: 10 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisMajorUnit',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisMajorUnit: 2 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisMaxVal',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisMaxVal: 12 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisMinorUnit',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisMinorUnit: 0.5 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisMinVal',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisMinVal: 1 }], catAxes: [{}] }
+	),
+	{
+		...chartOn(
+			'addChart.valAxes.valLabelFormatCode',
+			'bar',
+			{ valAxes: [{}], catAxes: [{}] },
+			{ valAxes: [{ valLabelFormatCode: '0.0%' }], catAxes: [{}] }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/189',
+	},
+	chartOn(
+		'addChart.valAxes.valAxisCrossBetween:midCat',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisCrossBetween: 'midCat' }], catAxes: [{}] },
+		['addChart.valAxes.valAxisCrossBetween']
+	),
+	chartOn(
+		'addChart.valAxes.valAxisDisplayUnit:thousands',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisDisplayUnit: 'thousands' }], catAxes: [{}] },
+		['addChart.valAxes.valAxisDisplayUnit']
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLabelPos:high',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLabelPos: 'high' }], catAxes: [{}] },
+		['addChart.valAxes.valAxisLabelPos']
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLineStyle:dash',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLineStyle: 'dash' }], catAxes: [{}] },
+		['addChart.valAxes.valAxisLineStyle']
+	),
+	chartOn(
+		'addChart.valAxes.valAxisMajorTickMark:cross',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisMajorTickMark: 'cross' }], catAxes: [{}] },
+		['addChart.valAxes.valAxisMajorTickMark']
+	),
+	chartOn(
+		'addChart.valAxes.valAxisMinorTickMark:in',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisMinorTickMark: 'in' }], catAxes: [{}] },
+		['addChart.valAxes.valAxisMinorTickMark']
+	),
+	chartOn(
+		'addChart.valAxes.valAxisOrientation:maxMin',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisOrientation: 'maxMin' }], catAxes: [{}] },
+		['addChart.valAxes.valAxisOrientation']
+	),
+	chartOn(
+		'addChart.valAxes.showValAxisTitle',
+		'bar',
+		{ valAxes: [{ valAxisTitle: 'Value' }], catAxes: [{}] },
+		{ valAxes: [{ valAxisTitle: 'Value', showValAxisTitle: true }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisTitle',
+		'bar',
+		{ valAxes: [{ showValAxisTitle: true }], catAxes: [{}] },
+		{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Value' }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisTitleColor',
+		'bar',
+		{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Value' }], catAxes: [{}] },
+		{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Value', valAxisTitleColor: '9B1B30' }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisTitleFontFace',
+		'bar',
+		{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Value' }], catAxes: [{}] },
+		{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Value', valAxisTitleFontFace: 'Georgia' }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisTitleFontSize',
+		'bar',
+		{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Value' }], catAxes: [{}] },
+		{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Value', valAxisTitleFontSize: 20 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisTitleRotate',
+		'bar',
+		{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Value' }], catAxes: [{}] },
+		{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Value', valAxisTitleRotate: 45 }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLine.cap',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLine: { cap: 'round' } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLine.color',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLine: { color: '9B1B30' } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLine.dashType',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLine: { dashType: 'lgDashDot' } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLine.width',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLine: { width: 3 } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLine.type:dash',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valAxisLine: { type: 'dash' } }], catAxes: [{}] },
+		['addChart.valAxes.valAxisLine.type']
+	),
+	chartOn(
+		'addChart.valAxes.valAxisLine.transparency',
+		'bar',
+		{ valAxes: [{ valAxisLine: { color: '9B1B30' } }], catAxes: [{}] },
+		{ valAxes: [{ valAxisLine: { color: '9B1B30', transparency: 40 } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valGridLine.cap',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valGridLine: { cap: 'round' } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valGridLine.color',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valGridLine: { color: '9B1B30' } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valGridLine.dashType',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valGridLine: { dashType: 'lgDashDot' } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valGridLine.width',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valGridLine: { width: 3 } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valGridLine.size',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valGridLine: { size: 3 } }], catAxes: [{}] }
+	),
+	chartOn(
+		'addChart.valAxes.valGridLine.type:dash',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valGridLine: { type: 'dash' } }], catAxes: [{}] },
+		['addChart.valAxes.valGridLine.type']
+	),
+	chartOn(
+		'addChart.valAxes.valGridLine.style:dash',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valGridLine: { style: 'dash' } }], catAxes: [{}] },
+		['addChart.valAxes.valGridLine.style']
+	),
+	chartOn(
+		'addChart.valAxes.valGridLine.transparency',
+		'bar',
+		{ valAxes: [{ valGridLine: { color: '9B1B30' } }], catAxes: [{}] },
+		{ valAxes: [{ valGridLine: { color: '9B1B30', transparency: 40 } }], catAxes: [{}] }
+	),
+	{
+		...chartCombo('addChart.secondaryCatAxis', { secondaryCatAxis: true }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/191',
+	},
+	{
+		...chartCombo('addChart.catAxes.secondaryCatAxis', { secondaryCatAxis: true }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/191',
+	},
+	{
+		...chartCombo('addChart.secondaryValAxis', { secondaryValAxis: true }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/191',
+	},
+	{
+		...chartCombo('addChart.valAxes.secondaryValAxis', { secondaryValAxis: true }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/191',
+	},
+	{
+		...chartOn(
+			'addChart.catAxes.catAxes',
+			'bar',
+			{ catAxes: [{}], valAxes: [{}] },
+			{ catAxes: [{ catAxes: [{ showCatAxisTitle: true, catAxisTitle: 'Nested' }] }], valAxes: [{}] }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'an element of the axis array is read as one axis; an axis array nested inside it is read by nothing, and is only reachable because the element type is the same props interface the array hangs off',
+		},
+	},
+	{
+		...chartOn(
+			'addChart.valAxes.valAxes',
+			'bar',
+			{ catAxes: [{}], valAxes: [{}] },
+			{ valAxes: [{ valAxes: [{ showValAxisTitle: true, valAxisTitle: 'Nested' }] }], catAxes: [{}] }
+		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'an element of the axis array is read as one axis; an axis array nested inside it is read by nothing, and is only reachable because the element type is the same props interface the array hangs off',
+		},
+	},
+	{
+		id: 'addChart.type:line',
+		covers: ['addChart.type'],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addChart(CHART_SERIES, { ...BOX, h: 4, objectName: 'probe', type: on ? 'line' : 'bar' })
+		},
+	},
+	chartPlaceholder('addChart.placeholder', undefined, 'chart'),
+	chartPlaceholder('addChart.placeholder.name', undefined, { name: 'chart' }),
+	chartPlaceholder('addChart.placeholder.type', undefined, { type: 'chart' }),
+	chartPlaceholder('addChart.placeholder.idx', { type: 'chart' }, { type: 'chart', idx: 13 }),
+	{
+		...chart('addChart.objectLock.noUngrp', { objectLock: { noUngrp: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'CT_GraphicalObjectFrameLocking has no noUngrp attribute, so a chart frame cannot carry it; ObjectLockProps is shared with groups, where it applies',
+		},
+	},
 ]
 
 /**
@@ -2901,6 +5095,12 @@ export const SKIPPED: Record<string, string> = {
 		'the file-path spelling of the background picture source; the picture it writes is exercised by defineSlideMaster.background.data',
 	'defineSlideMaster.background.image.path':
 		'the file-path spelling of the picture source; the picture it writes is exercised by defineSlideMaster.background.image.data',
+	'addChart.bullet.image.path':
+		'the file-path spelling of the bullet picture source; the bullet it would write is exercised by addChart.bullet.image.data',
+	'addChart.chartArea.fill.image.path':
+		'the file-path spelling of the picture source; the picture it writes is exercised by addChart.chartArea.fill.image.data',
+	'addChart.plotArea.fill.image.path':
+		'the file-path spelling of the picture source; the picture it writes is exercised by addChart.plotArea.fill.image.data',
 	'defineSlideMaster.objects.chart.type.data.sizes':
 		'bubble sizes are read only by a bubble chart, and the writer refuses a bubble chart in the multi-type form by design (InvalidOptionError: PowerPoint refuses the deck), so this spelling cannot be authored (ts-pptx#140: https://github.com/shbernal/pptx-ts/issues/140 asks for the type to stop admitting it); the sizes it would write are exercised by defineSlideMaster.objects.chart.data.sizes',
 	'addMedia.data':
