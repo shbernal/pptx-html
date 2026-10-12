@@ -1758,6 +1758,13 @@ export const PROBES: Probe[] = [
 		...notes('addNotes.options.fontFace', { fontFace: 'Georgia' }),
 		issue: 'https://github.com/shbernal/pptx-ts/issues/129',
 	},
+	{
+		...notes('addNotes.options.underline', { underline: { style: 'dbl', color: '9B1B30' } }, [
+			'addNotes.options.underline.style',
+			'addNotes.options.underline.color',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/129',
+	},
 ]
 
 /**
