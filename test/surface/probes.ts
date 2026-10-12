@@ -19,6 +19,7 @@
 
 import type TsPptx from 'pptx-ts'
 import type {
+	ImageProps,
 	SHAPE_NAME,
 	ShapeProps,
 	Slide,
@@ -265,6 +266,27 @@ function slideNumber(
 
 /** A silent eight-sample WAV, for transition sounds. */
 const WAV = 'audio/wav;base64,UklGRiwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQgAAACAgICAgICAgA=='
+
+/** `addImage` of the one-pixel PNG in the probe box, with `base` on both sides and `options` on the probe side. */
+function imageOn(
+	id: string,
+	base: Omit<ImageProps, 'data' | 'path'>,
+	options: Omit<ImageProps, 'data' | 'path'>,
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addImage({ data: PNG, ...BOX, objectName: 'probe', ...base, ...(on ? options : {}) })
+		},
+	}
+}
+
+/** `addImage` of the one-pixel PNG in the probe box; `options` is applied only when the probe is on. */
+function image(id: string, options: Omit<ImageProps, 'data' | 'path'>, covers = [id.split(':')[0] as string]): Probe {
+	return imageOn(id, {}, options, covers)
+}
 
 export const PROBES: Probe[] = [
 	text('addText.bold', { bold: true }),
@@ -1730,6 +1752,321 @@ export const PROBES: Probe[] = [
 	slideNumber('slide.slideNumber.textWarp', { textWarp: 'textArchUp' }),
 	slideNumber('slide.slideNumber.paraIndent', { paraIndent: 12 }),
 	slideNumber('slide.slideNumber.paraMarginLeft', { paraMarginLeft: 18 }),
+	image('addImage.altText', { altText: 'A probe description' }),
+	{
+		...image('addImage.biLevel.threshold', { biLevel: { threshold: 0.3 } }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
+	},
+	{
+		...image('addImage.clrChange', { clrChange: { from: '000000', to: '9B1B30' } }, [
+			'addImage.clrChange.from',
+			'addImage.clrChange.to',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
+	},
+	image('addImage.crop', { crop: { l: 10, t: 20, r: 30, b: 15 } }, [
+		'addImage.crop.l',
+		'addImage.crop.t',
+		'addImage.crop.r',
+		'addImage.crop.b',
+	]),
+	{
+		...image('addImage.duotone', { duotone: { shadow: '250F6B', highlight: 'F0C808' } }, [
+			'addImage.duotone.shadow',
+			'addImage.duotone.highlight',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
+	},
+	image('addImage.flipH', { flipH: true }),
+	image('addImage.flipV', { flipV: true }),
+	{
+		...image('addImage.grayscale', { grayscale: true }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
+	},
+	image('addImage.x', { x: 2 }),
+	image('addImage.y', { y: 2 }),
+	image('addImage.w', { w: 6 }),
+	image('addImage.h', { h: 2 }),
+	image('addImage.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
+		'addImage.hyperlink.url',
+		'addImage.hyperlink.tooltip',
+	]),
+	image('addImage.hyperlink.slide', { hyperlink: { slide: 1 } }),
+	image('addImage.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }, ['addImage.hyperlink.action']),
+	image('addImage.line', { line: { color: '250F6B', width: 2 } }, ['addImage.line.color', 'addImage.line.width']),
+	imageOn(
+		'addImage.line.dashType:dash',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, dashType: 'dash' } },
+		['addImage.line.dashType']
+	),
+	imageOn(
+		'addImage.line.cap:round',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, cap: 'round' } },
+		['addImage.line.cap']
+	),
+	imageOn(
+		'addImage.line.beginArrowType',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, beginArrowType: 'triangle' } }
+	),
+	imageOn(
+		'addImage.line.endArrowType',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, endArrowType: 'oval' } }
+	),
+	imageOn(
+		'addImage.line.transparency',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, transparency: 40 } }
+	),
+	imageOn(
+		'addImage.line.type:none',
+		{ line: { color: '250F6B', width: 2 } },
+		{ line: { color: '250F6B', width: 2, type: 'none' } },
+		['addImage.line.type']
+	),
+	image(
+		'addImage.line.gradient.linear',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B', transparency: 30 },
+					],
+				},
+			},
+		},
+		[
+			'addImage.line.gradient.kind',
+			'addImage.line.gradient.angle',
+			'addImage.line.gradient.stops.color',
+			'addImage.line.gradient.stops.position',
+			'addImage.line.gradient.stops.transparency',
+		]
+	),
+	imageOn(
+		'addImage.line.gradient.scaled',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					scaled: true,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	imageOn(
+		'addImage.line.gradient.rotateWithShape',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	image(
+		'addImage.line.gradient.center',
+		{
+			line: {
+				width: 3,
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		['addImage.line.gradient.center.x', 'addImage.line.gradient.center.y']
+	),
+	image(
+		'addImage.line.pattern',
+		{ line: { width: 3, pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
+		['addImage.line.pattern.preset', 'addImage.line.pattern.fgColor', 'addImage.line.pattern.bgColor']
+	),
+	image('addImage.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
+	image('addImage.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
+	image('addImage.objectLock.noChangeAspect:false', { objectLock: { noChangeAspect: false } }, [
+		'addImage.objectLock.noChangeAspect',
+	]),
+	image('addImage.objectLock.noChangeShapeType', { objectLock: { noChangeShapeType: true } }),
+	image('addImage.objectLock.noCrop', { objectLock: { noCrop: true } }),
+	{
+		...image('addImage.objectLock.noDrilldown', { objectLock: { noDrilldown: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noDrilldown is not supported on a:picLocks and drops it: it is a graphic-frame/group lock, which a picture does not have',
+		},
+	},
+	image('addImage.objectLock.noEditPoints', { objectLock: { noEditPoints: true } }),
+	image('addImage.objectLock.noGrp', { objectLock: { noGrp: true } }),
+	image('addImage.objectLock.noMove', { objectLock: { noMove: true } }),
+	image('addImage.objectLock.noResize', { objectLock: { noResize: true } }),
+	image('addImage.objectLock.noRot', { objectLock: { noRot: true } }),
+	image('addImage.objectLock.noSelect', { objectLock: { noSelect: true } }),
+	{
+		...image('addImage.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noTextEdit is not supported on a:picLocks and drops it: a picture has no text body to lock',
+		},
+	},
+	image('addImage.objectName', { objectName: 'Renamed probe' }),
+	{
+		id: 'addImage.placeholder',
+		covers: ['addImage.placeholder'],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.defineSlideMaster({
+				title: 'PROBE_PICTURE_MASTER',
+				objects: [{ placeholder: { options: { name: 'pic', type: 'pic', x: 1, y: 1, w: 5, h: 1.5 }, text: '' } }],
+			})
+			pptx
+				.addSlide({ masterTitle: 'PROBE_PICTURE_MASTER' })
+				.addImage({ data: PNG, ...BOX, objectName: 'probe', ...(on ? { placeholder: 'pic' } : {}) })
+		},
+
+		issue: 'https://github.com/shbernal/pptx-ts/issues/111',
+	},
+	image('addImage.points', { points: [{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 2.5, y: 1.5 }, { close: true }] }, [
+		'addImage.points.x',
+		'addImage.points.y',
+		'addImage.points.close',
+	]),
+	imageOn(
+		'addImage.points.moveTo',
+		{
+			points: [
+				{ x: 0, y: 0 },
+				{ x: 5, y: 1.5 },
+			],
+		},
+		{
+			points: [
+				{ x: 0, y: 0 },
+				{ x: 5, y: 1.5 },
+				{ x: 0, y: 1.5, moveTo: true },
+				{ x: 5, y: 0 },
+			],
+		}
+	),
+	imageOn(
+		'addImage.points.curve',
+		{
+			points: [
+				{ x: 0, y: 0 },
+				{ x: 5, y: 0 },
+			],
+		},
+		{ points: [{ x: 0, y: 0 }, { x: 5, y: 0 }, { curve: { type: 'arc', hR: 0.75, wR: 2.5, stAng: 0, swAng: 180 } }] },
+		[
+			'addImage.points.curve.type',
+			'addImage.points.curve.hR',
+			'addImage.points.curve.wR',
+			'addImage.points.curve.stAng',
+			'addImage.points.curve.swAng',
+		]
+	),
+	imageOn('addImage.rectRadius', { shape: 'roundRect' }, { rectRadius: 0.3 }),
+	image('addImage.rotate', { rotate: 30 }),
+	image('addImage.rounding', { rounding: true }),
+	image(
+		'addImage.shadow.outer',
+		{ shadow: { type: 'outer', angle: 60, blur: 6, color: '250F6B', offset: 4, transparency: 40 } },
+		[
+			'addImage.shadow.type',
+			'addImage.shadow.angle',
+			'addImage.shadow.blur',
+			'addImage.shadow.color',
+			'addImage.shadow.offset',
+			'addImage.shadow.transparency',
+		]
+	),
+	imageOn(
+		'addImage.shadow.rotateWithShape',
+		{ shadow: { type: 'outer', blur: 6 } },
+		{ shadow: { type: 'outer', blur: 6, rotateWithShape: true } }
+	),
+	image('addImage.shape:hexagon', { shape: 'hexagon' }, ['addImage.shape']),
+	imageOn('addImage.shapeAdjust', { shape: 'roundRect' }, { shapeAdjust: { name: 'adj', value: 0.4 } }, [
+		'addImage.shapeAdjust.name',
+		'addImage.shapeAdjust.value',
+	]),
+	image('addImage.sizing.type:cover', { sizing: { type: 'cover' } }, ['addImage.sizing.type']),
+	{
+		...image('addImage.sizing.contain.wh', { sizing: { type: 'contain', w: 2, h: 1 } }, [
+			'addImage.sizing.w',
+			'addImage.sizing.h',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/110',
+	},
+	image('addImage.sizing.crop.xy', { sizing: { type: 'crop', x: 1, y: 0.5, w: 2, h: 0.5 } }, [
+		'addImage.sizing.x',
+		'addImage.sizing.y',
+	]),
+	{
+		id: 'addImage.svg',
+		covers: ['addImage.svg'],
+		author: (pptx: TsPptx, on: boolean) => {
+			// A flat SVG of the probe box's aspect, against the PNG raster on the off side.
+			const svg =
+				'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="3" viewBox="0 0 10 3"><rect width="10" height="3" fill="#9B1B30"/></svg>'
+			pptx.addSlide().addImage(on ? { svg, ...BOX, objectName: 'probe' } : { data: PNG, ...BOX, objectName: 'probe' })
+		},
+	},
+	{
+		...image('addImage.transparency', { transparency: 40 }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/109',
+	},
 ]
 
 /**
@@ -1738,6 +2075,10 @@ export const PROBES: Probe[] = [
  * source and writes nothing of its own" is.
  */
 export const SKIPPED: Record<string, string> = {
+	'addImage.data':
+		'the picture source itself: every addImage probe writes its picture from it, so it has no option-free side to compare against',
+	'addImage.path':
+		'the file-path spelling of the picture source; the picture it writes is exercised by every addImage probe through data',
 	'addText.data': 'an image source for picture-filled text, exercised by addText.fill.image.*',
 	'addText.path': 'an image source for picture-filled text, exercised by addText.fill.image.*',
 	'addText.fill.image.path':
