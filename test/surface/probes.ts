@@ -665,10 +665,7 @@ export const PROBES: Probe[] = [
 		'addText.hyperlink.tooltip',
 	]),
 	text('addText.hyperlink.slide', { hyperlink: { slide: 1 } }),
-	{
-		...text('addText.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/128',
-	},
+	text('addText.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
 	text('addText.indentLevel', { indentLevel: 2 }),
 	text('addText.isTextBox', { isTextBox: true }),
 	text('addText.lang', { lang: 'fr-FR' }),
@@ -1377,36 +1374,27 @@ export const PROBES: Probe[] = [
 		'addTable.cell.border.color',
 		'addTable.cell.border.width',
 	]),
-	{
-		...cellOn(
-			'addTable.cell.border.cap:round',
-			{ border: { type: 'solid', color: '9B1B30', width: 2 } },
-			{ border: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
-	},
+	cellOn(
+		'addTable.cell.border.cap:round',
+		{ border: { type: 'solid', color: '9B1B30', width: 2 } },
+		{ border: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } }
+	),
 	cellOn(
 		'addTable.cell.border.dashType:dash',
 		{ border: { type: 'solid', color: '9B1B30', width: 2 } },
 		{ border: { type: 'solid', color: '9B1B30', width: 2, dashType: 'dash' } }
 	),
-	{
-		...cellOn(
-			'addTable.cell.border.transparency',
-			{ border: { type: 'solid', color: '9B1B30', width: 2 } },
-			{ border: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
-	},
+	cellOn(
+		'addTable.cell.border.transparency',
+		{ border: { type: 'solid', color: '9B1B30', width: 2 } },
+		{ border: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } }
+	),
 	cellRun('addTable.cell.breakLine', 0, { breakLine: true }),
 	cell('addTable.cell.bullet', { bullet: true }),
 	cellOn('addTable.cell.bullet.characterCode', { bullet: true }, { bullet: { characterCode: '25BA' } }),
 	cellOn('addTable.cell.bullet.color', { bullet: true }, { bullet: { color: '9B1B30' } }),
 	cellOn('addTable.cell.bullet.fontFace', { bullet: true }, { bullet: { fontFace: 'Wingdings' } }),
-	{
-		...cellOn('addTable.cell.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/82',
-	},
+	cellOn('addTable.cell.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
 	cellOn('addTable.cell.bullet.indent', { bullet: true }, { bullet: { indent: 10 } }),
 	cellOn(
 		'addTable.cell.bullet.numberStartAt',
@@ -1446,53 +1434,41 @@ export const PROBES: Probe[] = [
 		'addTable.cell.diagonal.tlToBr.color',
 		'addTable.cell.diagonal.tlToBr.width',
 	]),
-	{
-		...cellOn(
-			'addTable.cell.diagonal.tlToBr.cap:round',
-			{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2 } } },
-			{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
-	},
+	cellOn(
+		'addTable.cell.diagonal.tlToBr.cap:round',
+		{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2 } } },
+		{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } } }
+	),
 	cellOn(
 		'addTable.cell.diagonal.tlToBr.dashType:dash',
 		{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2 } } },
 		{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2, dashType: 'dash' } } }
 	),
-	{
-		...cellOn(
-			'addTable.cell.diagonal.tlToBr.transparency',
-			{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2 } } },
-			{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
-	},
+	cellOn(
+		'addTable.cell.diagonal.tlToBr.transparency',
+		{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2 } } },
+		{ diagonal: { tlToBr: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } } }
+	),
 	cell('addTable.cell.diagonal.blToTr', { diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } }, [
 		'addTable.cell.diagonal.blToTr.type',
 		'addTable.cell.diagonal.blToTr.color',
 		'addTable.cell.diagonal.blToTr.width',
 	]),
-	{
-		...cellOn(
-			'addTable.cell.diagonal.blToTr.cap:round',
-			{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } },
-			{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
-	},
+	cellOn(
+		'addTable.cell.diagonal.blToTr.cap:round',
+		{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } },
+		{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } } }
+	),
 	cellOn(
 		'addTable.cell.diagonal.blToTr.dashType:dash',
 		{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } },
 		{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2, dashType: 'dash' } } }
 	),
-	{
-		...cellOn(
-			'addTable.cell.diagonal.blToTr.transparency',
-			{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } },
-			{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/81',
-	},
+	cellOn(
+		'addTable.cell.diagonal.blToTr.transparency',
+		{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2 } } },
+		{ diagonal: { blToTr: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } } }
+	),
 	cell('addTable.cell.fill.type:solid', { fill: { type: 'solid', color: 'F0C808' } }, [
 		'addTable.cell.fill',
 		'addTable.cell.fill.type',
@@ -1636,10 +1612,7 @@ export const PROBES: Probe[] = [
 		'addTable.cell.hyperlink.tooltip',
 	]),
 	cell('addTable.cell.hyperlink.slide', { hyperlink: { slide: 1 } }),
-	{
-		...cell('addTable.cell.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/128',
-	},
+	cell('addTable.cell.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
 	cell('addTable.cell.indentLevel', { indentLevel: 2 }),
 	cell('addTable.cell.italic', { italic: true }),
 	cell('addTable.cell.lang', { lang: 'fr-FR' }),
@@ -2060,7 +2033,7 @@ export const PROBES: Probe[] = [
 		...master('defineSlideMaster.objects.placeholder.options', {
 			objects: [{ placeholder: { options: { name: 'body', type: 'body', x: 1, y: 3, w: 5, h: 1 } } }],
 		}),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/112',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/165',
 	},
 	master(
 		'defineSlideMaster.objects.placeholder.text',
@@ -2547,8 +2520,6 @@ export const PROBES: Probe[] = [
 				.addSlide({ masterTitle: 'PROBE_PICTURE_MASTER' })
 				.addImage({ data: PNG, ...BOX, objectName: 'probe', ...(on ? { placeholder: 'pic' } : {}) })
 		},
-
-		issue: 'https://github.com/shbernal/pptx-ts/issues/112',
 	},
 	image('addImage.points', { points: [{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 2.5, y: 1.5 }, { close: true }] }, [
 		'addImage.points.x',
@@ -2615,13 +2586,10 @@ export const PROBES: Probe[] = [
 		'addImage.shapeAdjust.value',
 	]),
 	image('addImage.sizing.type:cover', { sizing: { type: 'cover' } }, ['addImage.sizing.type']),
-	{
-		...image('addImage.sizing.contain.wh', { sizing: { type: 'contain', w: 2, h: 1 } }, [
-			'addImage.sizing.w',
-			'addImage.sizing.h',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/110',
-	},
+	image('addImage.sizing.contain.wh', { sizing: { type: 'contain', w: 2, h: 1 } }, [
+		'addImage.sizing.w',
+		'addImage.sizing.h',
+	]),
 	image('addImage.sizing.crop.xy', { sizing: { type: 'crop', x: 1, y: 0.5, w: 2, h: 0.5 } }, [
 		'addImage.sizing.x',
 		'addImage.sizing.y',

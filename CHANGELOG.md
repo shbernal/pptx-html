@@ -29,7 +29,10 @@ model is expected to move.
   slide numbers now survive `readModelToIr`. A later prerelease adds connector
   routes and shape bindings, a group's own rotation and flips, a picture's recolour
   and transparency, a background picture's crop, a paragraph's end language,
-  `slide.color`, and hyperlinked table cells.
+  `slide.color`, and hyperlinked table cells. A third adds table-cell border and
+  diagonal caps and transparency, table-cell picture bullets, `hyperlink.action`
+  runs without a forced colour, `sizing: 'contain'` pictures, and a picture's or
+  empty placeholder's binding to its layout placeholder.
 
 ### Fixed
 
