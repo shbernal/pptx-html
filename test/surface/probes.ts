@@ -1294,7 +1294,6 @@ export const PROBES: Probe[] = [
 			'addShape.guides.name',
 			'addShape.guides.formula',
 		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/78',
 	},
 	{
 		...shapeOn(
@@ -1304,7 +1303,6 @@ export const PROBES: Probe[] = [
 			{ connectionSites: [{ ang: 90, x: 2.5, y: 1.5 }] },
 			['addShape.connectionSites.ang', 'addShape.connectionSites.x', 'addShape.connectionSites.y']
 		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/78',
 	},
 	{
 		...shapeOn(
@@ -1329,7 +1327,6 @@ export const PROBES: Probe[] = [
 				'addShape.adjustHandles.maxY',
 			]
 		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/78',
 	},
 	{
 		...shapeOn(
@@ -1352,7 +1349,6 @@ export const PROBES: Probe[] = [
 				'addShape.adjustHandles.maxAng',
 			]
 		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/78',
 	},
 	shapeOn('addShape.rectRadius', 'roundRect', {}, { rectRadius: 0.3 }),
 	shape(
@@ -1946,11 +1942,9 @@ export const PROBES: Probe[] = [
 	]),
 	{
 		...notes('addNotes.options.hyperlink.slide', { hyperlink: { slide: 1 } }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/168',
 	},
 	{
 		...notes('addNotes.options.hyperlink.action', { hyperlink: { action: 'nextslide' } }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/168',
 	},
 	master('defineSlideMaster.background.color', { background: { color: 'F0C808' } }, {}, [
 		'defineSlideMaster.background',
@@ -2074,7 +2068,7 @@ export const PROBES: Probe[] = [
 		...master('defineSlideMaster.objects.placeholder.options', {
 			objects: [{ placeholder: { options: { name: 'body', type: 'body', x: 1, y: 3, w: 5, h: 1 } } }],
 		}),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/165',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/183',
 	},
 	master(
 		'defineSlideMaster.objects.placeholder.text',

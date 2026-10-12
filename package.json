@@ -92,6 +92,6 @@
 		"vue": "^3.5.43"
 	},
 	"dependencies": {
-		"pptx-ts": "^4.1.1-next.49.g3d62612"
+		"pptx-ts": "^4.1.1-next.69.g21e74d7"
 	}
 }
