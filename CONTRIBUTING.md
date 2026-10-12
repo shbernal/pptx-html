@@ -270,7 +270,7 @@ that fixed it. So `test/oracle/script-lane.ts` and
 comment turns into once the fix lands, which is a sentence about why the deleted
 stopgap existed rather than a deletion nobody can date.
 
-`ts-pptx-upstream`, the skill the package ships, is the normative reference for
+`pptx-ts-upstream`, the skill the package ships, is the normative reference for
 writing the report itself. See [AGENTS.md](./AGENTS.md#upstream) for what belongs
 upstream and what stays here.
 

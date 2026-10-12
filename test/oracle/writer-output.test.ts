@@ -27,7 +27,7 @@
  * deck, which made its own output depend on whether something threw.
  *
  * This file is what replaces it. If a future writer starts producing any of these
- * again, the answer is an upstream issue (see `.agents/skills/ts-pptx-upstream/`),
+ * again, the answer is an upstream issue (see `.agents/skills/pptx-ts-upstream/`),
  * not a second repair layer — but it should be a failing test first.
  */
 

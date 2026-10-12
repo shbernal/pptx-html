@@ -75,7 +75,7 @@ explains why the probe judges XML rather than `DeckIr`.
 
 Every `upstream` status, and every `crash` that the error class attributes to
 `pptx-ts`, becomes an issue on **`shbernal/pptx-ts`**. Do not ask first: the
-maintainer pre-authorized it. Follow the `ts-pptx-upstream` skill for the form,
+maintainer pre-authorized it. Follow the `pptx-ts-upstream` skill for the form,
 the reduction and the duplicate search, but pass `--repo shbernal/pptx-ts` (the
 skill's examples use the repo's old name). Write the body under `.tmp/`. One
 issue per distinct cause: if ten options are lost by the same missing reader,

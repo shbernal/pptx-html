@@ -2255,12 +2255,9 @@ export const PROBES: Probe[] = [
 		objects: [{ text: { text: 'Master text', options: { x: 1, y: 3, w: 5, h: 1 } } }],
 	}),
 	master('defineSlideMaster.objects.image', { objects: [{ image: { x: 1, y: 3, w: 1, h: 1, data: PNG } }] }),
-	{
-		...master('defineSlideMaster.objects.placeholder.options', {
-			objects: [{ placeholder: { options: { name: 'body', type: 'body', x: 1, y: 3, w: 5, h: 1 } } }],
-		}),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/183',
-	},
+	master('defineSlideMaster.objects.placeholder.options', {
+		objects: [{ placeholder: { options: { name: 'body', type: 'body', x: 1, y: 3, w: 5, h: 1 } } }],
+	}),
 	master(
 		'defineSlideMaster.objects.placeholder.text',
 		{
@@ -2906,14 +2903,14 @@ export const PROBES: Probe[] = [
 	theme('theme.colorScheme.folHlink', { colorScheme: { folHlink: '7A3E9D' } }),
 	media('addMedia.altText', { altText: 'A probe description' }),
 	media('addMedia.cover', { cover: PNG }),
-	{ ...media('addMedia.extn', { extn: 'mp3' }), issue: 'https://github.com/shbernal/pptx-ts/issues/202' },
+	media('addMedia.extn', { extn: 'mp3' }),
 	media('addMedia.h', { h: 2 }),
 	{
 		...media('addMedia.link', { link: 'https://example.com/probe.mp4' }, { type: 'video' }),
 		unwritten: 'https://github.com/shbernal/pptx-ts/issues/203',
 	},
-	{ ...media('addMedia.loop', { loop: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/202' },
-	{ ...media('addMedia.loopCount', { loopCount: 3 }), issue: 'https://github.com/shbernal/pptx-ts/issues/202' },
+	media('addMedia.loop', { loop: true }),
+	media('addMedia.loopCount', { loopCount: 3 }),
 	media('addMedia.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
 	media('addMedia.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
 	media('addMedia.objectLock.noChangeAspect:false', { objectLock: { noChangeAspect: false } }, {}, [
@@ -2944,47 +2941,32 @@ export const PROBES: Probe[] = [
 		},
 	},
 	media('addMedia.objectName', { objectName: 'Renamed probe' }),
-	{
-		...media('addMedia.type:video', { type: 'video' }, {}, ['addMedia.type']),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/202',
-	},
+	media('addMedia.type:video', { type: 'video' }, {}, ['addMedia.type']),
 	media('addMedia.w', { w: 2 }),
 	media('addMedia.x', { x: 2 }),
 	media('addMedia.y', { y: 2 }),
 	{
 		...comment('addComment', {}, ['addComment.author', 'addComment.text']),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/207',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/221',
 	},
 	comment('addComment.initials', { initials: 'XQ' }),
-	{ ...comment('addComment.x', { x: 3 }), issue: 'https://github.com/shbernal/pptx-ts/issues/207' },
-	{ ...comment('addComment.y', { y: 4 }), issue: 'https://github.com/shbernal/pptx-ts/issues/207' },
+	{ ...comment('addComment.x', { x: 3 }), issue: 'https://github.com/shbernal/pptx-ts/issues/221' },
+	{ ...comment('addComment.y', { y: 4 }), issue: 'https://github.com/shbernal/pptx-ts/issues/221' },
 	{
 		...comment('addComment.date', { date: '2026-01-02T03:04:05.000Z' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/207',
+		issue: 'https://github.com/shbernal/pptx-ts/issues/221',
 	},
-	{
-		...animation('addAnimation.preset', { preset: 'fadeIn', objectName: 'probe' }, undefined, [
-			'addAnimation.preset',
-			'addAnimation.objectName',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/209',
-	},
-	{
-		...animation('addAnimation.preset:spin', { preset: 'spin' }, { preset: 'fadeIn', objectName: 'probe' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/209',
-	},
-	{
-		...animation(
-			'addAnimation.trigger:afterPrevious',
-			{ trigger: 'afterPrevious' },
-			{ preset: 'fadeIn', objectName: 'probe' }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/209',
-	},
-	{
-		...animation('addAnimation.durationMs', { durationMs: 1700 }, { preset: 'fadeIn', objectName: 'probe' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/209',
-	},
+	animation('addAnimation.preset', { preset: 'fadeIn', objectName: 'probe' }, undefined, [
+		'addAnimation.preset',
+		'addAnimation.objectName',
+	]),
+	animation('addAnimation.preset:spin', { preset: 'spin' }, { preset: 'fadeIn', objectName: 'probe' }),
+	animation(
+		'addAnimation.trigger:afterPrevious',
+		{ trigger: 'afterPrevious' },
+		{ preset: 'fadeIn', objectName: 'probe' }
+	),
+	animation('addAnimation.durationMs', { durationMs: 1700 }, { preset: 'fadeIn', objectName: 'probe' }),
 	chart('addChart.altText', { altText: 'A probe description' }),
 	chart('addChart.chartColors', { chartColors: ['9B1B30', '250F6B'] }),
 	chart('addChart.chartColorsOpacity', { chartColorsOpacity: 40 }),
@@ -3000,10 +2982,7 @@ export const PROBES: Probe[] = [
 		{ dataBorder: { color: '9B1B30', transparency: 40 } }
 	),
 	chartOn('addChart.displayBlanksAs:zero', 'line', {}, { displayBlanksAs: 'zero' }, ['addChart.displayBlanksAs']),
-	{
-		...chartWith('addChart.invertedColors', 'bar', NEGATIVE, {}, { invertedColors: ['9B1B30', '250F6B', '0B6E4F'] }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/184',
-	},
+	chartWith('addChart.invertedColors', 'bar', NEGATIVE, {}, { invertedColors: ['9B1B30', '250F6B', '0B6E4F'] }),
 	chart('addChart.lang', { lang: 'fr-FR' }),
 	chart('addChart.layout', { layout: { x: 0.1, y: 0.15, w: 0.7, h: 0.6 } }, [
 		'addChart.layout.x',
@@ -3021,15 +3000,12 @@ export const PROBES: Probe[] = [
 		{ shadow: { type: 'outer', color: '9B1B30' } }
 	),
 	chartOn('addChart.shadow.offset', 'bar', { shadow: { type: 'outer' } }, { shadow: { type: 'outer', offset: 5 } }),
-	{
-		...chartOn(
-			'addChart.shadow.rotateWithShape',
-			'bar',
-			{ shadow: { type: 'outer' } },
-			{ shadow: { type: 'outer', rotateWithShape: false } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/185',
-	},
+	chartOn(
+		'addChart.shadow.rotateWithShape',
+		'bar',
+		{ shadow: { type: 'outer' } },
+		{ shadow: { type: 'outer', rotateWithShape: false } }
+	),
 	chartOn(
 		'addChart.shadow.transparency',
 		'bar',
@@ -3380,12 +3356,9 @@ export const PROBES: Probe[] = [
 		{ chartArea: { fill: { color: 'F0C808' } } },
 		{ chartArea: { fill: { color: 'F0C808', transparency: 40 } } }
 	),
-	{
-		...chart('addChart.chartArea.fill.type:inherit', { chartArea: { fill: { type: 'inherit' } } }, [
-			'addChart.chartArea.fill.type',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/186',
-	},
+	chart('addChart.chartArea.fill.type:inherit', { chartArea: { fill: { type: 'inherit' } } }, [
+		'addChart.chartArea.fill.type',
+	]),
 	chart(
 		'addChart.chartArea.fill.gradient',
 		{
@@ -3513,12 +3486,9 @@ export const PROBES: Probe[] = [
 		{ plotArea: { fill: { color: 'F0C808' } } },
 		{ plotArea: { fill: { color: 'F0C808', transparency: 40 } } }
 	),
-	{
-		...chart('addChart.plotArea.fill.type:inherit', { plotArea: { fill: { type: 'inherit' } } }, [
-			'addChart.plotArea.fill.type',
-		]),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/186',
-	},
+	chart('addChart.plotArea.fill.type:inherit', { plotArea: { fill: { type: 'inherit' } } }, [
+		'addChart.plotArea.fill.type',
+	]),
 	chart(
 		'addChart.plotArea.fill.gradient',
 		{
@@ -3700,10 +3670,7 @@ export const PROBES: Probe[] = [
 	]),
 	chart('addChart.showDataTable', { showDataTable: true }),
 	chartOn('addChart.dataTableFontSize', 'bar', { showDataTable: true }, { dataTableFontSize: 16 }),
-	{
-		...chartOn('addChart.dataTableFormatCode', 'bar', { showDataTable: true }, { dataTableFormatCode: '0.00' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/189',
-	},
+	chartOn('addChart.dataTableFormatCode', 'bar', { showDataTable: true }, { dataTableFormatCode: '0.00' }),
 	chartOn('addChart.showDataTableHorzBorder', 'bar', { showDataTable: true }, { showDataTableHorzBorder: true }),
 	chartOn('addChart.showDataTableKeys', 'bar', { showDataTable: true }, { showDataTableKeys: true }),
 	chartOn('addChart.showDataTableOutline', 'bar', { showDataTable: true }, { showDataTableOutline: true }),
@@ -3726,28 +3693,16 @@ export const PROBES: Probe[] = [
 	chartOn('addChart.titleItalic', 'bar', { showTitle: true, title: 'Probe title' }, { titleItalic: true }),
 	chartOn('addChart.titleRotate', 'bar', { showTitle: true, title: 'Probe title' }, { titleRotate: 20 }),
 	chartOn('addChart.titleUnderline', 'bar', { showTitle: true, title: 'Probe title' }, { titleUnderline: true }),
-	{
-		...chartOn(
-			'addChart.titlePos',
-			'bar',
-			{ showTitle: true, title: 'Probe title' },
-			{ titlePos: { x: 0.5, y: 0.3 } },
-			['addChart.titlePos.x', 'addChart.titlePos.y']
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/187',
-	},
+	chartOn('addChart.titlePos', 'bar', { showTitle: true, title: 'Probe title' }, { titlePos: { x: 0.5, y: 0.3 } }, [
+		'addChart.titlePos.x',
+		'addChart.titlePos.y',
+	]),
 	chartOn('addChart.lineCap', 'line', {}, { lineCap: 'round' }),
 	chartOn('addChart.lineDash:dash', 'line', {}, { lineDash: 'dash' }, ['addChart.lineDash']),
 	chartOn('addChart.lineDashValues', 'line', {}, { lineDashValues: ['lgDash', 'sysDot'] }),
 	chartOn('addChart.lineDataSymbol:diamond', 'line', {}, { lineDataSymbol: 'diamond' }, ['addChart.lineDataSymbol']),
-	{
-		...chartOn('addChart.lineDataSymbolLineColor', 'line', {}, { lineDataSymbolLineColor: '9B1B30' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/188',
-	},
-	{
-		...chartOn('addChart.lineDataSymbolLineSize', 'line', {}, { lineDataSymbolLineSize: 3 }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/188',
-	},
+	chartOn('addChart.lineDataSymbolLineColor', 'line', {}, { lineDataSymbolLineColor: '9B1B30' }),
+	chartOn('addChart.lineDataSymbolLineSize', 'line', {}, { lineDataSymbolLineSize: 3 }),
 	chartOn('addChart.lineDataSymbolSize', 'line', {}, { lineDataSymbolSize: 12 }),
 	chartOn('addChart.lineSize', 'line', {}, { lineSize: 5 }),
 	chartOn('addChart.lineSmooth', 'line', {}, { lineSmooth: true }),
@@ -3770,10 +3725,7 @@ export const PROBES: Probe[] = [
 	chart('addChart.catAxisMajorTickMark:cross', { catAxisMajorTickMark: 'cross' }, ['addChart.catAxisMajorTickMark']),
 	chart('addChart.catAxisMinorTickMark:in', { catAxisMinorTickMark: 'in' }, ['addChart.catAxisMinorTickMark']),
 	chart('addChart.catAxisOrientation:maxMin', { catAxisOrientation: 'maxMin' }, ['addChart.catAxisOrientation']),
-	{
-		...chartOn('addChart.catAxisLabelFormatCode', 'scatter', {}, { catAxisLabelFormatCode: '0.00' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/190',
-	},
+	chartOn('addChart.catAxisLabelFormatCode', 'scatter', {}, { catAxisLabelFormatCode: '0.00' }),
 	chartOn('addChart.catAxisMajorUnit', 'scatter', {}, { catAxisMajorUnit: 2 }),
 	chartOn('addChart.catAxisMinorUnit', 'scatter', {}, { catAxisMinorUnit: 0.5 }),
 	chartOn('addChart.catAxisMaxVal', 'scatter', {}, { catAxisMaxVal: 10 }),
@@ -3850,10 +3802,7 @@ export const PROBES: Probe[] = [
 	chart('addChart.valAxisMaxVal', { valAxisMaxVal: 12 }),
 	chart('addChart.valAxisMinorUnit', { valAxisMinorUnit: 0.5 }),
 	chart('addChart.valAxisMinVal', { valAxisMinVal: 1 }),
-	{
-		...chart('addChart.valLabelFormatCode', { valLabelFormatCode: '0.0%' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/189',
-	},
+	chart('addChart.valLabelFormatCode', { valLabelFormatCode: '0.0%' }),
 	chart('addChart.valAxisCrossBetween:midCat', { valAxisCrossBetween: 'midCat' }, ['addChart.valAxisCrossBetween']),
 	chart('addChart.valAxisDisplayUnit:thousands', { valAxisDisplayUnit: 'thousands' }, ['addChart.valAxisDisplayUnit']),
 	chart('addChart.valAxisLabelPos:high', { valAxisLabelPos: 'high' }, ['addChart.valAxisLabelPos']),
@@ -4515,15 +4464,12 @@ export const PROBES: Probe[] = [
 		{ catAxes: [{ catAxisOrientation: 'maxMin' }], valAxes: [{}] },
 		['addChart.catAxes.catAxisOrientation']
 	),
-	{
-		...chartOn(
-			'addChart.catAxes.catAxisLabelFormatCode',
-			'scatter',
-			{ catAxes: [{}], valAxes: [{}] },
-			{ catAxes: [{ catAxisLabelFormatCode: '0.00' }], valAxes: [{}] }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/190',
-	},
+	chartOn(
+		'addChart.catAxes.catAxisLabelFormatCode',
+		'scatter',
+		{ catAxes: [{}], valAxes: [{}] },
+		{ catAxes: [{ catAxisLabelFormatCode: '0.00' }], valAxes: [{}] }
+	),
 	chartOn(
 		'addChart.catAxes.catAxisMajorUnit',
 		'scatter',
@@ -4817,15 +4763,12 @@ export const PROBES: Probe[] = [
 		{ valAxes: [{}], catAxes: [{}] },
 		{ valAxes: [{ valAxisMinVal: 1 }], catAxes: [{}] }
 	),
-	{
-		...chartOn(
-			'addChart.valAxes.valLabelFormatCode',
-			'bar',
-			{ valAxes: [{}], catAxes: [{}] },
-			{ valAxes: [{ valLabelFormatCode: '0.0%' }], catAxes: [{}] }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/189',
-	},
+	chartOn(
+		'addChart.valAxes.valLabelFormatCode',
+		'bar',
+		{ valAxes: [{}], catAxes: [{}] },
+		{ valAxes: [{ valLabelFormatCode: '0.0%' }], catAxes: [{}] }
+	),
 	chartOn(
 		'addChart.valAxes.valAxisCrossBetween:midCat',
 		'bar',
@@ -4998,22 +4941,10 @@ export const PROBES: Probe[] = [
 		{ valAxes: [{ valGridLine: { color: '9B1B30' } }], catAxes: [{}] },
 		{ valAxes: [{ valGridLine: { color: '9B1B30', transparency: 40 } }], catAxes: [{}] }
 	),
-	{
-		...chartCombo('addChart.secondaryCatAxis', { secondaryCatAxis: true }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/191',
-	},
-	{
-		...chartCombo('addChart.catAxes.secondaryCatAxis', { secondaryCatAxis: true }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/191',
-	},
-	{
-		...chartCombo('addChart.secondaryValAxis', { secondaryValAxis: true }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/191',
-	},
-	{
-		...chartCombo('addChart.valAxes.secondaryValAxis', { secondaryValAxis: true }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/191',
-	},
+	chartCombo('addChart.secondaryCatAxis', { secondaryCatAxis: true }),
+	chartCombo('addChart.catAxes.secondaryCatAxis', { secondaryCatAxis: true }),
+	chartCombo('addChart.secondaryValAxis', { secondaryValAxis: true }),
+	chartCombo('addChart.valAxes.secondaryValAxis', { secondaryValAxis: true }),
 	{
 		...chartOn(
 			'addChart.catAxes.catAxes',
