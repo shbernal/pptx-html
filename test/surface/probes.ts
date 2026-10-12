@@ -22,9 +22,12 @@ import type {
 	ConnectorProps,
 	GroupProps,
 	ImageProps,
+	MasterTextStyleLevel,
+	OptsChartData,
 	SHAPE_NAME,
 	ShapeProps,
 	Slide,
+	SlideMasterProps,
 	SlideNumberProps,
 	TableCellProps,
 	TableProps,
@@ -265,6 +268,128 @@ function slideNumber(
 		},
 		covers
 	)
+}
+
+/** Master options a probe sets; `title` is fixed by the helper so the slide can name it. */
+type MasterOptions = Omit<SlideMasterProps, 'title'>
+
+/** A master the probe slide uses, with `base` on both sides and `options` merged in on the probe side. */
+function master(
+	id: string,
+	options: MasterOptions,
+	base: MasterOptions = {},
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.defineSlideMaster({ title: 'PROBE', ...base, ...(on ? options : {}) })
+			pptx.addSlide({ masterTitle: 'PROBE' }).addText('Probe text', { ...BOX, objectName: 'probe' })
+		},
+	}
+}
+
+/** A linear gradient both sides of a gradient-knob probe share. */
+const LINEAR = {
+	kind: 'linear' as const,
+	angle: 45,
+	stops: [
+		{ position: 0, color: 'F0C808' },
+		{ position: 100, color: '250F6B' },
+	],
+}
+
+/** The chart box and series a master chart probe places, so only the series option differs. */
+const CHART_BOX = { x: 1, y: 3, w: 5, h: 3 }
+const SERIES = { name: 'Sales', labels: ['A', 'B', 'C'], values: [3, 5, 4] }
+
+/** A master bar chart whose one series takes `series` on the probe side. */
+function masterChart(id: string, series: Partial<OptsChartData>, covers = [id.split(':')[0] as string]): Probe {
+	return master(
+		id,
+		{ objects: [{ chart: { type: 'bar', data: [{ ...SERIES, ...series }], options: CHART_BOX } }] },
+		{ objects: [{ chart: { type: 'bar', data: [SERIES], options: CHART_BOX } }] },
+		covers
+	)
+}
+
+/** The two series of a bubble chart: x values, then y values that take the sizes. */
+const BUBBLE_X = { name: 'X', values: [1, 2, 3] }
+const BUBBLE_Y = { name: 'Y', values: [4, 6, 5] }
+
+/** A bar-and-line combo on two axis pairs, the master chart's multi-type form. */
+const COMBO = [
+	{ type: 'bar' as const, data: [SERIES], options: {} },
+	{
+		type: 'line' as const,
+		data: [{ ...SERIES, name: 'Trend' }],
+		options: { secondaryValAxis: true, secondaryCatAxis: true },
+	},
+]
+const COMBO_BOX = { ...CHART_BOX, valAxes: [{}, {}], catAxes: [{}, {}] }
+
+/** A master slide number in a fixed box, with `base` on both sides and `options` merged in on the probe side. */
+function masterNumber(
+	id: string,
+	options: SlideNumberProps,
+	base: SlideNumberProps = {},
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return master(
+		id,
+		{ slideNumber: { ...NUMBER_BOX, ...base, ...options } },
+		{ slideNumber: { ...NUMBER_BOX, ...base } },
+		covers
+	)
+}
+
+/**
+ * Master text styles for `group` with `base` on both sides and `options` merged in on the probe side.
+ *
+ * `title` and `body` style only the text of a placeholder of that type, so the master
+ * declares one and the slide fills it: without it the style is written and nothing on
+ * the slide inherits it, which round-trips and is never rendered. `other` has no slide
+ * text to reach (a slide text box takes the presentation's default style, not the
+ * master's), so its probe keeps the plain text box and is not rendered by design.
+ *
+ * The slide text states `'inherit'` for bullet, margin and indent, or the writer's own
+ * `a:buNone` and zero insets would override the master's. Even so, the paragraph-level
+ * styles (align, margins, bullets) are not rendered yet: the read model resolves a run's
+ * inherited properties and none of a paragraph's (ts-pptx#143:
+ * https://github.com/shbernal/pptx-ts/issues/143). They render, and the ledger moves,
+ * when `Paragraph` gains resolved accessors and `src/import/text.ts` reads them.
+ */
+function masterStyle(
+	id: string,
+	group: 'title' | 'body' | 'other',
+	options: MasterTextStyleLevel,
+	base: MasterTextStyleLevel = {},
+	covers = [id.split(':')[0] as string]
+): Probe {
+	const styles = (level: MasterTextStyleLevel) => ({
+		textStyles: group === 'title' ? { title: level } : { [group]: [level] },
+	})
+	if (group === 'other') return master(id, styles({ ...base, ...options }), styles(base), covers)
+	const placeholder = { name: group, type: group, ...BOX }
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.defineSlideMaster({
+				title: 'PROBE',
+				objects: [{ placeholder: { options: placeholder, text: '' } }],
+				...styles(on ? { ...base, ...options } : base),
+			})
+			pptx.addSlide({ masterTitle: 'PROBE' }).addText('Probe text', {
+				placeholder: group,
+				objectName: 'probe',
+				bullet: 'inherit',
+				paraMarginLeft: 'inherit',
+				paraIndent: 'inherit',
+			})
+		},
+	}
 }
 
 /** A silent eight-sample WAV, for transition sounds. */
@@ -1813,6 +1938,405 @@ export const PROBES: Probe[] = [
 	slideNumber('slide.slideNumber.textWarp', { textWarp: 'textArchUp' }),
 	slideNumber('slide.slideNumber.paraIndent', { paraIndent: 12 }),
 	slideNumber('slide.slideNumber.paraMarginLeft', { paraMarginLeft: 18 }),
+	master('defineSlideMaster.background.color', { background: { color: 'F0C808' } }, {}, [
+		'defineSlideMaster.background',
+		'defineSlideMaster.background.color',
+	]),
+	master(
+		'defineSlideMaster.background.transparency',
+		{ background: { color: 'F0C808', transparency: 40 } },
+		{ background: { color: 'F0C808' } }
+	),
+	master(
+		'defineSlideMaster.background.type:none',
+		{ background: { color: 'F0C808', type: 'none' } },
+		{ background: { color: 'F0C808' } },
+		['defineSlideMaster.background.type']
+	),
+	master(
+		'defineSlideMaster.background.gradient.linear',
+		{
+			background: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B', transparency: 30 },
+					],
+				},
+			},
+		},
+		{},
+		[
+			'defineSlideMaster.background.gradient.kind',
+			'defineSlideMaster.background.gradient.angle',
+			'defineSlideMaster.background.gradient.stops.color',
+			'defineSlideMaster.background.gradient.stops.position',
+			'defineSlideMaster.background.gradient.stops.transparency',
+		]
+	),
+	master(
+		'defineSlideMaster.background.gradient.scaled',
+		{ background: { gradient: { ...LINEAR, scaled: true } } },
+		{ background: { gradient: LINEAR } }
+	),
+	master(
+		'defineSlideMaster.background.gradient.rotateWithShape',
+		{ background: { gradient: { ...LINEAR, rotateWithShape: false } } },
+		{ background: { gradient: LINEAR } }
+	),
+	master(
+		'defineSlideMaster.background.gradient.center',
+		{
+			background: {
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		{},
+		['defineSlideMaster.background.gradient.center.x', 'defineSlideMaster.background.gradient.center.y']
+	),
+	master(
+		'defineSlideMaster.background.pattern',
+		{ background: { pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
+		{},
+		[
+			'defineSlideMaster.background.pattern.preset',
+			'defineSlideMaster.background.pattern.fgColor',
+			'defineSlideMaster.background.pattern.bgColor',
+		]
+	),
+	master('defineSlideMaster.background.data', { background: { data: PNG } }),
+	master('defineSlideMaster.background.image.data', { background: { image: { data: PNG } } }),
+	master(
+		'defineSlideMaster.background.image.crop',
+		{ background: { image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } } },
+		{ background: { image: { data: PNG } } },
+		[
+			'defineSlideMaster.background.image.crop.l',
+			'defineSlideMaster.background.image.crop.t',
+			'defineSlideMaster.background.image.crop.r',
+			'defineSlideMaster.background.image.crop.b',
+		]
+	),
+	{
+		id: 'defineSlideMaster.margin',
+		covers: ['defineSlideMaster.margin'],
+		// The master margin writes nothing of its own: it is the deck-wide inset an
+		// auto-paged table sizes itself within, so the probe places one on the master.
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.defineSlideMaster({ title: 'PROBE', ...(on ? { margin: [0.5, 1.5, 0.5, 1.5] } : {}) })
+			pptx.addSlide({ masterTitle: 'PROBE' }).addTable(
+				[
+					[{ text: 'a' }, { text: 'b' }],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				{ x: 1, y: 1, autoPage: true, objectName: 'probe' }
+			)
+		},
+	},
+	master('defineSlideMaster.objects.rect', { objects: [{ rect: { ...BOX, fill: { color: 'F0C808' } } }] }),
+	master('defineSlideMaster.objects.roundRect', {
+		objects: [{ roundRect: { ...BOX, fill: { color: 'F0C808' }, rectRadius: 0.2 } }],
+	}),
+	master('defineSlideMaster.objects.line', {
+		objects: [{ line: { x: 1, y: 3, w: 5, h: 0, line: { color: '9B1B30', width: 2 } } }],
+	}),
+	master('defineSlideMaster.objects.shape', {
+		objects: [{ shape: { type: 'ellipse', options: { ...BOX, fill: { color: 'F0C808' } } } }],
+	}),
+	master('defineSlideMaster.objects.text', {
+		objects: [{ text: { text: 'Master text', options: { x: 1, y: 3, w: 5, h: 1 } } }],
+	}),
+	master('defineSlideMaster.objects.image', { objects: [{ image: { x: 1, y: 3, w: 1, h: 1, data: PNG } }] }),
+	{
+		...master('defineSlideMaster.objects.placeholder.options', {
+			objects: [{ placeholder: { options: { name: 'body', type: 'body', x: 1, y: 3, w: 5, h: 1 } } }],
+		}),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/112',
+	},
+	master(
+		'defineSlideMaster.objects.placeholder.text',
+		{
+			objects: [
+				{ placeholder: { options: { name: 'body', type: 'body', x: 1, y: 3, w: 5, h: 1 }, text: 'Body here' } },
+			],
+		},
+		{ objects: [{ placeholder: { options: { name: 'body', type: 'body', x: 1, y: 3, w: 5, h: 1 } } }] }
+	),
+	master(
+		'defineSlideMaster.objects.chart',
+		{ objects: [{ chart: { type: 'bar', data: [SERIES], options: CHART_BOX } }] },
+		{},
+		[
+			'defineSlideMaster.objects.chart.data.name',
+			'defineSlideMaster.objects.chart.data.labels',
+			'defineSlideMaster.objects.chart.data.values',
+			'defineSlideMaster.objects.chart.options',
+		]
+	),
+	masterChart('defineSlideMaster.objects.chart.data.customLabels', { customLabels: ['Low', '', 'High'] }),
+	masterChart(
+		'defineSlideMaster.objects.chart.data.pointStyles',
+		{
+			pointStyles: [{ fill: '00B050', border: { width: 2, color: '9B1B30' } }, {}, { pattern: { preset: 'ltUpDiag' } }],
+		},
+		[
+			'defineSlideMaster.objects.chart.data.pointStyles.fill',
+			'defineSlideMaster.objects.chart.data.pointStyles.border',
+			'defineSlideMaster.objects.chart.data.pointStyles.pattern',
+		]
+	),
+	masterChart(
+		'defineSlideMaster.objects.chart.data.errorBars',
+		{
+			errorBars: {
+				valueType: 'fixedVal',
+				value: 2,
+				barType: 'plus',
+				direction: 'y',
+				noEndCap: true,
+				color: '9B1B30',
+				width: 2,
+				dashType: 'dash',
+				cap: 'round',
+				transparency: 30,
+			},
+		},
+		[
+			'defineSlideMaster.objects.chart.data.errorBars.valueType',
+			'defineSlideMaster.objects.chart.data.errorBars.value',
+			'defineSlideMaster.objects.chart.data.errorBars.barType',
+			'defineSlideMaster.objects.chart.data.errorBars.direction',
+			'defineSlideMaster.objects.chart.data.errorBars.noEndCap',
+			'defineSlideMaster.objects.chart.data.errorBars.color',
+			'defineSlideMaster.objects.chart.data.errorBars.width',
+			'defineSlideMaster.objects.chart.data.errorBars.dashType',
+			'defineSlideMaster.objects.chart.data.errorBars.cap',
+			'defineSlideMaster.objects.chart.data.errorBars.transparency',
+		]
+	),
+	masterChart(
+		'defineSlideMaster.objects.chart.data.errorBars.cust',
+		{ errorBars: { valueType: 'cust', plusValues: [1, 2, 1], minusValues: [0.5, 1, 0.5] } },
+		[
+			'defineSlideMaster.objects.chart.data.errorBars.plusValues',
+			'defineSlideMaster.objects.chart.data.errorBars.minusValues',
+		]
+	),
+	masterChart('defineSlideMaster.objects.chart.data.errorBars.size', { errorBars: { size: 3 } }),
+	masterChart('defineSlideMaster.objects.chart.data.errorBars.type:dash', { errorBars: { type: 'dash' } }, [
+		'defineSlideMaster.objects.chart.data.errorBars.type',
+	]),
+	master(
+		'defineSlideMaster.objects.chart.data.sizes',
+		{
+			objects: [{ chart: { type: 'bubble', data: [BUBBLE_X, { ...BUBBLE_Y, sizes: [5, 1, 5] }], options: CHART_BOX } }],
+		},
+		{ objects: [{ chart: { type: 'bubble', data: [BUBBLE_X, BUBBLE_Y], options: CHART_BOX } }] }
+	),
+	master(
+		'defineSlideMaster.objects.chart.type:combo',
+		{ objects: [{ chart: { type: COMBO, data: [], options: COMBO_BOX } }] },
+		{},
+		[
+			'defineSlideMaster.objects.chart.type.type',
+			'defineSlideMaster.objects.chart.type.data.name',
+			'defineSlideMaster.objects.chart.type.data.labels',
+			'defineSlideMaster.objects.chart.type.data.values',
+			'defineSlideMaster.objects.chart.type.options',
+		]
+	),
+	master(
+		'defineSlideMaster.objects.chart.type.data.series',
+		{
+			objects: [
+				{
+					chart: {
+						type: [
+							{
+								type: 'bar',
+								data: [
+									{
+										...SERIES,
+										customLabels: ['Low', '', 'High'],
+										pointStyles: [{ fill: '00B050' }],
+										errorBars: { valueType: 'percentage', value: 5 },
+									},
+								],
+								options: {},
+							},
+							...COMBO.slice(1),
+						],
+						data: [],
+						options: COMBO_BOX,
+					},
+				},
+			],
+		},
+		{ objects: [{ chart: { type: COMBO, data: [], options: COMBO_BOX } }] },
+		[
+			'defineSlideMaster.objects.chart.type.data.customLabels',
+			'defineSlideMaster.objects.chart.type.data.pointStyles',
+			'defineSlideMaster.objects.chart.type.data.errorBars',
+		]
+	),
+	{
+		id: 'defineSlideMaster.title',
+		covers: ['defineSlideMaster.title'],
+		author: (pptx: TsPptx, on: boolean) => {
+			const title = on ? 'Probe master' : 'PROBE'
+			pptx.defineSlideMaster({ title })
+			pptx.addSlide({ masterTitle: title }).addText('Probe text', { ...BOX, objectName: 'probe' })
+		},
+	},
+	masterNumber('defineSlideMaster.slideNumber.x', { x: 2 }),
+	masterNumber('defineSlideMaster.slideNumber.y', { y: 5 }),
+	masterNumber('defineSlideMaster.slideNumber.w', { w: 2 }),
+	masterNumber('defineSlideMaster.slideNumber.h', { h: 0.8 }),
+	masterNumber('defineSlideMaster.slideNumber.align:center', { align: 'center' }, {}, [
+		'defineSlideMaster.slideNumber.align',
+	]),
+	masterNumber('defineSlideMaster.slideNumber.valign:bottom', { valign: 'bottom' }, {}, [
+		'defineSlideMaster.slideNumber.valign',
+	]),
+	masterNumber('defineSlideMaster.slideNumber.bold', { bold: true }),
+	masterNumber('defineSlideMaster.slideNumber.italic', { italic: true }),
+	masterNumber('defineSlideMaster.slideNumber.caps:all', { caps: 'all' }, {}, ['defineSlideMaster.slideNumber.caps']),
+	masterNumber('defineSlideMaster.slideNumber.color', { color: '9B1B30' }),
+	masterNumber('defineSlideMaster.slideNumber.fontFace', { fontFace: 'Georgia' }),
+	masterNumber('defineSlideMaster.slideNumber.fontFaceEA', { fontFaceEA: 'MS Mincho' }),
+	masterNumber('defineSlideMaster.slideNumber.fontSize', { fontSize: 20 }),
+	masterNumber('defineSlideMaster.slideNumber.highlight', { highlight: 'F0C808' }),
+	masterNumber('defineSlideMaster.slideNumber.lang', { lang: 'fr-FR' }),
+	masterNumber('defineSlideMaster.slideNumber.margin', { margin: [0.1, 0.2, 0.1, 0.2] }),
+	masterNumber('defineSlideMaster.slideNumber.transparency', { transparency: 40 }, { color: '9B1B30' }),
+	masterNumber('defineSlideMaster.slideNumber.underline', { underline: { style: 'dbl', color: '9B1B30' } }, {}, [
+		'defineSlideMaster.slideNumber.underline.style',
+		'defineSlideMaster.slideNumber.underline.color',
+	]),
+	masterNumber('defineSlideMaster.slideNumber.textDirection:vert', { textDirection: 'vert' }, {}, [
+		'defineSlideMaster.slideNumber.textDirection',
+	]),
+	masterNumber('defineSlideMaster.slideNumber.textWarp', { textWarp: 'textArchUp' }),
+	masterNumber('defineSlideMaster.slideNumber.paraIndent', { paraIndent: 12 }),
+	masterNumber('defineSlideMaster.slideNumber.paraMarginLeft', { paraMarginLeft: 18 }),
+	masterStyle('defineSlideMaster.textStyles.title.align:right', 'title', { align: 'right' }, {}, [
+		'defineSlideMaster.textStyles.title.align',
+	]),
+	masterStyle('defineSlideMaster.textStyles.title.bold', 'title', { bold: true }),
+	masterStyle('defineSlideMaster.textStyles.title.italic', 'title', { italic: true }),
+	masterStyle('defineSlideMaster.textStyles.title.color', 'title', { color: '9B1B30' }),
+	masterStyle('defineSlideMaster.textStyles.title.fontFace', 'title', { fontFace: 'Georgia' }),
+	masterStyle('defineSlideMaster.textStyles.title.fontSize', 'title', { fontSize: 28 }),
+	masterStyle('defineSlideMaster.textStyles.title.marginLeft', 'title', { marginLeft: 0.5 }),
+	masterStyle('defineSlideMaster.textStyles.title.indent', 'title', { indent: -0.25 }, { marginLeft: 0.5 }),
+	masterStyle('defineSlideMaster.textStyles.title.bullet:true', 'title', { bullet: true }, {}, [
+		'defineSlideMaster.textStyles.title.bullet',
+	]),
+	masterStyle('defineSlideMaster.textStyles.title.bullet.characterCode', 'title', {
+		bullet: { characterCode: '25BA' },
+	}),
+	masterStyle(
+		'defineSlideMaster.textStyles.title.bullet.fontFace',
+		'title',
+		{ bullet: { characterCode: '25BA', fontFace: 'Wingdings' } },
+		{ bullet: { characterCode: '25BA' } }
+	),
+	masterStyle('defineSlideMaster.textStyles.title.bullet.type:number', 'title', { bullet: { type: 'number' } }, {}, [
+		'defineSlideMaster.textStyles.title.bullet.type',
+	]),
+	masterStyle(
+		'defineSlideMaster.textStyles.title.bullet.numberType',
+		'title',
+		{ bullet: { type: 'number', numberType: 'romanLcParenR' } },
+		{ bullet: { type: 'number' } }
+	),
+	masterStyle(
+		'defineSlideMaster.textStyles.title.bullet.numberStartAt',
+		'title',
+		{ bullet: { type: 'number', numberStartAt: 5 } },
+		{ bullet: { type: 'number' } }
+	),
+	masterStyle('defineSlideMaster.textStyles.body.align:center', 'body', { align: 'center' }, {}, [
+		'defineSlideMaster.textStyles.body.align',
+	]),
+	masterStyle('defineSlideMaster.textStyles.body.bold', 'body', { bold: true }),
+	masterStyle('defineSlideMaster.textStyles.body.italic', 'body', { italic: true }),
+	masterStyle('defineSlideMaster.textStyles.body.color', 'body', { color: '9B1B30' }),
+	masterStyle('defineSlideMaster.textStyles.body.fontFace', 'body', { fontFace: 'Georgia' }),
+	masterStyle('defineSlideMaster.textStyles.body.fontSize', 'body', { fontSize: 28 }),
+	masterStyle('defineSlideMaster.textStyles.body.marginLeft', 'body', { marginLeft: 0.5 }),
+	masterStyle('defineSlideMaster.textStyles.body.indent', 'body', { indent: -0.25 }, { marginLeft: 0.5 }),
+	masterStyle('defineSlideMaster.textStyles.body.bullet:false', 'body', { bullet: false }, {}, [
+		'defineSlideMaster.textStyles.body.bullet',
+	]),
+	masterStyle('defineSlideMaster.textStyles.body.bullet.characterCode', 'body', { bullet: { characterCode: '25BA' } }),
+	masterStyle(
+		'defineSlideMaster.textStyles.body.bullet.fontFace',
+		'body',
+		{ bullet: { characterCode: '25BA', fontFace: 'Wingdings' } },
+		{ bullet: { characterCode: '25BA' } }
+	),
+	masterStyle('defineSlideMaster.textStyles.body.bullet.type:number', 'body', { bullet: { type: 'number' } }, {}, [
+		'defineSlideMaster.textStyles.body.bullet.type',
+	]),
+	masterStyle(
+		'defineSlideMaster.textStyles.body.bullet.numberType',
+		'body',
+		{ bullet: { type: 'number', numberType: 'romanLcParenR' } },
+		{ bullet: { type: 'number' } }
+	),
+	masterStyle(
+		'defineSlideMaster.textStyles.body.bullet.numberStartAt',
+		'body',
+		{ bullet: { type: 'number', numberStartAt: 5 } },
+		{ bullet: { type: 'number' } }
+	),
+	masterStyle('defineSlideMaster.textStyles.other.align:center', 'other', { align: 'center' }, {}, [
+		'defineSlideMaster.textStyles.other.align',
+	]),
+	masterStyle('defineSlideMaster.textStyles.other.bold', 'other', { bold: true }),
+	masterStyle('defineSlideMaster.textStyles.other.italic', 'other', { italic: true }),
+	masterStyle('defineSlideMaster.textStyles.other.color', 'other', { color: '9B1B30' }),
+	masterStyle('defineSlideMaster.textStyles.other.fontFace', 'other', { fontFace: 'Georgia' }),
+	masterStyle('defineSlideMaster.textStyles.other.fontSize', 'other', { fontSize: 28 }),
+	masterStyle('defineSlideMaster.textStyles.other.marginLeft', 'other', { marginLeft: 0.5 }),
+	masterStyle('defineSlideMaster.textStyles.other.indent', 'other', { indent: -0.25 }, { marginLeft: 0.5 }),
+	masterStyle('defineSlideMaster.textStyles.other.bullet:false', 'other', { bullet: false }, {}, [
+		'defineSlideMaster.textStyles.other.bullet',
+	]),
+	masterStyle('defineSlideMaster.textStyles.other.bullet.characterCode', 'other', {
+		bullet: { characterCode: '25BA' },
+	}),
+	masterStyle(
+		'defineSlideMaster.textStyles.other.bullet.fontFace',
+		'other',
+		{ bullet: { characterCode: '25BA', fontFace: 'Wingdings' } },
+		{ bullet: { characterCode: '25BA' } }
+	),
+	masterStyle('defineSlideMaster.textStyles.other.bullet.type:number', 'other', { bullet: { type: 'number' } }, {}, [
+		'defineSlideMaster.textStyles.other.bullet.type',
+	]),
+	masterStyle(
+		'defineSlideMaster.textStyles.other.bullet.numberType',
+		'other',
+		{ bullet: { type: 'number', numberType: 'romanLcParenR' } },
+		{ bullet: { type: 'number' } }
+	),
+	masterStyle(
+		'defineSlideMaster.textStyles.other.bullet.numberStartAt',
+		'other',
+		{ bullet: { type: 'number', numberStartAt: 5 } },
+		{ bullet: { type: 'number' } }
+	),
 	image('addImage.altText', { altText: 'A probe description' }),
 	image('addImage.biLevel.threshold', { biLevel: { threshold: 0.3 } }),
 	image('addImage.clrChange', { clrChange: { from: '000000', to: '9B1B30' } }, [
@@ -2218,4 +2742,10 @@ export const SKIPPED: Record<string, string> = {
 		'the file-path spelling of the picture source; the picture it writes is exercised by slide.background.image.data',
 	'slide.transition.sound.path':
 		'the file-path spelling of the sound source; the sound it writes is exercised by slide.transition.sound.data',
+	'defineSlideMaster.background.path':
+		'the file-path spelling of the background picture source; the picture it writes is exercised by defineSlideMaster.background.data',
+	'defineSlideMaster.background.image.path':
+		'the file-path spelling of the picture source; the picture it writes is exercised by defineSlideMaster.background.image.data',
+	'defineSlideMaster.objects.chart.type.data.sizes':
+		'bubble sizes are read only by a bubble chart, and the writer refuses a bubble chart in the multi-type form by design (InvalidOptionError: PowerPoint refuses the deck), so this spelling cannot be authored (ts-pptx#140: https://github.com/shbernal/pptx-ts/issues/140 asks for the type to stop admitting it); the sizes it would write are exercised by defineSlideMaster.objects.chart.data.sizes',
 }

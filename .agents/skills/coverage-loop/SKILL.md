@@ -38,6 +38,16 @@ explains why the probe judges XML rather than `DeckIr`.
    destroyed, not that the HTML carries the option. Report it as such, and never
    count it toward a fidelity claim.
 
+   The status line also says `not rendered` when the option changed the XML but
+   not the paint model. The lane says where the XML lives; this says whether the
+   HTML showed it, and a `template` survival can be either: a master rectangle is
+   drawn as chrome, a master `other` text style is not. That is not a failure: a lock, a transition or a master
+   slide number is never painted. It is a failure of the *probe* when the option
+   would be painted in context and the probe gave it none: a master text style on
+   a slide with no placeholder to inherit it. Give the probe that context rather
+   than accepting `unrendered`; if the renderer still never sees it, find out
+   whether the import reads it (a local fix) or the read model cannot (file it).
+
    `accepted: { kind: 'equivalent' }` is for an output that says the same thing in
    a different spelling. The reason must say how they are equivalent.
    `unsupported` is for losses OOXML or the HTML tier cannot carry. Use either one

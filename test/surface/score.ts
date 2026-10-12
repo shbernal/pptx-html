@@ -34,6 +34,7 @@ interface ObservationRecord {
 	covers: string[]
 	status: 'survives' | 'upstream' | 'local' | 'inert' | 'crash'
 	lane: 'authored' | 'carried' | 'template' | 'mixed'
+	rendered: boolean
 }
 
 const ROOT = join(import.meta.dirname, '..', '..')
@@ -42,15 +43,22 @@ const OBSERVATIONS = join(ROOT, '.tmp', 'surface', 'observations.json')
 
 /**
  * Higher is better. A probe may only move up without a human editing the ledger.
- * `survives/template` ranks lowest of the survivals: the HTML never held it, so
- * relabelling an entry to it is a weaker claim, which a human has to accept.
+ * The round trip decides the rank. Within a status, the lane decides: `survives/template`
+ * ranks lowest of the survivals, since the HTML never held it, so relabelling an entry to
+ * it is a weaker claim a human has to accept. Whether the renderer was handed the option
+ * breaks the remaining ties, so a probe that stops reaching the renderer is a regression
+ * even while its XML still comes back.
  */
 function rank(state: string): number {
-	const [status, lane] = state.split('/')
-	if (status === 'survives') return lane === 'authored' ? 4 : lane === 'template' ? 2 : 3
-	if (status === 'upstream' || status === 'local' || status === 'crash') return 1
-	return 0
+	const [status, lane, rendered] = state.split('/')
+	const paint = rendered === 'unrendered' ? 0 : 1
+	if (status === 'survives') return (lane === 'authored' ? 4 : lane === 'template' ? 2 : 3) * 2 + paint
+	if (status === 'upstream' || status === 'local' || status === 'crash') return 2 + paint
+	return paint
 }
+
+/** A probe's ledger state: `status/lane`, with `/unrendered` when the renderer never saw the option. */
+const stateOf = (seen: ObservationRecord) => `${seen.status}/${seen.lane}${seen.rendered ? '' : '/unrendered'}`
 
 const { values: args } = parseArgs({
 	options: {
@@ -91,6 +99,7 @@ const families = FAMILIES.map((family) => {
 	for (const seen of probes) {
 		const key = seen.status === 'survives' ? `survives/${seen.lane}` : seen.status
 		statuses[key] = (statuses[key] ?? 0) + 1
+		if (!seen.rendered) statuses.unrendered = (statuses.unrendered ?? 0) + 1
 	}
 	return {
 		family,
@@ -105,9 +114,7 @@ const families = FAMILIES.map((family) => {
 // 3. The ratchet.
 const ledger: Record<string, string> = existsSync(LEDGER) ? JSON.parse(readFileSync(LEDGER, 'utf8')) : {}
 const current: Record<string, string> = Object.fromEntries(
-	observations
-		.map((seen) => [seen.id, `${seen.status}/${seen.lane}`] as const)
-		.toSorted(([a], [b]) => a.localeCompare(b))
+	observations.map((seen) => [seen.id, stateOf(seen)] as const).toSorted(([a], [b]) => a.localeCompare(b))
 )
 const regressions: string[] = []
 const improvements: string[] = []

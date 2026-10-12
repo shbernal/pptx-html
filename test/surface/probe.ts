@@ -32,6 +32,9 @@
  */
 
 import type TsPptx from 'pptx-ts'
+import { Presentation } from 'pptx-ts/read'
+import { importPresentation } from '../../src/import/deck'
+import type { RenderIr } from '../../src/ir/render'
 import { newDeck } from '../corpus/decks'
 import { htmlLoop } from '../oracle/html-lane'
 import { roundTrip } from '../oracle/roundtrip'
@@ -92,6 +95,16 @@ export interface Observation {
 	 */
 	lane: Lane
 	signature: Signature
+	/**
+	 * Whether the option changed what the renderer is handed: the paint-relevant part
+	 * of the slides' `RenderIr` (see {@link paintOf}), off against on.
+	 *
+	 * `survives` cannot say this. The HTML lane emits against the source package, so
+	 * anything living outside the slide's own shape tree (a master, a layout, a theme)
+	 * comes back whether or not the renderer ever looked at it. `false` here is that
+	 * case made visible: the XML round-trips and the HTML never showed it.
+	 */
+	rendered: boolean
 	htmlLost: string[]
 	scriptLost: string[]
 	/** The oracle's view of the HTML lane, for spotting the blind spot. */
@@ -127,6 +140,30 @@ async function build(probe: Probe, on: boolean): Promise<Uint8Array> {
 	return pptx.write({ outputType: 'uint8array' })
 }
 
+/**
+ * What the renderer paints from, as one comparable string: every slide's background,
+ * chrome, nodes, visibility and notes, plus the asset manifest those nodes draw.
+ *
+ * Left out on purpose: `layout` (what emit binds to, not what is drawn), `source`
+ * (the lane, recorded separately), `residual` (carried XML, never painted) and
+ * `fidelity` (declared losses, which can change without the picture changing).
+ */
+async function paintOf(bytes: Uint8Array): Promise<string> {
+	const { render } = await importPresentation(await Presentation.load(bytes))
+	const paint = (ir: RenderIr) => ({
+		size: ir.size,
+		assets: ir.assets,
+		slides: ir.slides.map(({ background, chrome, nodes, hidden, notes }) => ({
+			background,
+			chrome,
+			nodes,
+			hidden,
+			notes,
+		})),
+	})
+	return JSON.stringify(paint(render))
+}
+
 /** Run one probe through both lanes. Never throws: a crash is an observation. */
 export async function observe(probe: Probe): Promise<Observation> {
 	const base = { id: probe.id, covers: probe.covers }
@@ -135,6 +172,7 @@ export async function observe(probe: Probe): Promise<Observation> {
 		const baseline = await build(probe, false)
 		const probed = await build(probe, true)
 		sig = signature(await packageFacts(baseline), await packageFacts(probed))
+		const rendered = (await paintOf(baseline)) !== (await paintOf(probed))
 		const html = await roundTrip(probed, htmlLoop)
 		const script = await roundTrip(probed, scriptLoop)
 		const sources = new Set(html.input.ir.slides.map((slide) => slide.source))
@@ -154,6 +192,7 @@ export async function observe(probe: Probe): Promise<Observation> {
 			status,
 			lane,
 			signature: sig,
+			rendered,
 			htmlLost,
 			scriptLost,
 			undeclared: html.report.undeclared.length,
@@ -165,6 +204,7 @@ export async function observe(probe: Probe): Promise<Observation> {
 			status: 'crash',
 			lane: 'authored',
 			signature: sig,
+			rendered: false,
 			htmlLost: [],
 			scriptLost: [],
 			undeclared: 0,
