@@ -19,9 +19,12 @@
 
 import type TsPptx from 'pptx-ts'
 import type {
+	AnimationProps,
+	CommentProps,
 	ConnectorProps,
 	GroupProps,
 	ImageProps,
+	MediaProps,
 	MasterTextStyleLevel,
 	OptsChartData,
 	SHAPE_NAME,
@@ -406,6 +409,74 @@ function masterStyle(
 
 /** A silent eight-sample WAV, for transition sounds. */
 const WAV = 'audio/wav;base64,UklGRiwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQgAAACAgICAgICAgA=='
+
+const MEDIA_BOX = { x: 1, y: 1, w: 4, h: 3 }
+
+/** An embedded sound with `base` on both sides and `options` merged in on the probe side. */
+function media(
+	id: string,
+	options: Partial<MediaProps>,
+	base: Partial<MediaProps> = {},
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addMedia({
+				type: 'audio',
+				data: WAV,
+				...MEDIA_BOX,
+				objectName: 'probe',
+				...base,
+				...(on ? options : {}),
+			} as MediaProps)
+		},
+	}
+}
+
+const COMMENT: CommentProps = { author: 'Ada Probe', text: 'Probe comment' }
+
+/**
+ * A slide holding the probe text box and one review comment, with `options` merged into the
+ * comment on the probe side. With no `options` the comment itself is what is probed: the off
+ * side has none.
+ */
+function comment(id: string, options: Partial<CommentProps>, covers = [id.split(':')[0] as string]): Probe {
+	const bare = Object.keys(options).length === 0
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			const target = pptx.addSlide()
+			target.addText('Probe text', { ...BOX, objectName: 'probe' })
+			if (on || !bare) target.addComment({ ...COMMENT, ...(on ? options : {}) })
+		},
+	}
+}
+
+/**
+ * A slide holding two text boxes, the probe and a second target, with `base` animating one of
+ * them on both sides and `options` merged in on the probe side. With no `base` the animation
+ * itself is what is probed: the off side has none.
+ */
+function animation(
+	id: string,
+	options: Partial<AnimationProps>,
+	base?: AnimationProps,
+	covers = [id.split(':')[0] as string]
+): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			const target = pptx.addSlide()
+			target.addText('Probe text', { ...BOX, objectName: 'probe' })
+			target.addText('Second text', { ...BOX, y: 3, objectName: 'second' })
+			if (on || base) target.addAnimation({ ...base, ...(on ? options : {}) } as AnimationProps)
+		},
+	}
+}
 
 /** `addImage` of the one-pixel PNG in the probe box, with `base` on both sides and `options` on the probe side. */
 function imageOn(
@@ -2713,6 +2784,87 @@ export const PROBES: Probe[] = [
 	theme('theme.colorScheme.accent6', { colorScheme: { accent6: '20B2AA' } }),
 	theme('theme.colorScheme.hlink', { colorScheme: { hlink: '0050A0' } }),
 	theme('theme.colorScheme.folHlink', { colorScheme: { folHlink: '7A3E9D' } }),
+	media('addMedia.altText', { altText: 'A probe description' }),
+	media('addMedia.cover', { cover: PNG }),
+	{ ...media('addMedia.extn', { extn: 'mp3' }), issue: 'https://github.com/shbernal/pptx-ts/issues/202' },
+	media('addMedia.h', { h: 2 }),
+	{
+		...media('addMedia.link', { link: 'https://example.com/probe.mp4' }, { type: 'video' }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/203',
+	},
+	{ ...media('addMedia.loop', { loop: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/202' },
+	{ ...media('addMedia.loopCount', { loopCount: 3 }), issue: 'https://github.com/shbernal/pptx-ts/issues/202' },
+	media('addMedia.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
+	media('addMedia.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
+	media('addMedia.objectLock.noChangeAspect:false', { objectLock: { noChangeAspect: false } }, {}, [
+		'addMedia.objectLock.noChangeAspect',
+	]),
+	media('addMedia.objectLock.noChangeShapeType', { objectLock: { noChangeShapeType: true } }),
+	media('addMedia.objectLock.noCrop', { objectLock: { noCrop: true } }),
+	{
+		...media('addMedia.objectLock.noDrilldown', { objectLock: { noDrilldown: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noDrilldown is not valid on a:picLocks and drops it: it is a graphic-frame/group lock, which a media picture does not have',
+		},
+	},
+	media('addMedia.objectLock.noEditPoints', { objectLock: { noEditPoints: true } }),
+	media('addMedia.objectLock.noGrp', { objectLock: { noGrp: true } }),
+	media('addMedia.objectLock.noMove', { objectLock: { noMove: true } }),
+	media('addMedia.objectLock.noResize', { objectLock: { noResize: true } }),
+	media('addMedia.objectLock.noRot', { objectLock: { noRot: true } }),
+	media('addMedia.objectLock.noSelect', { objectLock: { noSelect: true } }),
+	{
+		...media('addMedia.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noTextEdit is not valid on a:picLocks and drops it: it is a shape lock (a:spLocks), and a media picture has no text body',
+		},
+	},
+	media('addMedia.objectName', { objectName: 'Renamed probe' }),
+	{
+		...media('addMedia.type:video', { type: 'video' }, {}, ['addMedia.type']),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/202',
+	},
+	media('addMedia.w', { w: 2 }),
+	media('addMedia.x', { x: 2 }),
+	media('addMedia.y', { y: 2 }),
+	{
+		...comment('addComment', {}, ['addComment.author', 'addComment.text']),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/207',
+	},
+	comment('addComment.initials', { initials: 'XQ' }),
+	{ ...comment('addComment.x', { x: 3 }), issue: 'https://github.com/shbernal/pptx-ts/issues/207' },
+	{ ...comment('addComment.y', { y: 4 }), issue: 'https://github.com/shbernal/pptx-ts/issues/207' },
+	{
+		...comment('addComment.date', { date: '2026-01-02T03:04:05.000Z' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/207',
+	},
+	{
+		...animation('addAnimation.preset', { preset: 'fadeIn', objectName: 'probe' }, undefined, [
+			'addAnimation.preset',
+			'addAnimation.objectName',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/209',
+	},
+	{
+		...animation('addAnimation.preset:spin', { preset: 'spin' }, { preset: 'fadeIn', objectName: 'probe' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/209',
+	},
+	{
+		...animation(
+			'addAnimation.trigger:afterPrevious',
+			{ trigger: 'afterPrevious' },
+			{ preset: 'fadeIn', objectName: 'probe' }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/209',
+	},
+	{
+		...animation('addAnimation.durationMs', { durationMs: 1700 }, { preset: 'fadeIn', objectName: 'probe' }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/209',
+	},
 ]
 
 /**
@@ -2751,4 +2903,9 @@ export const SKIPPED: Record<string, string> = {
 		'the file-path spelling of the picture source; the picture it writes is exercised by defineSlideMaster.background.image.data',
 	'defineSlideMaster.objects.chart.type.data.sizes':
 		'bubble sizes are read only by a bubble chart, and the writer refuses a bubble chart in the multi-type form by design (InvalidOptionError: PowerPoint refuses the deck), so this spelling cannot be authored (ts-pptx#140: https://github.com/shbernal/pptx-ts/issues/140 asks for the type to stop admitting it); the sizes it would write are exercised by defineSlideMaster.objects.chart.data.sizes',
+	'addMedia.data':
+		'the media source, which every addMedia probe sets on both sides; the media part it writes is exercised by addMedia.extn, which renames that part',
+	'addMedia.path': 'the file-path spelling of the media source; the media part it writes is exercised by addMedia.extn',
+	'addAnimation.shapeIndex':
+		'selects the target by add order, the alternative to objectName; all it changes is p:spTgt@spid and p:bldP@spid, which the fact diff masks as ids, and the effect it targets is exercised by addAnimation.preset',
 }
