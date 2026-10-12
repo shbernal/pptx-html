@@ -1751,6 +1751,7 @@ export const PROBES: Probe[] = [
 		},
 	},
 	{ ...notes('addNotes.options.bold', { bold: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
+	{ ...notes('addNotes.options.italic', { italic: true }), issue: 'https://github.com/shbernal/pptx-ts/issues/129' },
 ]
 
 /**
