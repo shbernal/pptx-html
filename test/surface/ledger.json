@@ -3,6 +3,7 @@
 	"addNotes.options.color": "upstream/authored",
 	"addNotes.options.fontFace": "upstream/authored",
 	"addNotes.options.fontSize": "upstream/authored",
+	"addNotes.options.hyperlink.url": "upstream/authored",
 	"addNotes.options.italic": "upstream/authored",
 	"addNotes.options.underline": "upstream/authored",
 	"addNotes.text": "survives/authored",

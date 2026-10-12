@@ -1765,6 +1765,13 @@ export const PROBES: Probe[] = [
 		]),
 		issue: 'https://github.com/shbernal/pptx-ts/issues/129',
 	},
+	{
+		...notes('addNotes.options.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
+			'addNotes.options.hyperlink.url',
+			'addNotes.options.hyperlink.tooltip',
+		]),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/129',
+	},
 ]
 
 /**
