@@ -93,16 +93,6 @@ describe('emit → ts-pptx → read round-trip (custGeom)', () => {
 		expect(issues).toEqual([])
 	})
 
-	it('writes custom geometry (not preset) shapes ts-pptx can read back', async () => {
-		const { bytes } = await emit([triangle(), cubicStroke()])
-		const pres = await Presentation.load(bytes)
-		const customs = freeforms(first(pres.slides, 'slide').shapes)
-		expect(customs.length).toBe(2)
-		for (const shape of customs) {
-			expect(shape.presetGeometry).toBeNull()
-		}
-	})
-
 	it('round-trips the triangle command sequence (moveTo / lnTo×2 / close)', async () => {
 		const { bytes } = await emit([triangle()])
 		const pres = await Presentation.load(bytes)

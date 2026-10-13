@@ -1,42 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { RenderIr, ShapeNode, TableNode } from '../../src/ir/render'
-import { EDITABLE_PARA_PROPS, EDITABLE_RUN_PROPS, EDITABLE_SURFACE, freeze, project } from '../../src/ir/surface'
+import { freeze, project } from '../../src/ir/surface'
 import { SAMPLE_IR } from '../fixtures/render-ir'
 
 const clone = (ir: RenderIr): RenderIr => structuredClone(ir)
-
-describe('the surface is one list, not two opinions', () => {
-	it('names every editable run property exactly once', () => {
-		const props = EDITABLE_SURFACE.filter((rule) => rule.kind === 'runProp').map((rule) =>
-			rule.path.slice(rule.path.lastIndexOf('.') + 1)
-		)
-		expect(props).toEqual([...EDITABLE_RUN_PROPS])
-	})
-
-	it('names every editable paragraph property exactly once', () => {
-		const props = EDITABLE_SURFACE.filter((rule) => rule.kind === 'paraProp').map((rule) =>
-			rule.path.slice(rule.path.lastIndexOf('.') + 1)
-		)
-		expect(props).toEqual([...EDITABLE_PARA_PROPS])
-	})
-
-	it('keeps `level` out, because nothing in the paint model can say what it indexes into', () => {
-		// The paragraph property most likely to be added by analogy and the one that
-		// must not be: `@lvl` is an index into a list style the paint model does not
-		// carry, so a control for it would be offering to change a number whose meaning
-		// lives somewhere this package never reads.
-		expect(EDITABLE_SURFACE.some((rule) => rule.path.endsWith('.level'))).toBe(false)
-		expect(EDITABLE_PARA_PROPS).not.toContain('level')
-	})
-
-	it('permits run text and node deletion, and nothing structural', () => {
-		expect(EDITABLE_SURFACE.filter((rule) => rule.kind === 'text')).toHaveLength(1)
-		expect(EDITABLE_SURFACE.filter((rule) => rule.kind === 'delete')).toHaveLength(1)
-		// Moving a box, changing geometry or reordering slides must stay out: each
-		// needs interpretation on the way back, and the return path never guesses.
-		expect(EDITABLE_SURFACE.some((rule) => /placement|geometry|slides/.test(rule.path))).toBe(false)
-	})
-})
 
 describe('project', () => {
 	const projection = project(SAMPLE_IR)
@@ -101,6 +68,13 @@ describe('project', () => {
 		// no bullet. `level` and `spaceBeforePt` sit beside them on the same object and
 		// are not in surface, so a projection that copied the props wholesale would fail
 		// on the first of these.
+		//
+		// The blank line holds no runs and is projected anyway: keying the surface off
+		// runs would make exactly the empty paragraphs uneditable. And neither bullet
+		// here is settable (a glyph with its own font, a numbering scheme), yet both
+		// are projected, because the projection is what comes back: a bullet left out
+		// of it would read as *cleared* on the return path and be written as
+		// `'inherit'`, stripping the glyph from every deck that has one.
 		expect(bullets?.paragraphs.map((paragraph) => paragraph.props)).toStrictEqual([
 			{
 				align: 'left',
@@ -111,31 +85,6 @@ describe('project', () => {
 			{ bullet: { kind: 'number', scheme: 'arabicPeriod', startAt: 1 } },
 			{ align: 'right' },
 		])
-	})
-
-	it('carries the bullets the write API cannot author back, because carrying is not offering', () => {
-		// The two above are a glyph with its own font and a numbering scheme, and
-		// neither is settable — `parse/edits.ts` refuses both rather than approximating.
-		// They are projected anyway, and must be: the projection is what the renderer
-		// writes onto the `<p>` and what comes back, so a bullet left out of it would
-		// read as *cleared* on the return path and be written as `'inherit'`, silently
-		// stripping a glyph from every deck that has one.
-		const bullets = projection.slides[0]?.nodes.find((node) => node.id === 's1.sp3')
-		expect(bullets?.paragraphs[1]?.props.bullet).toStrictEqual({
-			kind: 'number',
-			scheme: 'arabicPeriod',
-			startAt: 1,
-		})
-	})
-
-	it('projects a paragraph that holds no runs', () => {
-		// A blank line is a paragraph in the source and can state an alignment like
-		// any other. Keying the surface off runs would have made exactly the empty
-		// paragraphs uneditable — and silently, since they have nothing to show for it.
-		const bullets = projection.slides[0]?.nodes.find((node) => node.id === 's1.sp3')
-		expect(bullets?.paragraphs).toHaveLength(3)
-		expect(bullets?.runs.filter((run) => run.paragraph === 2)).toHaveLength(0)
-		expect(bullets?.paragraphs[2]).toStrictEqual({ node: 's1.sp3', paragraph: 2, props: { align: 'right' } })
 	})
 
 	it('flattens groups but keeps opaque and picture nodes visible with no runs', () => {

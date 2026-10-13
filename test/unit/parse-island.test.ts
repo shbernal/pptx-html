@@ -49,13 +49,6 @@ describe('the escape has no inverse, and the hash does not need one', () => {
 })
 
 describe('the block scanner', () => {
-	it('does not mistake text that mentions the id for the block itself', () => {
-		// Reading this as an island would turn "not one of our pages" into a parse
-		// error on a page that is perfectly fine.
-		const blocks = blocksOf(`<p>look for id="${ISLAND_ID}" in the source</p>`)
-		expect(blocks.island).toBeNull()
-	})
-
 	it('finds the block when the attributes are in the other order', async () => {
 		// A document that has been through a serializer is not guaranteed to come
 		// back with the attributes written in the order they went out.

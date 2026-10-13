@@ -109,34 +109,16 @@ export function scriptTierNotes(ir: DeckIr): FidelityNote[] {
 	return printScript(ir, { assets: 'inline' }).notes
 }
 
-/** How much deck there actually is, for the emptiness guard below. */
-export interface DeckWeight {
-	slides: number
-	calls: number
-	authored: number
-	carried: number
-}
-
-export function weigh(view: DeckView): DeckWeight {
-	const slides = view.ir.slides
-	return {
-		slides: slides.length,
-		calls: slides.reduce((n, slide) => n + slide.calls.length, 0),
-		authored: slides.filter((slide) => slide.source === 'authored').length,
-		carried: slides.filter((slide) => slide.source === 'carried').length,
-	}
-}
-
 /**
  * Guard against the oracle's most embarrassing failure mode: an import that
  * yields empty slides compares clean against another empty import and passes
  * every test in the suite. A deck the oracle is asked about must have content.
  */
 export function assertNonTrivial(view: DeckView, label: string): void {
-	const weight = weigh(view)
-	if (weight.slides === 0) throw new Error(`${label}: deck has no slides — an empty deck proves nothing`)
-	if (weight.calls === 0)
-		throw new Error(`${label}: deck has ${weight.slides} slide(s) but no calls — nothing was read`)
+	const slides = view.ir.slides
+	if (slides.length === 0) throw new Error(`${label}: deck has no slides — an empty deck proves nothing`)
+	if (slides.every((slide) => slide.calls.length === 0))
+		throw new Error(`${label}: deck has ${slides.length} slide(s) but no calls — nothing was read`)
 }
 
 function describeDifference(difference: IrDifference): string {
@@ -204,8 +186,8 @@ export const resaveLoop: Loop = async (input) => ({ bytes: await input.pres.save
  *
  * The note is gone rather than kept, because a note that excludes nothing is the
  * decoration the lane test exists to catch — and a stale one is worse than none,
- * since it claims a loss the loop no longer takes. The test below now pins the
- * clean run, so a regression that reintroduces the duplicate arrives as an
+ * since it claims a loss the loop no longer takes. The carry lane test pins
+ * the clean run, so a regression that reintroduces the duplicate arrives as an
  * `undeclared` difference instead of being absorbed by a note left behind to
  * cover it.
  */

@@ -124,8 +124,8 @@ Each of these will break something if ignored.
   document and parsed back, so: no `undefined` (an absent field is a missing key,
   the single spelling of "absent"), no `Date`/`Map`/`Set`, and **no `Uint8Array`**:
   media lives behind an `AssetRef` and is addressed by content hash, never
-  re-embedded. `test/unit/ir-render.test.ts` walks the model and fails on any of
-  these.
+  re-embedded. `test/oracle/import.test.ts` walks every corpus deck's imported
+  model and fails on any of these.
 - **Node identity is derived from the source, never generated**:
   `s{slide}.sp{cNvPr@id}`, structural rather than hashed, so a second import of
   the same deck agrees with the first and the differ aligns sides by id instead of

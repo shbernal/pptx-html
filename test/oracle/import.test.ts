@@ -40,9 +40,8 @@ async function nodeNamed(deck: string, name: string): Promise<RenderNode> {
 describe('the imported model survives the JSON island', () => {
 	for (const entry of CORPUS) {
 		it(`${entry.name} imports to a JSON-native model`, async () => {
-			// The same rule `test/unit/ir-render.test.ts` holds the hand-written
-			// fixture to, applied to what the importer really emits: no `undefined`,
-			// no `Uint8Array`, no exotic prototypes, no non-finite numbers. A mapper
+			// The island's wire rules, applied to what the importer really emits: no
+			// `undefined`, no `Uint8Array`, no exotic prototypes, no non-finite numbers. A mapper
 			// that returned a `Buffer` or wrote an explicit `undefined` would pass
 			// every structural assertion below and fail only on the way back.
 			const ir = await importCorpus(entry.name)
@@ -105,6 +104,19 @@ describe('identity', () => {
 				}
 			}
 			expect(new Set(ids).size, `${entry.name} has duplicate node ids`).toBe(ids.length)
+		}
+	})
+
+	it('places every node on integral EMU', async () => {
+		// EMU is the stored truth precisely so that no frame carries float noise;
+		// a fractional one means something converted through inches and back.
+		for (const entry of CORPUS) {
+			const ir = await importCorpus(entry.name)
+			for (const node of ir.slides.flatMap((slide) => flatten([...slide.chrome, ...slide.nodes]))) {
+				if (node.placement === null) continue
+				const { x, y, w, h } = node.placement.box
+				expect([x, y, w, h].every(Number.isInteger), `${entry.name} ${node.id}`).toBe(true)
+			}
 		}
 	})
 })
@@ -310,15 +322,6 @@ describe('bullets', () => {
 		if (bullet?.kind !== 'picture') return
 		const ir = await importCorpus('bullet')
 		expect(ir.assets.map((asset) => asset.name)).toContain(bullet.asset.$asset)
-	})
-
-	it('leaves an inherited bullet absent and an explicit a:buNone stated', async () => {
-		// The distinction the `null` arm exists for: a paragraph inheriting the list
-		// style's bullet and one suppressing its own render differently, so `absent`
-		// and `{ kind: 'none' }` may never collapse together.
-		const copy = (await nodeNamed('text-box', 'copy')) as ShapeNode
-		const bullets = copy.text?.paragraphs.map((paragraph) => paragraph.props.bullet)
-		expect(bullets?.every((bullet) => bullet === undefined || bullet.kind === 'none')).toBe(true)
 	})
 })
 

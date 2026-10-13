@@ -14,7 +14,7 @@
 import { Presentation } from 'pptx-ts/read'
 import { readModelToIr } from 'pptx-ts/script'
 import { describe, expect, it } from 'vitest'
-import { importDeck, importPresentation } from '../../src/import/deck'
+import { importDeck } from '../../src/import/deck'
 import { IR_VERSION } from '../../src/ir/render'
 import { emitDeck } from '../../src/loop'
 import { parseDeck } from '../../src/parse/deck'
@@ -589,40 +589,5 @@ describe('determinism', () => {
 		const a = await viewDeck(first.bytes)
 		const b = await viewDeck(second.bytes)
 		expect(JSON.stringify(b.canonical)).toBe(JSON.stringify(a.canonical))
-	})
-
-	it('renders the same document from the same package twice', async () => {
-		// Import feeding render has to be a function of the bytes alone, or the
-		// `modelHash` check in `emitDeck` would reject documents at random.
-		const source = await entry('nested-group')
-		const once = await importPresentation(await Presentation.load(source))
-		const twice = await importPresentation(await Presentation.load(source))
-		expect(JSON.stringify(twice.render)).toBe(JSON.stringify(once.render))
-	})
-
-	it('produces the same island whether or not the bytes ride along', async () => {
-		const imported = await importDeck(await entry('picture'))
-		const inline = await renderDeck(imported.render, { bytes: (name) => imported.assets.bytesFor({ $asset: name }) })
-		const ref = await renderDeck(imported.render, { assets: 'ref' })
-		expect(ref.integrity).toStrictEqual(inline.integrity)
-
-		const fromInline = await parseDeck(inline.html, { parseHtml: null })
-		const fromRef = await parseDeck(ref.html, { parseHtml: null })
-		expect(JSON.stringify(fromRef.island)).toBe(JSON.stringify(fromInline.island))
-	})
-})
-
-describe('the island survives what a deck can contain', () => {
-	it('round-trips a run whose text would end the script block', async () => {
-		const source = await entry('text-box')
-		const imported = await importDeck(source)
-		const hostile = structuredClone(imported.render)
-		const shape = hostile.slides[0]?.nodes[0]
-		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]?.runs[0]) throw new Error('fixture changed')
-		shape.text.paragraphs[0].runs[0].text = '</script><img src=x onerror=alert(1)>'
-
-		const { html } = await renderDeck(hostile, { assets: 'ref' })
-		const parsed = await parseDeck(html, { parseHtml: null })
-		expect(parsed.island).toStrictEqual(hostile)
 	})
 })

@@ -125,7 +125,7 @@ export const EDITABLE_PARA_PROPS = ['align', 'bullet', 'marginLeftPt', 'indentPt
 export type EditableParaProp = (typeof EDITABLE_PARA_PROPS)[number]
 
 /** One rule of the surface. Paths are dotted, relative to a `RenderSlide`. */
-export interface SurfaceRule {
+interface SurfaceRule {
 	kind: 'text' | 'runProp' | 'paraProp' | 'delete'
 	path: string
 	why: string
