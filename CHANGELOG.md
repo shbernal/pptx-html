@@ -40,6 +40,10 @@ model is expected to move.
 
 ### Fixed
 
+- **Elbow and curved connectors draw their route.** `bentConnector2`–`5` and
+  `curvedConnector2`–`5`, which `addConnector` writes for every `elbow` and
+  `curved` route, were drawn as the outline of their bounding box. They now draw
+  the preset's path, bends included, and are never filled.
 - **A table's own background is drawn.** `addTable`'s `tableFill` (`a:tblPr` fill:
   solid, gradient, pattern or picture) survived the round trip but `renderDeck`
   never painted it, so an unfilled cell showed the slide instead of the table

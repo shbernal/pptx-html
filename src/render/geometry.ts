@@ -172,7 +172,10 @@ function rect(w: number, h: number): string {
  * preset instances; the whole remainder was `chevron` ×9, `star5` ×2 and
  * `blockArc` ×1. A later census of slide-ui's 98 generated browser previews
  * supplied the next evidence set: `round2DiagRect` ×6, `rightArrowCallout` ×4,
- * `rightArrow` ×2, `round2SameRect` ×2 and `wedgeRectCallout` ×2. Entries outside
+ * `rightArrow` ×2, `round2SameRect` ×2 and `wedgeRectCallout` ×2. The live
+ * samples on pptx-ts's own documentation site supplied the elbow and curved
+ * connectors in {@link CONNECTORS}, which `addConnector` writes for every
+ * non-straight route. Entries outside
  * those measured sets still fall back visibly instead of turning an appealing
  * but unevidenced list into dozens of formulas that each have to be right.
  */
@@ -425,6 +428,76 @@ const PRESETS: Record<string, (w: number, h: number, adj: Record<string, string>
 	},
 }
 
+/**
+ * The elbow and curved connectors, which are open strokes: every one is declared
+ * `@fill="none"` in the addendum, so {@link pathOf} reports them unfilled whether
+ * they sit on a `p:cxnSp` or on a plain `p:sp`.
+ *
+ * Each adjust is a fraction of the box along one axis and is deliberately not
+ * pinned: a bend outside `0..100000` is how PowerPoint routes a connector whose
+ * ends have crossed, so the jog lands outside the box rather than on its edge.
+ * The `2` variants take no adjust at all.
+ *
+ * The curved ones are the bent ones with each corner replaced by a cubic whose
+ * control points sit halfway along the legs it joins, which is why the guides
+ * below are mostly midpoints of the bent connector's own coordinates.
+ */
+const CONNECTORS: Record<string, (w: number, h: number, adj: Record<string, string>) => string> = {
+	bentConnector2: (w, h) => `M 0 0 L ${w} 0 L ${w} ${h}`,
+	bentConnector3: (w, h, adj) => {
+		const x1 = (w * adjust(adj, 'adj1', 50_000)) / GUIDE_SCALE
+		return `M 0 0 L ${x1} 0 L ${x1} ${h} L ${w} ${h}`
+	},
+	bentConnector4: (w, h, adj) => {
+		const x1 = (w * adjust(adj, 'adj1', 50_000)) / GUIDE_SCALE
+		const y2 = (h * adjust(adj, 'adj2', 50_000)) / GUIDE_SCALE
+		return `M 0 0 L ${x1} 0 L ${x1} ${y2} L ${w} ${y2} L ${w} ${h}`
+	},
+	bentConnector5: (w, h, adj) => {
+		const x1 = (w * adjust(adj, 'adj1', 50_000)) / GUIDE_SCALE
+		const y2 = (h * adjust(adj, 'adj2', 50_000)) / GUIDE_SCALE
+		const x3 = (w * adjust(adj, 'adj3', 50_000)) / GUIDE_SCALE
+		return `M 0 0 L ${x1} 0 L ${x1} ${y2} L ${x3} ${y2} L ${x3} ${h} L ${w} ${h}`
+	},
+	curvedConnector2: (w, h) => `M 0 0 C ${w / 2} 0 ${w} ${h / 2} ${w} ${h}`,
+	curvedConnector3: (w, h, adj) => {
+		const x2 = (w * adjust(adj, 'adj1', 50_000)) / GUIDE_SCALE
+		const [x1, x3] = [x2 / 2, (w + x2) / 2]
+		return `M 0 0 C ${x1} 0 ${x2} ${h / 4} ${x2} ${h / 2} C ${x2} ${(h * 3) / 4} ${x3} ${h} ${w} ${h}`
+	},
+	curvedConnector4: (w, h, adj) => {
+		const x2 = (w * adjust(adj, 'adj1', 50_000)) / GUIDE_SCALE
+		const [x1, x3] = [x2 / 2, (w + x2) / 2]
+		const [x4, x5] = [(x2 + x3) / 2, (x3 + w) / 2]
+		const y4 = (h * adjust(adj, 'adj2', 50_000)) / GUIDE_SCALE
+		const y1 = y4 / 2
+		const [y2, y3, y5] = [y1 / 2, (y1 + y4) / 2, (h + y4) / 2]
+		return [
+			'M 0 0',
+			`C ${x1} 0 ${x2} ${y2} ${x2} ${y1}`,
+			`C ${x2} ${y3} ${x4} ${y4} ${x3} ${y4}`,
+			`C ${x5} ${y4} ${w} ${y5} ${w} ${h}`,
+		].join(' ')
+	},
+	curvedConnector5: (w, h, adj) => {
+		const x3 = (w * adjust(adj, 'adj1', 50_000)) / GUIDE_SCALE
+		const x6 = (w * adjust(adj, 'adj3', 50_000)) / GUIDE_SCALE
+		const x1 = (x3 + x6) / 2
+		const [x2, x4, x5, x7] = [x3 / 2, (x3 + x1) / 2, (x6 + x1) / 2, (x6 + w) / 2]
+		const y4 = (h * adjust(adj, 'adj2', 50_000)) / GUIDE_SCALE
+		const y1 = y4 / 2
+		const [y2, y3, y5] = [y1 / 2, (y1 + y4) / 2, (h + y4) / 2]
+		const [y6, y7] = [(y5 + y4) / 2, (y5 + h) / 2]
+		return [
+			'M 0 0',
+			`C ${x2} 0 ${x3} ${y2} ${x3} ${y1}`,
+			`C ${x3} ${y3} ${x4} ${y4} ${x1} ${y4}`,
+			`C ${x5} ${y4} ${x6} ${y6} ${x6} ${y5}`,
+			`C ${x6} ${y7} ${x7} ${h} ${w} ${h}`,
+		].join(' ')
+	},
+}
+
 /** One `a:path`'s commands, scaled from its own `0..w`/`0..h` units into the box. */
 function customPathData(path: GeometryPath, w: number, h: number): string {
 	// `@w`/`@h` of 0 means "the path is already in the shape's coordinate space",
@@ -530,6 +603,8 @@ export function pathOf(geometry: Geometry, w: number, h: number): PathResult {
 		}
 	}
 
+	const connector = CONNECTORS[geometry.preset]
+	if (connector !== undefined) return { d: connector(w, h, geometry.adjustValues), unfilled: true }
 	const preset = PRESETS[geometry.preset]
 	if (preset === undefined) return { d: rect(w, h), fallback: geometry.preset }
 	return { d: preset(w, h, geometry.adjustValues) }

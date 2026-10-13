@@ -160,6 +160,24 @@ describe('presets', () => {
 		)
 	})
 
+	it('draws the elbow and curved connectors as open strokes', () => {
+		const draw = (preset: string, adjustValues: Record<string, string> = {}) =>
+			pathOf({ kind: 'preset', preset, adjustValues }, 1000, 400)
+		for (const n of [2, 3, 4, 5]) {
+			for (const preset of [`bentConnector${n}`, `curvedConnector${n}`]) {
+				expect([preset, draw(preset).fallback, draw(preset).unfilled]).toStrictEqual([preset, undefined, true])
+			}
+		}
+
+		expect(draw('bentConnector3').d).toBe('M 0 0 L 500 0 L 500 400 L 1000 400')
+		// A bend outside the box is how PowerPoint routes crossed ends, so it is not pinned.
+		expect(draw('bentConnector3', { adj1: 'val -25000' }).d).toBe('M 0 0 L -250 0 L -250 400 L 1000 400')
+		expect(draw('bentConnector4', { adj1: 'val 20000', adj2: 'val 75000' }).d).toBe(
+			'M 0 0 L 200 0 L 200 300 L 1000 300 L 1000 400'
+		)
+		expect(draw('curvedConnector3').d).toBe('M 0 0 C 250 0 500 100 500 200 C 500 300 750 400 1000 400')
+	})
+
 	it('clamps a radius that would exceed the box', () => {
 		// `val 100000` is the whole shorter side, and a radius of that would make the
 		// two corner arcs on one edge overlap and the path self-intersect.
