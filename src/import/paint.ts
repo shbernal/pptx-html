@@ -23,6 +23,7 @@ import type {
 	GradientFill,
 	GradientStop as ReadGradientStop,
 	PatternFill,
+	OuterShadow,
 	PictureFill,
 	ResolvedColor,
 } from 'pptx-ts/read'
@@ -35,6 +36,7 @@ import type {
 	GradientStop,
 	LineEnd,
 	SchemeToken,
+	Shadow,
 	Stroke,
 } from '../ir/render'
 import { type ImportScope, note } from './context'
@@ -108,9 +110,29 @@ function stopOf(stop: ReadGradientStop): GradientStop | null {
 	return { position: stop.position ?? 0, color }
 }
 
+/**
+ * An outer shadow, on a shape or a run. Each geometry field only when stated, so a
+ * shadow that leaves `@rotWithShape` to its default and one that states it stay apart.
+ * A shadow whose colour does not resolve has nothing to draw.
+ */
+export function shadowFields(shadow: OuterShadow | null): { shadow?: Shadow } {
+	const color = shadow === null ? undefined : colorOfRef(shadow.colorRef)
+	if (shadow === null || color === undefined) return {}
+	return {
+		shadow: {
+			color,
+			...(shadow.blurPt === undefined ? {} : { blurPt: shadow.blurPt }),
+			...(shadow.offsetPt === undefined ? {} : { offsetPt: shadow.offsetPt }),
+			...(shadow.angleDeg === undefined ? {} : { angleDeg: shadow.angleDeg }),
+			...(shadow.rotateWithShape === undefined ? {} : { rotateWithShape: shadow.rotateWithShape }),
+		},
+	}
+}
+
 export function gradientOf(fill: GradientFill, scope: ImportScope): Gradient | null {
 	const stops = fill.stops.map(stopOf).filter((stop): stop is GradientStop => stop !== null)
 	if (stops.length === 0) return null
+	const turns = fill.rotateWithShape === null ? {} : { rotateWithShape: fill.rotateWithShape }
 	if (fill.kind === 'path') {
 		const shape = fill.path === 'circle' || fill.path === 'rect' || fill.path === 'shape' ? fill.path : null
 		if (shape === null) {
@@ -121,11 +143,17 @@ export function gradientOf(fill: GradientFill, scope: ImportScope): Gradient | n
 				'unsupported',
 				`a path gradient whose shape is ${JSON.stringify(fill.path)} is drawn as a circular one`
 			)
-			return { kind: 'path', shape: 'circle', stops }
+			return { kind: 'path', shape: 'circle', ...turns, stops }
 		}
-		return { kind: 'path', shape, stops }
+		return { kind: 'path', shape, ...turns, stops }
 	}
-	return { kind: 'linear', angleDeg: fill.angleDeg ?? 0, stops }
+	return {
+		kind: 'linear',
+		angleDeg: fill.angleDeg ?? 0,
+		...(fill.scaled === null ? {} : { scaled: fill.scaled }),
+		...turns,
+		stops,
+	}
 }
 
 function edgeRectOf(rect: { left: number; top: number; right: number; bottom: number }): EdgeRect {

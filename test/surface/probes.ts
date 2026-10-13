@@ -1002,6 +1002,20 @@ const AUTHORED: Probe[] = [
 	text('addText.flipV', { flipV: true }),
 	text('addText.fontFace', { fontFace: 'Georgia' }),
 	textOn('addText.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
+	{
+		// The probe above has only Latin text, which the East Asian face never
+		// paints; this one gives it characters to paint.
+		id: 'addText.fontFaceEA:cjk',
+		covers: ['addText.fontFaceEA'],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addText('プローブ', {
+				...BOX,
+				objectName: 'probe',
+				fontFace: 'Georgia',
+				...(on ? { fontFaceEA: 'MS Mincho' } : {}),
+			})
+		},
+	},
 	text('addText.fontSize', { fontSize: 28 }),
 	text('addText.glow', { glow: { size: 8, opacity: 0.5, color: 'FF00FF' } }, [
 		'addText.glow.size',
@@ -1020,7 +1034,11 @@ const AUTHORED: Probe[] = [
 	text('addText.hyperlink.slide', { hyperlink: { slide: 1 } }),
 	text('addText.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
 	text('addText.indentLevel', { indentLevel: 2 }),
-	text('addText.isTextBox', { isTextBox: true }),
+	{
+		...text('addText.isTextBox', { isTextBox: true }),
+		invisible:
+			'`p:cNvSpPr/@txBox`: marks the shape as a text box, which changes how PowerPoint edits and autofits it on the next change, and draws nothing',
+	},
 	text('addText.lang', { lang: 'fr-FR' }),
 	text('addText.line', { line: { color: '250F6B', width: 2 } }, ['addText.line.color', 'addText.line.width']),
 	textOn(
@@ -1277,6 +1295,19 @@ const AUTHORED: Probe[] = [
 		'addText.tabStops.position',
 		'addText.tabStops.alignment',
 	]),
+	{
+		// The probe above has no tab character, so its stops have nothing to move;
+		// this one gives them one.
+		id: 'addText.tabStops:tabbed',
+		covers: ['addText.tabStops.position', 'addText.tabStops.alignment'],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addText('Probe\ttext', {
+				...BOX,
+				objectName: 'probe',
+				...(on ? { tabStops: [{ position: 1.5, alignment: 'r' as const }] } : {}),
+			})
+		},
+	},
 	text('addText.textDirection:vert', { textDirection: 'vert' }),
 	text('addText.textWarp', { textWarp: 'textArchUp' }),
 	text('addText.transparency', { transparency: 40 }),
@@ -1368,6 +1399,39 @@ const AUTHORED: Probe[] = [
 			},
 		},
 		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	// The probe above is upright, where a gradient that does not turn with its
+	// shape looks the same as one that does; this one turns the shape.
+	shapeOn(
+		'addShape.fill.gradient.rotateWithShape:rotated',
+		'rect',
+		{
+			rotate: 30,
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		{
+			rotate: 30,
 			fill: {
 				gradient: {
 					kind: 'linear',
@@ -1654,6 +1718,10 @@ const AUTHORED: Probe[] = [
 			'addShape.guides.name',
 			'addShape.guides.formula',
 		]),
+		// A guide paints only through a path point that names it, which pptx-ts can
+		// neither write nor read back: the reader turns `x="g0"` into 0. Once it can,
+		// the probe that proves rendering is a new one whose path uses the guide.
+		unread: 'https://github.com/shbernal/pptx-ts/issues/255',
 	},
 	{
 		...shapeOn(
@@ -5747,6 +5815,18 @@ const INVISIBLE: [RegExp, string][] = [
 	[/^addAnimation\./, 'an animation: plays during a slideshow, and draws nothing on a static slide'],
 	[/^addMedia\.loop/, 'media playback: changes how the clip plays, not the frame drawn for it'],
 	[/\.lang(:|$)/, 'a proofing language (`a:rPr/@lang`): selects spelling and grammar rules, and draws nothing'],
+	[
+		/^add(Shape|Image)\.hyperlink\./,
+		'a click action on the whole object (`p:cNvPr/a:hlinkClick`): fires in a slideshow, and draws nothing; a run hyperlink, which styles its text, is not this',
+	],
+	[
+		/background\.gradient\.rotateWithShape$/,
+		'whether a gradient turns with its shape (`a:gradFill/@rotWithShape`): a background has no rotation to follow, so it draws the same either way',
+	],
+	[
+		/^addShape\.(connectionSites|adjustHandles)\b/,
+		'a custom geometry editing affordance (`a:cxnLst` / `a:ahLst`): where connectors snap and which handles PowerPoint offers, neither of which is drawn',
+	],
 ]
 
 export const PROBES: Probe[] = AUTHORED.map((probe) => {

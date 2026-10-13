@@ -28,6 +28,7 @@ import {
 	isGroupShape,
 	isPicture,
 	type Picture,
+	type Recolor,
 	type Shape,
 	type Table,
 	type TableCell as ReadTableCell,
@@ -39,8 +40,10 @@ import {
 	importedNodeId,
 	type NodeId,
 	type OpaqueNode,
+	type PictureEffect,
 	type Placement,
 	type RenderNode,
+	type Shadow,
 	type TableCell,
 	type TableColumn,
 	type TableRow,
@@ -48,7 +51,7 @@ import {
 } from '../ir/render'
 import { forShape, type ImportScope, note } from './context'
 import { geometryOf } from './geometry'
-import { cellBorderOf, colorOf, fillOf, strokeOf } from './paint'
+import { cellBorderOf, colorOf, colorOfRef, fillOf, shadowFields, strokeOf } from './paint'
 import { textBodyOf } from './text'
 
 /** The identity every node on this slide is addressed by. */
@@ -102,6 +105,7 @@ function baseOf(shape: Shape, scope: ImportScope): {
 	name: string
 	placement: Placement | null
 	hidden?: boolean
+	shadow?: Shadow
 	alt?: string
 	placeholder?: { type: string | null; idx: string }
 } {
@@ -112,6 +116,7 @@ function baseOf(shape: Shape, scope: ImportScope): {
 		name: shape.name,
 		placement: placementOf(shape, scope),
 		...(shape.hidden ? { hidden: true } : {}),
+		...shadowFields(shape.shadow),
 		...(alt === null || alt === '' ? {} : { alt }),
 		// The link, not its resolution: a placeholder flattened into a plain shape
 		// passes a pixel diff and loses the binding that governs theme and colour-map
@@ -195,14 +200,40 @@ function pictureNodeOf(picture: Picture, scope: ImportScope): RenderNode {
 		return opaque(picture, scope, 'picture')
 	}
 	const crop = picture.crop
+	const effects = picture.recolors.map(effectOf).filter((effect): effect is PictureEffect => effect !== null)
 	return {
 		...baseOf(picture, scope),
 		kind: 'picture',
 		render: 'drawn',
 		asset,
 		...(crop === null ? {} : { crop }),
+		...(effects.length === 0 ? {} : { effects }),
 		geometry: geometryOf(picture, scope),
 		stroke: strokeOf(picture, scope),
+	}
+}
+
+/**
+ * One blip effect. `null` for one whose colours do not resolve, which has nothing
+ * to paint. A `biLevel` that states no threshold is PowerPoint's default, half.
+ */
+function effectOf(recolor: Recolor): PictureEffect | null {
+	switch (recolor.kind) {
+		case 'grayscale':
+			return { kind: 'grayscale' }
+		case 'biLevel':
+			return { kind: 'biLevel', threshold: recolor.threshold ?? 0.5 }
+		case 'alphaModFix':
+			return { kind: 'alpha', amount: recolor.amount }
+		case 'duotone': {
+			const [dark, light] = recolor.stops.map(colorOfRef)
+			return dark === undefined || light === undefined ? null : { kind: 'duotone', dark, light }
+		}
+		case 'clrChange': {
+			const from = colorOfRef(recolor.from)
+			const to = colorOfRef(recolor.to)
+			return from === undefined || to === undefined ? null : { kind: 'clrChange', from, to }
+		}
 	}
 }
 

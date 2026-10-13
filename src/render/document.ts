@@ -82,8 +82,8 @@ const UNSTATED_SLIDE_BACKGROUND = '#ffffff'
  * transparent would hand the deck whatever colour the embedding page happens to
  * be — so a dark host page would silently invert the whole preview.
  */
-function backgroundPaint(fill: RenderSlide['background']['fill'], defs: Defs): Painted {
-	if (fill.kind !== 'inherit') return fillPaint(fill, defs)
+function backgroundPaint(fill: RenderSlide['background']['fill'], size: RenderIr['size'], defs: Defs): Painted {
+	if (fill.kind !== 'inherit') return fillPaint(fill, { w: size.w, h: size.h, rotation: 0 }, defs)
 	return { attrs: `fill="${UNSTATED_SLIDE_BACKGROUND}"`, painted: true, approx: 'background:inherit' }
 }
 
@@ -98,7 +98,7 @@ function renderSlide(slide: RenderSlide, size: RenderIr['size'], warnings: strin
 	// Order is paint order: the background, then the template's furniture, then
 	// the slide's own nodes front-to-back in document order, which is the order
 	// the array is already in.
-	const background = backgroundPaint(slide.background.fill, defs)
+	const background = backgroundPaint(slide.background.fill, size, defs)
 	const chrome = slide.chrome.map((node) => renderNode(node, chromeContext)).join('')
 	const nodes = slide.nodes.map((node) => renderNode(node, context)).join('')
 

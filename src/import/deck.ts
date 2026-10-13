@@ -186,7 +186,10 @@ function fillOfBackground(background: BackgroundFill, scope: ImportScope): Fill 
 		}
 		case 'gradient': {
 			const gradient = gradientOf(background.gradient, scope)
-			return gradient === null ? { kind: 'inherit' } : { kind: 'gradient', gradient }
+			if (gradient === null) return { kind: 'inherit' }
+			// A background never rotates, so `@rotWithShape` cannot change what it paints.
+			const { rotateWithShape: _, ...still } = gradient
+			return { kind: 'gradient', gradient: still }
 		}
 		case 'pattern':
 			return {

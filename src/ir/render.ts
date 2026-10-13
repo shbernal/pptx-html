@@ -329,9 +329,13 @@ export interface GradientStop {
 	color: Color
 }
 
+/**
+ * A gradient. `rotateWithShape` is `a:gradFill/@rotWithShape` and `scaled` is
+ * `a:lin/@scaled`, each only when stated.
+ */
 export type Gradient =
-	| { kind: 'linear'; angleDeg: number; stops: GradientStop[] }
-	| { kind: 'path'; shape: 'circle' | 'rect' | 'shape'; stops: GradientStop[] }
+	| { kind: 'linear'; angleDeg: number; scaled?: boolean; rotateWithShape?: boolean; stops: GradientStop[] }
+	| { kind: 'path'; shape: 'circle' | 'rect' | 'shape'; rotateWithShape?: boolean; stops: GradientStop[] }
 
 /**
  * A fill.
@@ -427,6 +431,21 @@ export type Stroke =
 			tail?: LineEnd
 	  }
 
+/**
+ * An outer shadow (`a:outerShdw`), on a shape's `spPr` or a run's `a:rPr`.
+ *
+ * Lengths in points, the direction in degrees clockwise from 3 o'clock, each
+ * absent when unstated: OOXML's own default for all three is `0`, and
+ * `@rotWithShape` defaults to rotating, so absent and stated stay two decks.
+ */
+export interface Shadow {
+	color: Color
+	blurPt?: number
+	offsetPt?: number
+	angleDeg?: number
+	rotateWithShape?: boolean
+}
+
 // ---------------------------------------------------------------------------
 // Text
 // ---------------------------------------------------------------------------
@@ -441,6 +460,8 @@ export type Stroke =
  */
 export interface RunProperties {
 	fontFace?: string
+	/** `a:rPr/a:ea`: the face for East Asian characters. {@link fontFace} is the Latin slot. */
+	eastAsianFontFace?: string
 	sizePt?: number
 	bold?: boolean
 	italic?: boolean
@@ -450,8 +471,20 @@ export interface RunProperties {
 	 * as a {@link FidelityNote}, not rounded to `single`.
 	 */
 	underline?: 'none' | 'single' | 'double'
+	/** `a:rPr/a:uFill`: the underline's own colour. Absent, it follows the text colour. */
+	underlineColor?: Color
 	strike?: 'none' | 'single' | 'double'
+	/** `a:rPr/@cap`: the text is drawn in capitals without its characters changing. */
+	caps?: 'none' | 'small' | 'all'
 	color?: Color
+	/** `a:rPr/a:highlight`: a colour painted behind the run's glyphs. */
+	highlight?: Color
+	/** `a:rPr/a:ln`: a stroke around each glyph. Absent when the run has none or states `a:noFill`. */
+	outline?: { widthPt?: number; color?: Color }
+	/** `a:rPr/a:effectLst/a:outerShdw`. */
+	shadow?: Shadow
+	/** `a:rPr/a:effectLst/a:glow`: a halo of `color` around each glyph; `color.alpha` is its opacity. */
+	glow?: { color: Color; radiusPt?: number }
 	/** `a:rPr/@spc`, character spacing. */
 	spacingPt?: number
 	/** `a:rPr/@kern`: the smallest font size, in points, that is pair-kerned; `0` turns kerning off. */
@@ -544,6 +577,16 @@ export interface ParagraphProperties {
 	lineSpacing?: LineSpacing
 	spaceBeforePt?: number
 	spaceAfterPt?: number
+	/** `@rtl`: the paragraph reads right to left. */
+	rtl?: boolean
+	/** `a:tabLst`, in document order. Positions are from the paragraph's left edge. */
+	tabStops?: TabStop[]
+}
+
+/** One `a:tab`. `alignment` is `@algn`, `l` when the stop states none. */
+export interface TabStop {
+	positionPt: number
+	alignment: 'l' | 'ctr' | 'r' | 'dec'
 }
 
 /**
@@ -570,6 +613,11 @@ export interface ResolvedRunProperties {
 
 export interface TextRun {
 	text: string
+	/**
+	 * Line breaks (`a:br`) directly before this run. A break is not a run, so
+	 * without this the runs either side of one read as neighbours on one line.
+	 */
+	breaksBefore?: number
 	/** What this run itself stated. Absent field = inherited. */
 	props: RunProperties
 	/** What to paint. Derived at import; never written back to the deck. */
@@ -617,6 +665,10 @@ export interface TextBody {
 	insetsPt: { left: number; right: number; top: number; bottom: number }
 	/** `@vert`, when the frame is not horizontal. */
 	vertical?: 'vert' | 'vert270' | 'eaVert' | 'wordArtVert'
+	/** `a:prstTxWarp/@prst`, a WordArt warp such as `textArchUp`. */
+	warp?: string
+	/** `@numCol` and `@spcCol` (points), when the frame states more than one column. */
+	columns?: { count: number; spacingPt?: number }
 }
 
 // ---------------------------------------------------------------------------
@@ -656,6 +708,8 @@ interface NodeBase {
 	standsFor?: string
 	/** `p:cNvPr/@hidden`. */
 	hidden?: boolean
+	/** `spPr/a:effectLst/a:outerShdw`. */
+	shadow?: Shadow
 	/** `p:cNvPr/@descr`, alt text. */
 	alt?: string
 	/** Set when the node is a layout placeholder rather than a free shape. */
@@ -670,11 +724,26 @@ export interface ShapeNode extends NodeBase {
 	text: TextBody | null
 }
 
+/**
+ * One effect on a picture's blip (`p:blipFill/a:blip`), in document order.
+ * `threshold` and `amount` are 0–1 fractions.
+ */
+export type PictureEffect =
+	| { kind: 'grayscale' }
+	| { kind: 'biLevel'; threshold: number }
+	/** `a:duotone`: luminance mapped from the first colour (dark) to the second (light). */
+	| { kind: 'duotone'; dark: Color; light: Color }
+	/** `a:clrChange`: pixels of `from` painted `to`, whose alpha is how a picture states a transparent colour. */
+	| { kind: 'clrChange'; from: Color; to: Color }
+	/** `a:alphaModFix`: the picture's opacity. */
+	| { kind: 'alpha'; amount: number }
+
 export interface PictureNode extends NodeBase {
 	kind: 'picture'
 	asset: AssetRef
 	/** `a:srcRect` crop. */
 	crop?: EdgeRect
+	effects?: PictureEffect[]
 	geometry: Geometry
 	stroke: Stroke
 }

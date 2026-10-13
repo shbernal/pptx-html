@@ -19,8 +19,11 @@ import {
 	EMU_PER_POINT,
 	escapeAttr,
 	fillPaint,
+	type PaintFrame,
+	pictureEffects,
 	type Painted,
 	round3,
+	shadowFilter,
 	strokePaint,
 	UNPAINTED_FILL,
 	UNPAINTED_STROKE,
@@ -122,8 +125,8 @@ function placeholderBox(box: Box, standsFor: string): string {
  * insets bleed outward and fall out of the same arithmetic, which is why this is
  * computed rather than clamped.
  */
-function croppedImage(asset: string, box: Box, crop: EdgeRect | undefined): string {
-	const attrs = `data-pxh-asset="${escapeAttr(asset)}" preserveAspectRatio="none"`
+function croppedImage(asset: string, box: Box, crop: EdgeRect | undefined, effects: string): string {
+	const attrs = `data-pxh-asset="${escapeAttr(asset)}" preserveAspectRatio="none"${effects === '' ? '' : ` ${effects}`}`
 	if (crop === undefined) return `<image ${attrs} x="0" y="0" width="${box.w}" height="${box.h}"/>`
 
 	const visibleW = 1 - crop.left - crop.right
@@ -138,6 +141,7 @@ function croppedImage(asset: string, box: Box, crop: EdgeRect | undefined): stri
 }
 
 function renderTable(node: TableNode, box: Box, context: NodeContext): string {
+	const rotation = node.placement?.rotation ?? 0
 	// A column with no stated width, or a row with no stated height, shares out
 	// what the frame has left. That is the same rule the writer applies on the way
 	// out, so a table drawn here and a table re-emitted agree about the geometry.
@@ -151,7 +155,7 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 
 	// The table's own background goes down first, under the whole frame, so a cell
 	// with no fill of its own shows it through and a cell with one covers it.
-	const background = fillPaint(node.fill, context.defs)
+	const background = fillPaint(node.fill, { w: box.w, h: box.h, rotation }, context.defs)
 	const parts: string[] = background.painted
 		? [
 				`<rect x="0" y="0" width="${box.w}" height="${box.h}" ${background.attrs}` +
@@ -188,12 +192,16 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 
 			// The cell's own fill wins, `none` included; only a cell that states none
 			// shows the table style's shading.
-			const fill = fillPaint(cell.fill.kind === 'inherit' ? cell.styleFill : cell.fill, context.defs)
+			const fill = fillPaint(
+				cell.fill.kind === 'inherit' ? cell.styleFill : cell.fill,
+				{ w: cellW, h: cellH, rotation },
+				context.defs
+			)
 			parts.push(
 				`<g ${context.editable ? `data-pxh-node="${escapeAttr(cell.id)}" ` : ''}transform="translate(${x} ${y})"` +
 					`${fill.approx === undefined ? '' : ` data-pxh-approx="${fill.approx}"`}>` +
 					`<rect x="0" y="0" width="${cellW}" height="${cellH}" ${fill.attrs}/>` +
-					cellLines(cell.borders, cellW, cellH, context) +
+					cellLines(cell.borders, cellW, cellH, rotation, context) +
 					(cell.text === null
 						? ''
 						: textFrame(
@@ -218,7 +226,13 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
  * `w`/`h` are the *spanned* box, so a diagonal on a merged cell is the single
  * stroke across the whole region that OOXML means by it.
  */
-function cellLines(borders: TableNode['rows'][number]['cells'][number]['borders'], w: number, h: number, context: NodeContext): string {
+function cellLines(
+	borders: TableNode['rows'][number]['cells'][number]['borders'],
+	w: number,
+	h: number,
+	rotation: number,
+	context: NodeContext
+): string {
 	const sides: [keyof typeof borders, number, number, number, number][] = [
 		['top', 0, 0, w, 0],
 		['right', w, 0, w, h],
@@ -229,7 +243,7 @@ function cellLines(borders: TableNode['rows'][number]['cells'][number]['borders'
 	]
 	return sides
 		.map(([side, x1, y1, x2, y2]) => {
-			const paint = strokePaint(borders[side], context.defs)
+			const paint = strokePaint(borders[side], { w, h, rotation }, context.defs)
 			if (!paint.painted) return ''
 			return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${paint.attrs}/>`
 		})
@@ -260,12 +274,18 @@ export function renderNode(node: RenderNode, context: NodeContext): string {
 	if (node.hidden === true) attrs.push('style="display:none"')
 	if (node.alt !== undefined) attrs.push(`aria-label="${escapeAttr(node.alt)}"`)
 
-	const inner = node.render === 'placeholder' ? placeholderBox(box, node.standsFor ?? node.kind) : bodyOf(node, box, context)
+	const body = node.render === 'placeholder' ? placeholderBox(box, node.standsFor ?? node.kind) : bodyOf(node, box, context)
+	// Inside the node's transform, so the shadow turns with the shape unless it says otherwise.
+	const inner =
+		node.shadow === undefined || node.render === 'placeholder'
+			? body
+			: `<g filter="${shadowFilter(node.shadow, node.placement.rotation, context.defs)}">${body}</g>`
 
 	return `<g ${attrs.join(' ')}>${inner}</g>`
 }
 
 function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
+	const frame: PaintFrame = { w: box.w, h: box.h, rotation: node.placement?.rotation ?? 0 }
 	switch (node.kind) {
 		case 'group':
 			// A group paints nothing of its own. Its children's placements are already
@@ -277,8 +297,8 @@ function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
 			const path = pathOf(node.geometry, box.w, box.h)
 			// A preset that says it paints nothing overrides what the node states: the
 			// geometry decided there is no interior or no outline to paint.
-			const fill: Painted = path.unfilled === true ? UNPAINTED_FILL : fillPaint(node.fill, context.defs)
-			const stroke: Painted = path.unstroked === true ? UNPAINTED_STROKE : strokePaint(node.stroke, context.defs)
+			const fill: Painted = path.unfilled === true ? UNPAINTED_FILL : fillPaint(node.fill, frame, context.defs)
+			const stroke: Painted = path.unstroked === true ? UNPAINTED_STROKE : strokePaint(node.stroke, frame, context.defs)
 			const approx = [path.fallback === undefined ? '' : `geometry:${path.fallback}`, fill.approx ?? '', stroke.approx ?? '']
 				.filter((entry) => entry !== '')
 				.join(' ')
@@ -291,19 +311,19 @@ function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
 
 		case 'picture': {
 			const path = pathOf(node.geometry, box.w, box.h)
-			const stroke = strokePaint(node.stroke, context.defs)
+			const stroke = strokePaint(node.stroke, frame, context.defs)
 			// The geometry clips the image rather than outlining it: a picture cropped
 			// to a shape is the common case, and a plain `rect` clip is a no-op.
 			const clip = context.defs.add((id) => `<clipPath id="${id}"><path d="${path.d}"/></clipPath>`)
 			return (
-				`<g clip-path="${clip}">${croppedImage(node.asset.$asset, box, node.crop)}</g>` +
+				`<g clip-path="${clip}">${croppedImage(node.asset.$asset, box, node.crop, pictureEffects(node.effects ?? [], context.defs))}</g>` +
 				(stroke.painted ? `<path d="${path.d}" fill="none" ${stroke.attrs}/>` : '')
 			)
 		}
 
 		case 'connector': {
 			const path = pathOf(node.geometry, box.w, box.h)
-			const stroke = strokePaint(node.stroke, context.defs)
+			const stroke = strokePaint(node.stroke, frame, context.defs)
 			return `<path d="${path.d}" fill="none" ${stroke.attrs}${stroke.approx === undefined ? '' : ` data-pxh-approx="${stroke.approx}"`}/>`
 		}
 

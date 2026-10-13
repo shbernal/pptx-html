@@ -41,7 +41,7 @@
 
 import type { Bullet, Paragraph, ParagraphProperties, TextBody, TextRun } from '../ir/render'
 import { editableParaProps, editableRunProps } from '../ir/surface'
-import { cssColor, escapeAttr, round3 } from './paint'
+import { cssColor, cssTextGlow, cssTextShadow, escapeAttr, round3 } from './paint'
 
 /** Text-node escaping. `&` first, or it would double-escape the entities below. */
 export function escapeText(value: string): string {
@@ -95,8 +95,11 @@ function runStyle(run: TextRun, fontScalePct: number | undefined): string {
 	const resolved = run.resolved
 	const style: string[] = []
 
-	const face = props.fontFace ?? resolved.fontFace
-	if (face !== undefined) style.push(`font-family:${JSON.stringify(face)},sans-serif`)
+	// PowerPoint picks the East Asian face per character by script. A browser's
+	// per-glyph fallback down the stack is the same choice: Latin glyphs stop at
+	// the Latin face, and the ones it lacks fall through to the East Asian one.
+	const faces = [props.fontFace ?? resolved.fontFace, props.eastAsianFontFace].filter((f) => f !== undefined)
+	if (faces.length > 0) style.push(`font-family:${faces.map((f) => JSON.stringify(f)).join(',')},sans-serif`)
 
 	const size = props.sizePt ?? resolved.sizePt
 	if (size !== undefined) style.push(`font-size:${px(scaled(size, fontScalePct))}px`)
@@ -109,6 +112,17 @@ function runStyle(run: TextRun, fontScalePct: number | undefined): string {
 
 	const color = props.color ?? resolved.color
 	if (color !== undefined) style.push(`color:${cssColor(color)}`)
+	if (props.highlight !== undefined) style.push(`background-color:${cssColor(props.highlight)}`)
+	// `a:ln` with no width is PowerPoint's 0.75pt hairline. The CSS stroke is
+	// centred on the glyph edge, as OOXML's is.
+	if (props.outline !== undefined) {
+		const stroke = props.outline.color === undefined ? 'currentcolor' : cssColor(props.outline.color)
+		style.push(`-webkit-text-stroke:${px(props.outline.widthPt ?? 0.75)}px ${stroke}`)
+	}
+	const shadows: string[] = []
+	if (props.shadow !== undefined) shadows.push(cssTextShadow(props.shadow))
+	if (props.glow !== undefined) shadows.push(...cssTextGlow(props.glow))
+	if (shadows.length > 0) style.push(`text-shadow:${shadows.join(',')}`)
 
 	// `underline` and `strike` are both `none`/`single`/`double`; CSS spells the
 	// last one as a separate style rather than a second line.
@@ -118,7 +132,15 @@ function runStyle(run: TextRun, fontScalePct: number | undefined): string {
 	if (decoration.length > 0) {
 		style.push(`text-decoration:${decoration.join(' ')}`)
 		if (props.underline === 'double' || props.strike === 'double') style.push('text-decoration-style:double')
+		// CSS has one decoration colour for both lines, so it is only stated when the
+		// strike it would also recolour is absent.
+		if (props.underlineColor !== undefined && !decoration.includes('line-through'))
+			style.push(`text-decoration-color:${cssColor(props.underlineColor)}`)
 	}
+
+	// Display only, as in PowerPoint: the run's characters stay as typed.
+	if (props.caps === 'all') style.push('text-transform:uppercase')
+	if (props.caps === 'small') style.push('font-variant-caps:small-caps')
 
 	if (props.spacingPt !== undefined) style.push(`letter-spacing:${px(props.spacingPt)}px`)
 	// A threshold, not a switch: only text at or above it is kerned. A run that
@@ -175,8 +197,11 @@ function renderRun(
 			? `<span${styleAttr}>${escapeText(run.text)}</span>`
 			: surfaceSpan(run, `${nodeId}/${paragraph}/${index}`, styleAttr)
 
-	if (link?.url == null) return span
-	return `<a href="${escapeAttr(link.url)}"${link.tooltip === undefined ? '' : ` title="${escapeAttr(link.tooltip)}"`}>${span}</a>`
+	// Outside the span, so the break is not typed over: it is a sibling in the
+	// source too, not part of the run's text.
+	const breaks = '<br/>'.repeat(run.breaksBefore ?? 0)
+	if (link?.url == null) return breaks + span
+	return `${breaks}<a href="${escapeAttr(link.url)}"${link.tooltip === undefined ? '' : ` title="${escapeAttr(link.tooltip)}"`}>${span}</a>`
 }
 
 /** The editable form of a run: its address, its invitation to type, its stated props. */
@@ -259,6 +284,14 @@ function renderBullet(bullet: Bullet, ordinal: number): string {
 function paragraphStyle(props: ParagraphProperties, reductionPct: number): string {
 	const style = ['margin:0']
 	if (props.align !== undefined) style.push(`text-align:${props.align === 'justify' ? 'justify' : props.align}`)
+	// CSS has one tab width, repeated, and no stop alignment: the first stop's
+	// position is that width, which is exact for left stops at its multiples.
+	const firstTab = props.tabStops?.[0]
+	if (firstTab !== undefined) style.push(`tab-size:${px(firstTab.positionPt)}px`)
+	// `@algn` names a side, not a start or an end, so an RTL paragraph that states
+	// none still sits at the left, where the inherited `l` puts it; only the
+	// ordering of its characters turns around. PowerPoint 16.0.20430 draws it there.
+	if (props.rtl === true) style.push('direction:rtl', ...(props.align === undefined ? ['text-align:left'] : []))
 	// `@lvl` is an outline depth, and the list style it indexes into is not in the
 	// IR; a flat indent per level is the honest approximation of "deeper".
 	if (props.level > 0) style.push(`margin-left:${px(props.level * 18)}px`)
@@ -286,6 +319,13 @@ function paragraphStyle(props: ParagraphProperties, reductionPct: number): strin
 		style.push(`line-height:${round3((SINGLE_LINE_HEIGHT * (100 - reductionPct)) / 100)}`)
 	}
 	return style.join(';')
+}
+
+/** Whether {@link paragraphStyle}'s `tab-size` misplaces any of the paragraph's stops. */
+function tabsApproximate(props: ParagraphProperties): boolean {
+	const stops = props.tabStops ?? []
+	const step = stops[0]?.positionPt ?? 0
+	return stops.some((stop, at) => stop.alignment !== 'l' || Math.abs(stop.positionPt - step * (at + 1)) > 0.01)
 }
 
 /**
@@ -346,12 +386,31 @@ export function renderTextBody(text: TextBody, nodeId: string | null): string {
 			// one: an empty `<p>` collapses to nothing without something to give it
 			// height.
 			const content = runs === '' ? '<br/>' : runs
+			const approx = tabsApproximate(paragraph.props) ? ' data-pxh-approx="text:tabs"' : ''
 			return (
-				`<p${paragraphSurface(paragraph, nodeId, index)}` +
+				`<p${paragraphSurface(paragraph, nodeId, index)}${approx}` +
 				` style="${escapeAttr(paragraphStyle(paragraph.props, reduction))}">${glyph}${content}</p>`
 			)
 		})
 		.join('')
+
+	// Columns fill one at a time to the frame's foot, as PowerPoint's do, which in
+	// CSS is an unbalanced multi-column box the frame's height. PowerPoint has no
+	// widow or orphan control, and CSS's default of two would pull a line over early.
+	const columns = text.columns
+	const flowed =
+		columns === undefined
+			? body
+			: `<div style="${escapeAttr(
+					[
+						'height:100%',
+						`column-count:${columns.count}`,
+						`column-gap:${px(columns.spacingPt ?? 0)}px`,
+						'column-fill:auto',
+						'orphans:1',
+						'widows:1',
+					].join(';')
+				)}">${body}</div>`
 
 	const frame = [
 		'height:100%',
@@ -371,6 +430,9 @@ export function renderTextBody(text: TextBody, nodeId: string | null): string {
 
 	const declared: string[] = []
 	if (text.vertical === 'eaVert' || text.vertical === 'wordArtVert') declared.push('text:vertical')
+	// A warp bends each line along one of forty preset curves, which needs the
+	// glyphs' measured advances to place; the text is drawn flat and says so.
+	if (text.warp !== undefined) declared.push('text:warp')
 	// The scale is exact and says nothing; the reduction only says something when it
 	// had no stated spacing to subtract from and fell back to `SINGLE_LINE_HEIGHT`.
 	if (reduction > 0 && text.paragraphs.some((paragraph) => paragraph.props.lineSpacing === undefined))
@@ -379,6 +441,6 @@ export function renderTextBody(text: TextBody, nodeId: string | null): string {
 
 	return (
 		`<div xmlns="http://www.w3.org/1999/xhtml" class="pxh-text"${approx} style="${escapeAttr(frame.join(';'))}">` +
-		`${body}</div>`
+		`${flowed}</div>`
 	)
 }

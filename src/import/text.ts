@@ -36,11 +36,12 @@ import type {
 	ParagraphProperties,
 	ResolvedRunProperties,
 	RunProperties,
+	TabStop,
 	TextBody,
 	TextRun,
 } from '../ir/render'
 import { type ImportScope, note } from './context'
-import { colorOf, colorOfRef } from './paint'
+import { colorOf, colorOfRef, shadowFields } from './paint'
 
 /** PowerPoint's `a:bodyPr` inset defaults: 0.1" horizontally, 0.05" vertically. */
 const DEFAULT_INSETS = { left: 7.2, right: 7.2, top: 3.6, bottom: 3.6 } as const
@@ -74,6 +75,9 @@ const STRIKE: Record<string, NonNullable<RunProperties['strike']>> = {
 	sngStrike: 'single',
 	dblStrike: 'double',
 }
+
+/** `ST_TextCapsType`, all three of them. */
+const CAPS: Record<string, NonNullable<RunProperties['caps']>> = { none: 'none', small: 'small', all: 'all' }
 
 export function textBodyOf(frame: TextFrame, scope: ImportScope): TextBody {
 	const body = frame.bodyProperties
@@ -114,7 +118,17 @@ export function textBodyOf(frame: TextFrame, scope: ImportScope): TextBody {
 			bottom: insets.bottom ?? DEFAULT_INSETS.bottom,
 		},
 		...(modeledVertical === undefined ? {} : { vertical: modeledVertical }),
+		...(body?.textWarp == null || body.textWarp === 'textNoShape' ? {} : { warp: body.textWarp }),
+		...columnFields(body),
 	}
+}
+
+/** One column, or none stated, is the ordinary frame and states nothing here. */
+function columnFields(body: TextFrame['bodyProperties']): { columns?: NonNullable<TextBody['columns']> } {
+	const count = body?.columns ?? null
+	if (count === null || count <= 1) return {}
+	const spacing = body?.columnSpacingPt ?? null
+	return { columns: { count, ...(spacing === null ? {} : { spacingPt: spacing }) } }
 }
 
 function paragraphOf(paragraph: ReadParagraph, scope: ImportScope): Paragraph {
@@ -141,9 +155,23 @@ function paragraphOf(paragraph: ReadParagraph, scope: ImportScope): Paragraph {
 		...(paragraph.lineSpacing === null ? {} : { lineSpacing: paragraph.lineSpacing }),
 		...(paragraph.spaceBeforePt === null ? {} : { spaceBeforePt: paragraph.spaceBeforePt }),
 		...(paragraph.spaceAfterPt === null ? {} : { spaceAfterPt: paragraph.spaceAfterPt }),
+		...(paragraph.rtl === null ? {} : { rtl: paragraph.rtl }),
+		...tabStopFields(paragraph),
 	}
 
 	return { props, runs: paragraph.runs.map((run) => runOf(run, scope)) }
+}
+
+const TAB_ALIGN: Record<string, TabStop['alignment']> = { l: 'l', ctr: 'ctr', r: 'r', dec: 'dec' }
+
+/** A stop with no position has nowhere to stop, and is left out. */
+function tabStopFields(paragraph: ReadParagraph): { tabStops?: TabStop[] } {
+	const stops = (paragraph.tabStops ?? []).flatMap((stop): TabStop[] =>
+		stop.positionPt === null
+			? []
+			: [{ positionPt: stop.positionPt, alignment: TAB_ALIGN[stop.alignment ?? 'l'] ?? 'l' }]
+	)
+	return stops.length === 0 ? {} : { tabStops: stops }
 }
 
 /**
@@ -227,7 +255,12 @@ function bulletFields(bullet: BulletDetail | null, scope: ImportScope): { bullet
 }
 
 function runOf(run: ReadRun, scope: ImportScope): TextRun {
-	return { text: run.text, props: runPropsOf(run, scope), resolved: resolvedRunPropsOf(run) }
+	return {
+		text: run.text,
+		...(run.breaksBefore === 0 ? {} : { breaksBefore: run.breaksBefore }),
+		props: runPropsOf(run, scope),
+		resolved: resolvedRunPropsOf(run),
+	}
 }
 
 function runPropsOf(run: ReadRun, scope: ImportScope): RunProperties {
@@ -242,12 +275,19 @@ function runPropsOf(run: ReadRun, scope: ImportScope): RunProperties {
 
 	return {
 		...(run.fontName === null ? {} : { fontFace: run.fontName }),
+		...(run.eastAsianFontName === null ? {} : { eastAsianFontFace: run.eastAsianFontName }),
 		...(run.fontSizePt === null ? {} : { sizePt: run.fontSizePt }),
 		...(run.bold === null ? {} : { bold: run.bold }),
 		...(run.italic === null ? {} : { italic: run.italic }),
 		...enumField(run.underline, UNDERLINE, 'underline', scope, 'text.underline', 'underline style'),
 		...enumField(run.strike, STRIKE, 'strike', scope, 'text.strike', 'strikethrough style'),
+		...(run.caps !== null && CAPS[run.caps] !== undefined ? { caps: CAPS[run.caps] } : {}),
 		...(color === undefined ? {} : { color }),
+		...highlightFields(run),
+		...underlineColorFields(run),
+		...outlineFields(run),
+		...shadowFields(run.shadow),
+		...glowFields(run),
 		...(run.charSpacingPt === null ? {} : { spacingPt: run.charSpacingPt }),
 		...(run.kerningPt === null ? {} : { kerningPt: run.kerningPt }),
 		...(run.baselinePct === null ? {} : { baselinePct: run.baselinePct }),
@@ -283,6 +323,36 @@ function enumField<K extends string, V extends string>(
 		`a ${label} of ${JSON.stringify(value)} is outside the three the write API expresses, so the run carries none`
 	)
 	return {}
+}
+
+/** The read model resolves a highlight to a literal colour, so there is no scheme token to keep. */
+function highlightFields(run: ReadRun): { highlight?: Color } {
+	const highlight = colorOf(null, run.highlight)
+	return highlight === undefined ? {} : { highlight }
+}
+
+function underlineColorFields(run: ReadRun): { underlineColor?: Color } {
+	const underlineColor = colorOfRef(run.underlineColor)
+	return underlineColor === undefined ? {} : { underlineColor }
+}
+
+function outlineFields(run: ReadRun): { outline?: NonNullable<RunProperties['outline']> } {
+	const outline = run.outline
+	if (outline === null || outline.noFill) return {}
+	const color = colorOfRef(outline.colorRef)
+	return {
+		outline: {
+			...(outline.widthPt === null ? {} : { widthPt: outline.widthPt }),
+			...(color === undefined ? {} : { color }),
+		},
+	}
+}
+
+function glowFields(run: ReadRun): { glow?: NonNullable<RunProperties['glow']> } {
+	const glow = run.glow
+	const color = glow === null ? undefined : colorOfRef(glow.colorRef)
+	if (glow === null || color === undefined) return {}
+	return { glow: { color, ...(glow.radiusPt === undefined ? {} : { radiusPt: glow.radiusPt }) } }
 }
 
 function hyperlinkFields(run: ReadRun, scope: ImportScope): { hyperlink?: Hyperlink } {

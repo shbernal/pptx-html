@@ -14,7 +14,7 @@
  * to read a path back out.
  */
 
-import { type AnyShape, isAutoShape } from 'pptx-ts/read'
+import type { AnyShape } from 'pptx-ts/read'
 import type { Geometry, GeometryPath } from '../ir/render'
 import { type ImportScope, note } from './context'
 
@@ -26,18 +26,18 @@ import { type ImportScope, note } from './context'
 const FALLBACK: Geometry = { kind: 'preset', preset: 'rect', adjustValues: {} }
 
 export function geometryOf(shape: AnyShape, scope: ImportScope): Geometry {
-	if (isAutoShape(shape)) {
-		const custom = shape.customGeometry
-		if (custom !== null) {
-			const paths: GeometryPath[] = custom.paths.map((path) => ({
-				w: path.w,
-				h: path.h,
-				fill: path.fill,
-				stroke: path.stroke,
-				commands: path.commands,
-			}))
-			if (paths.length > 0) return { kind: 'custom', paths }
-		}
+	// Any kind, not just an auto-shape: a picture clipped to a freeform carries
+	// its clip here too.
+	const custom = shape.customGeometry
+	if (custom !== null) {
+		const paths: GeometryPath[] = custom.paths.map((path) => ({
+			w: path.w,
+			h: path.h,
+			fill: path.fill,
+			stroke: path.stroke,
+			commands: path.commands,
+		}))
+		if (paths.length > 0) return { kind: 'custom', paths }
 	}
 
 	const preset = shape.presetGeometry

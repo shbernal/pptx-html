@@ -36,7 +36,17 @@
  * travel through the island as themselves, and only the picture approximates.
  */
 
-import { type Color, type DashStyle, EMU_PER_POINT, type Fill, type Gradient, type LineEnd, type Stroke } from '../ir/render'
+import {
+	type Color,
+	type DashStyle,
+	EMU_PER_POINT,
+	type Fill,
+	type Gradient,
+	type LineEnd,
+	type PictureEffect,
+	type Shadow,
+	type Stroke,
+} from '../ir/render'
 
 /**
  * What a line is drawn in when it states a width or a dash but no colour — the
@@ -81,7 +91,178 @@ export function cssColor(color: Color): string {
 	return color.kind === 'srgb' ? `#${color.hex}` : `#${color.effectiveHex}`
 }
 
-function gradientDef(gradient: Gradient, defs: Defs): string {
+/** {@link cssColor} with the colour's own alpha, for the places CSS takes no separate opacity. */
+function cssColorAlpha(color: Color): string {
+	const hex = cssColor(color)
+	if (color.alpha === undefined) return hex
+	const channel = (at: number) => Number.parseInt(hex.slice(at, at + 2), 16)
+	return `rgba(${channel(1)},${channel(3)},${channel(5)},${round3(color.alpha)})`
+}
+
+/**
+ * A shadow's offset as x/y, in whatever unit `unit` converts a point to.
+ *
+ * The node is drawn inside its own rotation, so a shadow that rotates with the
+ * shape needs nothing more; one that does not (`@rotWithShape="0"`) is turned back
+ * by the shape's rotation to keep its direction on the slide.
+ */
+function shadowOffset(shadow: Shadow, rotation: number, unit: number): { dx: number; dy: number } {
+	const turn = shadow.rotateWithShape === false ? rotation : 0
+	const radians = (((shadow.angleDeg ?? 0) - turn) * Math.PI) / 180
+	const distance = (shadow.offsetPt ?? 0) * unit
+	return { dx: round3(distance * Math.cos(radians)), dy: round3(distance * Math.sin(radians)) }
+}
+
+/** An outer shadow as an SVG filter on a node drawn in EMU, returning its `url(#…)`. */
+export function shadowFilter(shadow: Shadow, rotation: number, defs: Defs): string {
+	const { dx, dy } = shadowOffset(shadow, rotation, EMU_PER_POINT)
+	// `@blurRad` is a radius; a Gaussian's standard deviation is about half of one.
+	const blur = round3(((shadow.blurPt ?? 0) * EMU_PER_POINT) / 2)
+	const opacity = shadow.color.alpha === undefined ? '' : ` flood-opacity="${round3(shadow.color.alpha)}"`
+	return defs.add(
+		(id) =>
+			`<filter id="${id}" x="-50%" y="-50%" width="200%" height="200%">` +
+			`<feDropShadow dx="${dx}" dy="${dy}" stdDeviation="${blur}" flood-color="${cssColor(shadow.color)}"${opacity}/>` +
+			`</filter>`
+	)
+}
+
+/** An outer shadow on a run, as a CSS `text-shadow` in the frame's point-sized `px`. */
+export function cssTextShadow(shadow: Shadow): string {
+	const { dx, dy } = shadowOffset(shadow, 0, 1)
+	return `${dx}px ${dy}px ${round3(shadow.blurPt ?? 0)}px ${cssColorAlpha(shadow.color)}`
+}
+
+/** A colour's three channels as 0–1 fractions, in sRGB. */
+function channels(color: Color): [number, number, number] {
+	const hex = cssColor(color)
+	return [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16) / 255) as [number, number, number]
+}
+
+/** Luminance into all three channels, which is what every recolour below starts from. */
+const GRAY = '0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0.299 0.587 0.114 0 0 0 0 0 1 0'
+
+/**
+ * One blip effect as filter primitives reading `input` and writing `output`.
+ * Not `alpha`, which is an opacity and not a filter.
+ */
+function effectPrimitives(effect: Exclude<PictureEffect, { kind: 'alpha' }>, input: string, output: string): string {
+	const io = `in="${input}" result="${output}"`
+	switch (effect.kind) {
+		case 'grayscale':
+			return `<feColorMatrix ${io} type="matrix" values="${GRAY}"/>`
+		case 'biLevel': {
+			// A step at the threshold: a steep enough slope clamps every channel to 0 or 1.
+			const slope = 1000
+			const func = `type="linear" slope="${slope}" intercept="${round3(-slope * effect.threshold)}"`
+			return (
+				`<feColorMatrix in="${input}" result="${output}-gray" type="matrix" values="${GRAY}"/>` +
+				`<feComponentTransfer in="${output}-gray" result="${output}">` +
+				`<feFuncR ${func}/><feFuncG ${func}/><feFuncB ${func}/></feComponentTransfer>`
+			)
+		}
+		case 'duotone': {
+			const dark = channels(effect.dark)
+			const light = channels(effect.light)
+			const func = (i: number) => `type="table" tableValues="${round3(dark[i] as number)} ${round3(light[i] as number)}"`
+			return (
+				`<feColorMatrix in="${input}" result="${output}-gray" type="matrix" values="${GRAY}"/>` +
+				`<feComponentTransfer in="${output}-gray" result="${output}">` +
+				`<feFuncR ${func(0)}/><feFuncG ${func(1)}/><feFuncB ${func(2)}/></feComponentTransfer>`
+			)
+		}
+		case 'clrChange': {
+			// Each channel is 1 where it equals `from`'s byte and 0 elsewhere; an opaque
+			// pixel whose three channels all hit is the one `a:clrChange` repaints.
+			const from = channels(effect.from).map((value) => Math.round(value * 255))
+			const table = (byte: number) =>
+				`type="discrete" tableValues="${Array.from({ length: 256 }, (_, at) => (at === byte ? 1 : 0)).join(' ')}"`
+			const opacity = effect.to.alpha === undefined ? '' : ` flood-opacity="${round3(effect.to.alpha)}"`
+			return (
+				`<feComponentTransfer in="${input}" result="${output}-hit">` +
+				`<feFuncR ${table(from[0] as number)}/><feFuncG ${table(from[1] as number)}/><feFuncB ${table(from[2] as number)}/>` +
+				`</feComponentTransfer>` +
+				`<feColorMatrix in="${output}-hit" result="${output}-mask" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 -3"/>` +
+				`<feFlood result="${output}-to" flood-color="${cssColor(effect.to)}"${opacity}/>` +
+				`<feComposite in="${output}-to" in2="${output}-mask" operator="in" result="${output}-swapped"/>` +
+				`<feComposite in="${input}" in2="${output}-mask" operator="out" result="${output}-kept"/>` +
+				`<feMerge result="${output}"><feMergeNode in="${output}-kept"/><feMergeNode in="${output}-swapped"/></feMerge>`
+			)
+		}
+	}
+}
+
+/**
+ * A picture's blip effects, as the attributes its `<image>` takes: one filter
+ * chaining the recolours in document order, and an opacity for `a:alphaModFix`.
+ * The filter works in sRGB, the space the effects' colours and thresholds are in.
+ */
+export function pictureEffects(effects: readonly PictureEffect[], defs: Defs): string {
+	const attrs: string[] = []
+	const primitives: string[] = []
+	let input = 'SourceGraphic'
+	for (const effect of effects) {
+		if (effect.kind === 'alpha') {
+			attrs.push(`opacity="${round3(effect.amount)}"`)
+			continue
+		}
+		const output = `e${primitives.length}`
+		primitives.push(effectPrimitives(effect, input, output))
+		input = output
+	}
+	if (primitives.length > 0) {
+		const filter = defs.add(
+			(id) => `<filter id="${id}" color-interpolation-filters="sRGB">${primitives.join('')}</filter>`
+		)
+		attrs.push(`filter="${filter}"`)
+	}
+	return attrs.join(' ')
+}
+
+/**
+ * What a gradient needs from the node it paints: the box's proportions, for an
+ * angle that is not to be stretched with it, and the node's rotation, for a
+ * gradient that does not turn with it.
+ */
+export interface PaintFrame {
+	w: number
+	h: number
+	rotation: number
+}
+
+/**
+ * A linear gradient's end points in `objectBoundingBox` units.
+ *
+ * DrawingML sweeps the gradient so the two farthest corners land on the first
+ * and last stop. `a:lin/@scaled` says which space the angle is in: scaled, the
+ * unit square, stretched with the box; unscaled, the box itself, so 45° is 45° on
+ * the slide. The vector below is the one whose isolines in the stretched box are
+ * perpendicular to the angle in that space, scaled so the corners reach the ends.
+ */
+function linearEnds(angleDeg: number, scaled: boolean, frame: PaintFrame): [number, number, number, number] {
+	const radians = (angleDeg * Math.PI) / 180
+	const dx = Math.cos(radians)
+	const dy = Math.sin(radians)
+	const [sx, sy] = scaled || frame.w <= 0 || frame.h <= 0 ? [1, 1] : [frame.w, frame.h]
+	const [vx, vy] = [dx * sx, dy * sy]
+	const k = (Math.abs(dx) * sx + Math.abs(dy) * sy) / (vx * vx + vy * vy)
+	const [hx, hy] = [(vx * k) / 2, (vy * k) / 2]
+	return [round3(0.5 - hx), round3(0.5 - hy), round3(0.5 + hx), round3(0.5 + hy)]
+}
+
+/**
+ * A run's glow as `text-shadow` layers. OOXML's glow is the glyph grown by its
+ * radius and softened at the edge; one blurred shadow of that radius fades out
+ * long before it, so a second at half the radius gives the halo its body.
+ */
+export function cssTextGlow(glow: { color: Color; radiusPt?: number }): string[] {
+	const radius = glow.radiusPt ?? 0
+	if (radius <= 0) return []
+	const color = cssColorAlpha(glow.color)
+	return [`0 0 ${round3(radius / 2)}px ${color}`, `0 0 ${round3(radius)}px ${color}`]
+}
+
+function gradientDef(gradient: Gradient, frame: PaintFrame, defs: Defs): string {
 	const stops = gradient.stops
 		.map((stop) => {
 			const opacity = stop.color.alpha
@@ -92,12 +273,13 @@ function gradientDef(gradient: Gradient, defs: Defs): string {
 
 	if (gradient.kind === 'linear') {
 		// Both systems measure the angle clockwise from the positive x-axis with y
-		// growing downward, so the OOXML angle goes in unchanged. Rotating about the
-		// bounding box's centre in `objectBoundingBox` units is what keeps the sweep
-		// correct for a box that is not square.
+		// growing downward, so the OOXML angle goes in unchanged. A gradient that does
+		// not rotate with its shape is turned back by the shape's rotation, since it
+		// is drawn inside the shape's transform.
+		const turn = gradient.rotateWithShape === false ? frame.rotation : 0
+		const [x1, y1, x2, y2] = linearEnds(gradient.angleDeg - turn, gradient.scaled === true, frame)
 		return defs.add(
-			(id) =>
-				`<linearGradient id="${id}" gradientTransform="rotate(${gradient.angleDeg} 0.5 0.5)">${stops}</linearGradient>`
+			(id) => `<linearGradient id="${id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">${stops}</linearGradient>`
 		)
 	}
 	return defs.add((id) => `<radialGradient id="${id}">${stops}</radialGradient>`)
@@ -156,7 +338,7 @@ export function escapeAttr(value: string): string {
 export const UNPAINTED_FILL: Painted = { attrs: 'fill="none"', painted: false }
 export const UNPAINTED_STROKE: Painted = { attrs: 'stroke="none"', painted: false }
 
-export function fillPaint(fill: Fill, defs: Defs): Painted {
+export function fillPaint(fill: Fill, frame: PaintFrame, defs: Defs): Painted {
 	switch (fill.kind) {
 		// Two different facts, one drawing. `none` is an explicit `a:noFill`; `inherit`
 		// is the absence of any statement. They stay distinct in the IR and on the
@@ -173,7 +355,7 @@ export function fillPaint(fill: Fill, defs: Defs): Painted {
 			}
 		}
 		case 'gradient':
-			return { attrs: `fill="${gradientDef(fill.gradient, defs)}"`, painted: true }
+			return { attrs: `fill="${gradientDef(fill.gradient, frame, defs)}"`, painted: true }
 		case 'picture': {
 			const opacity = fill.alpha
 			return {
@@ -197,7 +379,7 @@ export function fillPaint(fill: Fill, defs: Defs): Painted {
 	}
 }
 
-export function strokePaint(stroke: Stroke, defs: Defs): Painted {
+export function strokePaint(stroke: Stroke, frame: PaintFrame, defs: Defs): Painted {
 	if (stroke.kind === 'none' || stroke.kind === 'inherit') return { attrs: 'stroke="none"', painted: false }
 
 	const parts: string[] = []
@@ -205,7 +387,7 @@ export function strokePaint(stroke: Stroke, defs: Defs): Painted {
 	let markerPaint: string
 	let markerOpacity: number | undefined
 	if (stroke.gradient !== undefined) {
-		markerPaint = gradientDef(stroke.gradient, defs)
+		markerPaint = gradientDef(stroke.gradient, frame, defs)
 		parts.push(`stroke="${markerPaint}"`)
 	}
 	else if (stroke.color !== undefined) {
