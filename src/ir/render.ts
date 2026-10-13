@@ -85,7 +85,8 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  * `8` → `9` is the same shape change one level up: {@link TableNode.fill} is the
  * table's own background (`a:tblPr` fill), required for the reason the diagonals
  * were — a table has a background whether or not it states one, and `inherit` is
- * the spelling of "states none".
+ * the spelling of "states none". The same version adds {@link TableCell.styleFill},
+ * the table style's shading kept apart from the cell's own {@link TableCell.fill}.
  */
 export const IR_VERSION = 9
 
@@ -702,7 +703,25 @@ export interface TableColumn {
 export interface TableCell {
 	id: NodeId
 	text: TextBody | null
+	/**
+	 * The cell's own fill (`a:tcPr`), and only that: `inherit` when the cell states
+	 * none, however the table style shades it. What the style paints there is
+	 * {@link styleFill}, kept apart so a colour the style supplies is never mistaken
+	 * for one the cell states.
+	 */
 	fill: Fill
+	/**
+	 * What the table style paints in this cell when {@link fill} is `inherit`: the
+	 * `wholeTbl`/banding/first-row shading the style's options select for its
+	 * region, resolved by the read model. `inherit` when the style supplies nothing
+	 * the read model can resolve, which includes a built-in style the deck does not
+	 * define (pptx-ts#241).
+	 *
+	 * Render-only. The write path never reads `RenderIr`, and the style itself goes
+	 * back as `tableStyle` plus its six options, so a restyled deck still restyles
+	 * this cell.
+	 */
+	styleFill: Fill
 	/**
 	 * All six of `a:tcPr`'s lines, not just the four edges: `tlToBr` (`a:lnTlToBr`,
 	 * ╲) and `blToTr` (`a:lnBlToTr`, ╱) are the corner-to-corner rules PowerPoint

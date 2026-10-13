@@ -105,6 +105,7 @@ describe('a table', () => {
 							id: cellNodeId('t1', 0, 0),
 							text: null,
 							fill: { kind: 'none' },
+							styleFill: { kind: 'inherit' },
 							borders: { left: none, right: none, top: none, bottom: none, tlToBr: none, blToTr: none },
 							span: null,
 							covered: false,

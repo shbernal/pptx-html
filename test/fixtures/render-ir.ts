@@ -278,6 +278,7 @@ const GRID: TableNode = {
 					id: cellNodeId(TABLE_ID, 0, 0),
 					text: body('Region'),
 					fill: SOLID,
+					styleFill: { kind: 'inherit' },
 					// One diagonal stated and one not: a cell states its six lines
 					// independently, and a fixture that set both the same way could not
 					// tell a renderer reading `tlToBr` from one reading either.
@@ -298,6 +299,7 @@ const GRID: TableNode = {
 					id: cellNodeId(TABLE_ID, 0, 1),
 					text: null,
 					fill: { kind: 'inherit' },
+					styleFill: { kind: 'inherit' },
 					borders: {
 						left: INHERITED,
 						right: INHERITED,

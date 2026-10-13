@@ -42,6 +42,15 @@ model is expected to move.
   behind it. `TableNode.fill` now carries it and the renderer paints it once under
   the grid. `IR_VERSION` goes to 9, so a document rendered by an older build is
   refused with "re-render it" rather than read without the field.
+- **A table style's shading is no longer recorded as each cell's own fill.** A cell
+  that stated no fill was imported with the colour its table style gives it
+  (header, banding, `wholeTbl`) as a solid `fill`, so it looked the same as a cell
+  that stated that colour. `TableCell.fill` is now the cell's own fill only, and
+  the style's shading is in `TableCell.styleFill`, which the renderer paints when
+  the cell states none. The write path is unchanged: it never read `RenderIr`, and
+  it writes the style back by reference. Part of `IR_VERSION` 9. A table written
+  by pptx-ts still draws unstyled, because `addTable` names a built-in style
+  without defining it (pptx-ts#241).
 - **A slide number survives the loop.** `emitDeck` replays `SlideIr.slideNumber`
   alongside the slide's background and transition, so a deck's slide-number
   placeholder, its position and its formatting come back instead of being dropped.

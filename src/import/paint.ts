@@ -183,9 +183,11 @@ export function fillOf(source: FillSource, scope: ImportScope): Fill {
 	// Nothing of its own, and nothing upstream could resolve for it either — a fill
 	// reachable through `p:style/a:fillRef` arrives in `resolvedFill` and returns on
 	// the line above. What is left takes its interior from a placeholder or the table
-	// style, neither of which this model follows, and that is a third state rather
+	// style, and that is a third state rather
 	// than a missing one: `none` would emit an explicit `a:noFill` the input never
 	// stated, and a colour would bake a copy that stops moving when the style changes.
+	// A cell's table-style shading is modeled apart, as `TableCell.styleFill`; a cell
+	// that states no fill never reaches this function (`cellFillsOf`).
 	// The explicit `a:noFill` that used to land here for cells took the `none` arm as
 	// of ts-pptx 3.1.0.
 	return { kind: 'inherit' }

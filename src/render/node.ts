@@ -186,7 +186,9 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 					? h
 					: node.rows.slice(rowIndex, rowIndex + span.rows).reduce((sum, spanned) => sum + (spanned.heightEmu ?? rowFill), 0)
 
-			const fill = fillPaint(cell.fill, context.defs)
+			// The cell's own fill wins, `none` included; only a cell that states none
+			// shows the table style's shading.
+			const fill = fillPaint(cell.fill.kind === 'inherit' ? cell.styleFill : cell.fill, context.defs)
 			parts.push(
 				`<g ${context.editable ? `data-pxh-node="${escapeAttr(cell.id)}" ` : ''}transform="translate(${x} ${y})"` +
 					`${fill.approx === undefined ? '' : ` data-pxh-approx="${fill.approx}"`}>` +

@@ -8,6 +8,8 @@
  * oracle project owns. No DOM is involved.
  */
 
+import TsPptx from 'pptx-ts'
+import { OpcPackage, Presentation } from 'pptx-ts/read'
 import { LAYOUT_NOTE_PREFIX } from 'pptx-ts/script'
 import { describe, expect, it } from 'vitest'
 import { importDeck } from '../../src/import/deck'
@@ -597,4 +599,65 @@ describe('tables', () => {
 		expect(covered?.fill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: 'FFFFFF' } })
 		expect(through?.fill).toStrictEqual({ kind: 'inherit' })
 	})
+
+	it("keeps a table style's shading apart from a cell's own fill", async () => {
+		// `TableCell.resolvedFill` falls back to the table style, so read as the cell's
+		// own fill it records a banded cell as though it stated the band colour. The
+		// style is a reference that restyles the table when it changes; a copy of its
+		// colour in every cell does not move.
+		const backed = await styledTable()
+		const [head, own] = backed.rows[0]?.cells ?? []
+		const band = backed.rows[1]?.cells[0]
+		const plain = backed.rows[2]?.cells[0]
+		expect(head?.fill).toStrictEqual({ kind: 'inherit' })
+		expect(head?.styleFill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: '250F6B' } })
+		expect(band?.fill).toStrictEqual({ kind: 'inherit' })
+		expect(band?.styleFill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: 'CCCCCC' } })
+		expect(plain?.styleFill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: 'EEEEEE' } })
+		// A cell's own fill is its own, and the style has nothing to add under it.
+		expect(own?.fill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: 'F0C808' } })
+		expect(own?.styleFill).toStrictEqual({ kind: 'inherit' })
+	})
 })
+
+/**
+ * A table bound to a style the deck defines, with its header and banded rows on.
+ *
+ * Not a corpus deck, because the writer cannot make one: `addTable` names a
+ * built-in style without writing its definition, so the read model resolves
+ * nothing (pptx-ts#241). The definition is swapped in afterwards, the way
+ * PowerPoint saves one. Once #241 ships, a corpus deck naming a built-in style
+ * resolves on its own and this can become one.
+ */
+async function styledTable() {
+	const id = '{0505E3EF-67EA-436B-97B2-0124C06EBD24}'
+	const shade = (hex: string) =>
+		`<a:tcStyle><a:fill><a:solidFill><a:srgbClr val="${hex}"/></a:solidFill></a:fill></a:tcStyle>`
+	const styles =
+		'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+		`<a:tblStyleLst xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" def="${id}">` +
+		`<a:tblStyle styleId="${id}" styleName="Probe Style">` +
+		`<a:wholeTbl>${shade('EEEEEE')}</a:wholeTbl>` +
+		`<a:band1H>${shade('CCCCCC')}</a:band1H>` +
+		`<a:firstRow>${shade('250F6B')}</a:firstRow>` +
+		'</a:tblStyle></a:tblStyleLst>'
+
+	const pptx = new TsPptx()
+	pptx.addSlide().addTable(
+		[
+			[{ text: 'head' }, { text: 'own', options: { fill: { color: 'F0C808' } } }],
+			[{ text: 'band' }, { text: 'x' }],
+			[{ text: 'plain' }, { text: 'y' }],
+		],
+		{ x: 1, y: 1, w: 4, tableStyle: id, hasHeader: true, hasBandedRows: true, objectName: 'styled' }
+	)
+	const opc = await OpcPackage.load(await pptx.write({ outputType: 'uint8array' }))
+	const part = opc.part('/ppt/tableStyles.xml')
+	if (!part) throw new Error('the writer wrote no tableStyles.xml')
+	opc.removePart(part.partName)
+	opc.addPart(part.partName, part.contentType, new TextEncoder().encode(styles))
+	const { render } = await importDeck(await Presentation.fromPackage(opc).save())
+	const table = render.slides[0]?.nodes.find((node) => node.name === 'styled')
+	if (table?.kind !== 'table') throw new Error('the styled deck has no table')
+	return table
+}

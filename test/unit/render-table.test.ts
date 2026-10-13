@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	EMU_PER_INCH,
 	IR_VERSION,
+	type Fill,
 	type RenderIr,
 	type Stroke,
 	type TableNode,
@@ -40,7 +41,8 @@ function cell(row: number, column: number, rest: { span?: { columns: number; row
 	return {
 		id: cellNodeId(TABLE_ID, row, column),
 		text: null,
-		fill: { kind: 'solid', color: { kind: 'srgb', hex: '451DC7' } } as const,
+		fill: { kind: 'solid', color: { kind: 'srgb', hex: '451DC7' } } as Fill,
+		styleFill: { kind: 'inherit' } as Fill,
 		borders: NO_BORDERS,
 		span: rest.span ?? null,
 		covered: rest.covered ?? false,
@@ -205,5 +207,35 @@ describe("a table's own background", () => {
 	it('paints nothing when the table states none', async () => {
 		const { html } = await renderDeck(irWith(unequalRows(null)), NO_ASSETS)
 		expect(underCells(html)).toEqual([])
+	})
+})
+
+describe("a cell's table-style shading", () => {
+	const OWN = { kind: 'solid', color: { kind: 'srgb', hex: '451DC7' } } as const
+	const STYLED = { kind: 'solid', color: { kind: 'srgb', hex: 'CCCCCC' } } as const
+
+	/** The first cell's own `<rect>`, the one its fill paints. */
+	async function cellRect(fill: Fill, styleFill: Fill): Promise<string | undefined> {
+		const table = unequalRows(null)
+		const first = table.rows[0]!.cells[0]!
+		first.fill = fill
+		first.styleFill = styleFill
+		const { html } = await renderDeck(irWith(table), NO_ASSETS)
+		const group = html.slice(html.indexOf(`data-pxh-node="${cellNodeId(TABLE_ID, 0, 0)}"`))
+		return group.match(/<rect [^>]*>/)?.[0]
+	}
+
+	it('shows through a cell that states no fill', async () => {
+		expect(await cellRect({ kind: 'inherit' }, STYLED)).toContain('fill="#CCCCCC"')
+	})
+
+	it("is covered by a cell's own fill", async () => {
+		expect(await cellRect(OWN, STYLED)).toContain('fill="#451DC7"')
+	})
+
+	it('is covered by an explicit no-fill too', async () => {
+		// `a:noFill` is the cell stating "nothing here", which overrides the style in
+		// PowerPoint the same as any other fill of its own.
+		expect(await cellRect({ kind: 'none' }, STYLED)).not.toContain('#CCCCCC')
 	})
 })

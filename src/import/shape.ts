@@ -48,7 +48,7 @@ import {
 } from '../ir/render'
 import { forShape, type ImportScope, note } from './context'
 import { geometryOf } from './geometry'
-import { cellBorderOf, fillOf, strokeOf } from './paint'
+import { cellBorderOf, colorOf, fillOf, strokeOf } from './paint'
 import { textBodyOf } from './text'
 
 /** The identity every node on this slide is addressed by. */
@@ -293,6 +293,21 @@ function tableNodeOf(frame: GraphicFrame, table: Table, scope: ImportScope): Ren
 	return { ...base, kind: 'table', render: 'drawn', fill: fillOf(source, scope), columns, rows }
 }
 
+/**
+ * A cell's own fill and the table style's, apart. `TableCell.resolvedFill` answers
+ * "what colour does this cell render as", falling back to the table style when the
+ * cell states none, so read as the cell's own fill it records banding as though
+ * every banded cell stated it. `hasOwnFill` says which of the two it answered.
+ */
+function cellFillsOf(cell: ReadTableCell, scope: ImportScope): Pick<TableCell, 'fill' | 'styleFill'> {
+	if (cell.hasOwnFill) return { fill: fillOf(cell, scope), styleFill: { kind: 'inherit' } }
+	const styled = colorOf(null, cell.resolvedFill)
+	return {
+		fill: { kind: 'inherit' },
+		styleFill: styled === undefined ? { kind: 'inherit' } : { kind: 'solid', color: styled },
+	}
+}
+
 const CELL_ANCHOR: Record<string, TableCell['anchor']> = { t: 'top', ctr: 'middle', b: 'bottom' }
 
 function cellOf(
@@ -310,7 +325,7 @@ function cellOf(
 	return {
 		id: cellNodeId(tableId, rowIndex, columnIndex),
 		text: frame === null ? null : textBodyOf(frame, scope),
-		fill: fillOf(cell, scope),
+		...cellFillsOf(cell, scope),
 		borders: {
 			left: cellBorderOf(borders?.left ?? null, scope),
 			right: cellBorderOf(borders?.right ?? null, scope),
