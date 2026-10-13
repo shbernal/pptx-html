@@ -156,11 +156,7 @@ function downloadBlob(blob: Blob, fileName?: string): void {
 	document.body.appendChild(a)
 	a.click()
 	setTimeout(() => {
-		try {
-			a.remove()
-		} catch {
-			/* already detached */
-		}
+		a.remove()
 		URL.revokeObjectURL(url)
 	}, 0)
 }

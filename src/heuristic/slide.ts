@@ -60,11 +60,11 @@ export async function addModelToSlide(
 	if (model.background.type === 'color') {
 		slide.background = { color: model.background.value || 'FFFFFF' }
 	} else if (model.background.src) {
+		slide.background = { color: model.background.fallback || 'FFFFFF' }
 		try {
-			slide.background = { color: model.background.fallback || 'FFFFFF' }
 			slide.addImage({ ...imageRef(model.background.src), x: 0, y: 0, w: slideSize.width, h: slideSize.height, sizing: { type: 'cover', w: slideSize.width, h: slideSize.height } })
-		} catch {
-			slide.background = { color: model.background.fallback || 'FFFFFF' }
+		} catch (err) {
+			issues.push('SLIDE EXPORT ISSUE: the background image could not be placed (' + (err instanceof Error && err.message ? err.message : String(err)) + ').')
 		}
 	}
 

@@ -56,11 +56,7 @@ export function createHiddenFrame(html: string): SlideFrame {
 			iframe.style.height = Math.round(height) + 'px'
 		},
 		close() {
-			try {
-				iframe.remove()
-			} catch {
-				/* already detached */
-			}
+			iframe.remove()
 		},
 	}
 }
@@ -118,17 +114,13 @@ export async function settleFrame(frame: SlideFrame): Promise<void> {
 			})
 		})
 	)
-	try {
-		// `doc.fonts` is what may be absent; `ready` is a promise, and testing a
-		// promise for truthiness answers yes whatever it resolves to. `Document.fonts`
-		// is declared as always present, so the cast is what lets the test be written
-		// at all — the CSS Font Loading API is optional and older engines ship without
-		// it.
-		const fonts = doc.fonts as FontFaceSet | undefined
-		if (fonts) await Promise.race([fonts.ready, wait(3000)])
-	} catch {
-		/* fonts API unavailable */
-	}
+	// `doc.fonts` is what may be absent; `ready` is a promise, and testing a
+	// promise for truthiness answers yes whatever it resolves to. `Document.fonts`
+	// is declared as always present, so the cast is what lets the test be written
+	// at all — the CSS Font Loading API is optional and older engines ship without
+	// it.
+	const fonts = doc.fonts as FontFaceSet | undefined
+	if (fonts) await Promise.race([fonts.ready, wait(3000)])
 	await waitForIcons(doc, 5000)
 	await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 	await wait(120)
