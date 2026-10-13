@@ -95,6 +95,7 @@ describe('a table', () => {
 			name: 't1',
 			render: 'drawn',
 			placement: placement(2000, 1000, 4000, 2000),
+			fill: { kind: 'inherit' },
 			columns: [{ widthEmu: 4000 }],
 			rows: [
 				{

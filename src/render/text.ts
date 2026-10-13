@@ -121,6 +121,13 @@ function runStyle(run: TextRun, fontScalePct: number | undefined): string {
 	}
 
 	if (props.spacingPt !== undefined) style.push(`letter-spacing:${px(props.spacingPt)}px`)
+	// A threshold, not a switch: only text at or above it is kerned. A run that
+	// states none leaves the browser's own default, since the threshold it inherits
+	// is not resolved here.
+	if (props.kerningPt !== undefined && size !== undefined) {
+		const kerned = props.kerningPt > 0 && scaled(size, fontScalePct) >= props.kerningPt
+		style.push(`font-kerning:${kerned ? 'normal' : 'none'}`)
+	}
 	if (props.baselinePct !== undefined && props.baselinePct !== 0) {
 		// A baseline shift is a percentage of the font size, which is what `em` is.
 		style.push(`vertical-align:${props.baselinePct / 100}em`, 'font-size:0.65em')

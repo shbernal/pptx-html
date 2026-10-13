@@ -280,7 +280,17 @@ function tableNodeOf(frame: GraphicFrame, table: Table, scope: ImportScope): Ren
 		heightEmu: row.heightEmu,
 		cells: row.cells.map((cell, columnIndex) => cellOf(cell, base.id, rowIndex, columnIndex, scope)),
 	}))
-	return { ...base, kind: 'table', render: 'drawn', columns, rows }
+	// `Table` has every fill accessor a cell has except `fillNoFill`, and a table that
+	// states `a:noFill` paints what one that states nothing does: no background.
+	const source = {
+		fillSchemeColor: table.fillSchemeColor,
+		resolvedFill: table.resolvedFill,
+		gradientFill: table.gradientFill,
+		patternFill: table.patternFill,
+		pictureFill: table.pictureFill,
+		fillNoFill: false,
+	}
+	return { ...base, kind: 'table', render: 'drawn', fill: fillOf(source, scope), columns, rows }
 }
 
 const CELL_ANCHOR: Record<string, TableCell['anchor']> = { t: 'top', ctr: 'middle', b: 'bottom' }

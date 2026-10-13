@@ -82,8 +82,12 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  * cell has six lines whether or not it states any — `inherit` is the spelling of
  * "states none". A v7 document's cells carry no key to read them from, which is
  * the `2` → `3` case again.
+ * `8` → `9` is the same shape change one level up: {@link TableNode.fill} is the
+ * table's own background (`a:tblPr` fill), required for the reason the diagonals
+ * were — a table has a background whether or not it states one, and `inherit` is
+ * the spelling of "states none".
  */
-export const IR_VERSION = 8
+export const IR_VERSION = 9
 
 /** English Metric Units per inch. */
 export const EMU_PER_INCH = 914_400
@@ -449,6 +453,8 @@ export interface RunProperties {
 	color?: Color
 	/** `a:rPr/@spc`, character spacing. */
 	spacingPt?: number
+	/** `a:rPr/@kern`: the smallest font size, in points, that is pair-kerned; `0` turns kerning off. */
+	kerningPt?: number
 	/** Superscript/subscript (`@baseline`), as a percentage of font size. */
 	baselinePct?: number
 	hyperlink?: Hyperlink
@@ -743,6 +749,12 @@ export interface TableRow {
 
 export interface TableNode extends NodeBase {
 	kind: 'table'
+	/**
+	 * The table's own background (`a:tblPr` fill), painted once behind the whole grid.
+	 * Not a default for the cells: a cell with a fill of its own covers it, and a cell
+	 * without one shows it through. `inherit` when the table states none.
+	 */
+	fill: Fill
 	columns: TableColumn[]
 	rows: TableRow[]
 }

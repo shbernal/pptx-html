@@ -149,7 +149,15 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 	const autoRows = node.rows.filter((row) => row.heightEmu === null).length
 	const rowFill = autoRows === 0 ? 0 : Math.max(0, box.h - statedH) / autoRows
 
-	const parts: string[] = []
+	// The table's own background goes down first, under the whole frame, so a cell
+	// with no fill of its own shows it through and a cell with one covers it.
+	const background = fillPaint(node.fill, context.defs)
+	const parts: string[] = background.painted
+		? [
+				`<rect x="0" y="0" width="${box.w}" height="${box.h}" ${background.attrs}` +
+					`${background.approx === undefined ? '' : ` data-pxh-approx="${background.approx}"`}/>`,
+			]
+		: []
 	let y = 0
 	node.rows.forEach((row, rowIndex) => {
 		const h = row.heightEmu ?? rowFill

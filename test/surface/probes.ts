@@ -71,6 +71,28 @@ function textOn(
 	}
 }
 
+/** A text box on a slide whose master has a `body` placeholder; `placeholder` binds it on the probe side, over `base`. */
+function textPlaceholder(
+	id: string,
+	base: TextPropsOptions['placeholder'],
+	placeholder: TextPropsOptions['placeholder']
+): Probe {
+	return {
+		id,
+		covers: [id.split(':')[0] as string],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.defineSlideMaster({
+				title: 'PROBE_BODY_MASTER',
+				objects: [{ placeholder: { options: { name: 'body', type: 'body', ...BOX }, text: '' } }],
+			})
+			const bound = on ? placeholder : base
+			const options: TextPropsOptions = { ...BOX, objectName: 'probe' }
+			if (bound !== undefined) options.placeholder = bound
+			pptx.addSlide({ masterTitle: 'PROBE_BODY_MASTER' }).addText('Probe text', options)
+		},
+	}
+}
+
 /** `addText` with two runs; `options` go on run `at` only. */
 function run(id: string, at: 0 | 1, options: TextPropsOptions, covers = [id.split(':')[0] as string]): Probe {
 	return {
@@ -238,6 +260,93 @@ function span(
 						: [[first, { text: 'b' }], on ? [{ text: 'd' }] : [{ text: '' }, { text: 'd' }]],
 					{ ...BOX, objectName: 'probe' }
 				)
+		},
+	}
+}
+
+/** A 2×2 table with `base` on the table call on both sides, for options that only mean something on top of another. */
+function tableOn(id: string, base: TableProps, options: TableProps, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addTable(
+				[
+					[{ text: 'a' }, { text: 'b' }],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				{ ...BOX, objectName: 'probe', ...base, ...(on ? options : {}) }
+			)
+		},
+	}
+}
+
+/** A 2×2 table on a master with a table placeholder; the table binds to `base` off and `placeholder` on. */
+function tablePlaceholder(id: string, base: TableProps['placeholder'], placeholder: TableProps['placeholder']): Probe {
+	return {
+		id,
+		covers: [id.split(':')[0] as string],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.defineSlideMaster({
+				title: 'PROBE_TABLE_MASTER',
+				objects: [{ placeholder: { options: { name: 'tbl', type: 'tbl', ...BOX }, text: '' } }],
+			})
+			const bound = on ? placeholder : base
+			const options: TableProps = { ...BOX, objectName: 'probe' }
+			if (bound !== undefined) options.placeholder = bound
+			pptx.addSlide({ masterTitle: 'PROBE_TABLE_MASTER' }).addTable(
+				[
+					[{ text: 'a' }, { text: 'b' }],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				options
+			)
+		},
+	}
+}
+
+/**
+ * A table of twenty tall rows that overflows one slide, with `base` on both sides,
+ * for the auto-paging options.
+ */
+function tallTable(id: string, base: TableProps, options: TableProps, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addTable(
+				Array.from({ length: 20 }, (_, row) => [{ text: `r${row}a` }, { text: `r${row}b` }]),
+				{ x: 1, y: 1, w: 5, rowH: 0.5, objectName: 'probe', ...base, ...(on ? options : {}) }
+			)
+		},
+	}
+}
+
+/**
+ * A 1.8 KB TrueType face, "Probe Mono", built with opentype.js: lowercase letters and a
+ * space, each 600 units wide with no outline. Measured fit only runs once a face has
+ * metrics registered, so a fit probe registers this one.
+ */
+const FONT =
+	'T1RUTwAKAIAAAwAgQ0ZGIFBavrcAAAUoAAABYU9TLzJmlWAMAAABEAAAAGBjbWFwAM0AHAAABNQAAAA0aGVhZC9VJWYAAACsAAAANmhoZWEDIgGtAAAA5AAAACRobXR4QaAAAAAABowAAABwbHRhZ2V+AAQAAAb8AAAAEm1heHAAHFAAAAABCAAAAAZuYW1l3j3nbwAAAXAAAANjcG9zdAADAAAAAAUIAAAAIAABAAAAAQAAmwdrVF8PPPUAAwPoAAAAAObzckMAAAAA5vNyQwAAAAACWAAAAAAAAwACAAAAAAAAAAEAAAMg/zgAAAJYAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAcAABQAAAcAAAAAwJYAfQABQAAAooCuwAAAIwCigK7AAAB3wAxAQIAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAWFhYWABAACAAegMg/zgAAAAAAAAAAAABAAAAAAAAAAAAIAAgAAAAAAAzAmoAAAAEAAAAAAACAAoAAAAEAAAAAQAUAAAAAAAEAAAAAgAOABQAAAAEAAAAAwAqAHwAAAAEAAAABAAkACIAAAAEAAAABQAWAGYAAAAEAAAABgAgAEYAAAAEAAAABwACAAoAAAAEAAAACAACAAoAAAAEAAAACQACAAoAAAAEAAAACgACAAoAAAAEAAAACwACAAoAAAAEAAAADAACAAoAAAAEAAAADQACAAoAAAAEAAAADgACAAoAAAAEAAAAEAAUAAAAAAAEAAAAEQAOABQAAQAAAAAAAAABAAsAAQAAAAAAAQAKAKYAAQAAAAAAAgAHALAAAQAAAAAAAwAVAOQAAQAAAAAABAASALcAAQAAAAAABQALANkAAQAAAAAABgAQAMkAAQAAAAAABwABAAsAAQAAAAAACAABAAsAAQAAAAAACQABAAsAAQAAAAAACgABAAsAAQAAAAAACwABAAsAAQAAAAAADAABAAsAAQAAAAAADQABAAsAAQAAAAAADgABAAsAAQAAAAAAEAAKAKYAAQAAAAAAEQAHALAAAwABBAkAAAACAAoAAwABBAkAAQAUAAAAAwABBAkAAgAOABQAAwABBAkAAwAqAHwAAwABBAkABAAkACIAAwABBAkABQAWAGYAAwABBAkABgAgAEYAAwABBAkABwACAAoAAwABBAkACAACAAoAAwABBAkACQACAAoAAwABBAkACgACAAoAAwABBAkACwACAAoAAwABBAkADAACAAoAAwABBAkADQACAAoAAwABBAkADgACAAoAAwABBAkAEAAUAAAAAwABBAkAEQAOABQAUAByAG8AYgBlACAATQBvAG4AbwBSAGUAZwB1AGwAYQByAFAAcgBvAGIAZQAgAE0AbwBuAG8AIABSAGUAZwB1AGwAYQByAFAAcgBvAGIAZQBNAG8AbgBvAFIAZQBnAHUAbABhAHIAVgBlAHIAcwBpAG8AbgAgADAALgAxACAAOgAgAFAAcgBvAGIAZQAgAE0AbwBuAG8AIABSAGUAZwB1AGwAYQByUHJvYmUgTW9ub1JlZ3VsYXJQcm9iZSBNb25vIFJlZ3VsYXJQcm9iZU1vbm9SZWd1bGFyVmVyc2lvbiAwLjEgOiBQcm9iZSBNb25vIFJlZ3VsYXIAAAAAAQADAAEAAAAMAAQAKAAAAAYABAABAAIAIAB6//8AAAAgAGH////h/6EAAQAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAEAQABAQERUHJvYmVNb25vUmVndWxhcgABAQEn+BsA+BwC+B0D+B4Ei4v5tPjsBR0AAAC2Dx0AAADtEYsdAAABYRIAHwEBDB4oLzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTlZlcnNpb24gMC4xUHJvYmUgTW9ubyBSZWd1bGFyUHJvYmUgTW9ub1JlZ3VsYXJzcGFjZWFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6AAAAAYsBjAGNAY4BjwGQAZEBkgGTAZQBlQGWAZcBmAGZAZoBmwGcAZ0BngGfAaABoQGiAaMBpAGlABwBAQQHCg0QExYZHB8iJSgrLjE0Nzo9QENGSUxPUlX47A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A747A4AAAACWAAAAlgAAAJYAAACWAAAAlgAAAJYAAACWAAAAlgAAAJYAAACWAAAAlgAAAJYAAACWAAAAlgAAAJYAAACWAAAAlgAAAJYAAACWAAAAlgAAAJYAAACWAAAAlgAAAJYAAACWAAAAlgAAAJYAAACWAAAAAAAAQAAAAAAAAABABAAAmVuAAA='
+
+/** A 2×2 table in 60 pt Probe Mono, whose metrics are registered on both sides, so a measured fit has text to shrink. */
+function fitTable(id: string, options: TableProps, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: async (pptx: TsPptx, on: boolean) => {
+			await pptx.registerFontMetrics(
+				'Probe Mono',
+				Uint8Array.from(atob(FONT), (char) => char.charCodeAt(0))
+			)
+			pptx.addSlide().addTable(
+				[
+					[{ text: 'a' }, { text: 'b' }],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				{ ...BOX, objectName: 'probe', fontFace: 'Probe Mono', fontSize: 60, ...(on ? options : {}) }
+			)
 		},
 	}
 }
@@ -619,6 +728,24 @@ function image(id: string, options: Omit<ImageProps, 'data' | 'path'>, covers = 
 	return imageOn(id, {}, options, covers)
 }
 
+/** The PNG on a slide whose master has a `pic` placeholder; `placeholder` binds it on the probe side, over `base`. */
+function imagePlaceholder(id: string, base: ImageProps['placeholder'], placeholder: ImageProps['placeholder']): Probe {
+	return {
+		id,
+		covers: [id.split(':')[0] as string],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.defineSlideMaster({
+				title: 'PROBE_PICTURE_MASTER',
+				objects: [{ placeholder: { options: { name: 'pic', type: 'pic', ...BOX }, text: '' } }],
+			})
+			const bound = on ? placeholder : base
+			const options: ImageProps = { data: PNG, ...BOX, objectName: 'probe' }
+			if (bound !== undefined) options.placeholder = bound
+			pptx.addSlide({ masterTitle: 'PROBE_PICTURE_MASTER' }).addImage(options)
+		},
+	}
+}
+
 /** The probe connector's endpoints, on both sides. */
 const LINE = { x1: 1, y1: 1, x2: 5, y2: 3 }
 
@@ -695,6 +822,7 @@ export const PROBES: Probe[] = [
 	text('addText.underline.style:dbl', { underline: { style: 'dbl' } }),
 	text('addText.strike:dblStrike', { strike: 'dblStrike' }),
 	text('addText.charSpacing', { charSpacing: 4 }),
+	text('addText.kerning', { kerning: 20 }),
 	text('addText.lineSpacingMultiple', { lineSpacingMultiple: 1.5 }),
 	text('addText.valign:bottom', { valign: 'bottom' }),
 	text('addText.margin', { margin: [10, 20, 10, 20] }),
@@ -1035,6 +1163,14 @@ export const PROBES: Probe[] = [
 	text('addText.objectLock.noRot', { objectLock: { noRot: true } }),
 	text('addText.objectLock.noSelect', { objectLock: { noSelect: true } }),
 	text('addText.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
+	{
+		...text('addText.objectLock.noUngrp', { objectLock: { noUngrp: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer drops noUngrp on a:spLocks: it is a group lock (a:grpSpLocks only), which a text box does not have',
+		},
+	},
 	text('addText.objectName', { objectName: 'Renamed probe' }),
 	text('addText.outline', { outline: { color: '9B1B30', size: 1.5 } }, [
 		'addText.outline.color',
@@ -1126,6 +1262,9 @@ export const PROBES: Probe[] = [
 	text('addText.vert:eaVert', { vert: 'eaVert' }),
 	text('addText.wrap', { wrap: false }),
 	text('addText.placeholder', { placeholder: 'body' }),
+	textPlaceholder('addText.placeholder.name', undefined, { name: 'body' }),
+	textPlaceholder('addText.placeholder.type', undefined, { type: 'body' }),
+	textPlaceholder('addText.placeholder.idx', { type: 'body' }, { type: 'body', idx: 13 }),
 	{
 		...shape('addShape.align:center', { align: 'center' }),
 		accepted: {
@@ -1431,6 +1570,14 @@ export const PROBES: Probe[] = [
 	shape('addShape.objectLock.noRot', { objectLock: { noRot: true } }),
 	shape('addShape.objectLock.noSelect', { objectLock: { noSelect: true } }),
 	shape('addShape.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
+	{
+		...shape('addShape.objectLock.noUngrp', { objectLock: { noUngrp: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer drops noUngrp on a:spLocks: it is a group lock (a:grpSpLocks only), which a shape does not have',
+		},
+	},
 	shape('addShape.objectName', { objectName: 'Renamed probe' }),
 	shapeOn(
 		'addShape.points',
@@ -1625,6 +1772,7 @@ export const PROBES: Probe[] = [
 		{ cell3D: { preset: 'angle', lightRig: { rig: 'threePt', dir: 't' } } },
 		['addTable.cell.cell3D.lightRig.rig', 'addTable.cell.cell3D.lightRig.dir']
 	),
+	cell('addTable.cell.charSpacing', { charSpacing: 4 }),
 	cell('addTable.cell.color', { color: '9B1B30' }),
 	span('addTable.cell.colspan', { colspan: 2 }),
 	span('addTable.cell.rowspan', { rowspan: 2 }),
@@ -1814,6 +1962,7 @@ export const PROBES: Probe[] = [
 	cell('addTable.cell.hyperlink.action:nextslide', { hyperlink: { action: 'nextslide' } }),
 	cell('addTable.cell.indentLevel', { indentLevel: 2 }),
 	cell('addTable.cell.italic', { italic: true }),
+	cell('addTable.cell.kerning', { kerning: 20 }),
 	cell('addTable.cell.lang', { lang: 'fr-FR' }),
 	cell('addTable.cell.lineSpacing', { lineSpacing: 30 }),
 	cell('addTable.cell.lineSpacingMultiple', { lineSpacingMultiple: 1.5 }),
@@ -1822,6 +1971,29 @@ export const PROBES: Probe[] = [
 	cell('addTable.cell.paraMarginLeft', { paraMarginLeft: 18 }),
 	cell('addTable.cell.paraSpaceAfter', { paraSpaceAfter: 12 }),
 	cell('addTable.cell.paraSpaceBefore', { paraSpaceBefore: 12 }),
+	{
+		...cell(
+			'addTable.cell.shadow.outer',
+			{ shadow: { type: 'outer', angle: 60, blur: 6, color: '250F6B', offset: 4, transparency: 40 } },
+			[
+				'addTable.cell.shadow.type',
+				'addTable.cell.shadow.angle',
+				'addTable.cell.shadow.blur',
+				'addTable.cell.shadow.color',
+				'addTable.cell.shadow.offset',
+				'addTable.cell.shadow.transparency',
+			]
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/223',
+	},
+	{
+		...cellOn(
+			'addTable.cell.shadow.rotateWithShape',
+			{ shadow: { type: 'outer', blur: 6 } },
+			{ shadow: { type: 'outer', blur: 6, rotateWithShape: true } }
+		),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/223',
+	},
 	cellRun('addTable.cell.softBreakBefore', 1, { softBreakBefore: true }),
 	cell('addTable.cell.strike:dblStrike', { strike: 'dblStrike' }),
 	cell('addTable.cell.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
@@ -1841,6 +2013,579 @@ export const PROBES: Probe[] = [
 		{ underline: { style: 'sng', color: '9B1B30' } }
 	),
 	cell('addTable.cell.valign:bottom', { valign: 'bottom' }),
+	table('addTable.altText', { altText: 'A probe description' }),
+	table('addTable.align:center', { align: 'center' }, ['addTable.align']),
+	{
+		...tallTable('addTable.autoPage', {}, { autoPage: true }),
+		accepted: {
+			kind: 'equivalent',
+			reason:
+				'the only facts lost are the empty notes slide pptx-ts writes for the continuation slide; the round trip writes no notes part for a slide without notes in either lane, and an absent notes slide shows the same empty notes page',
+		},
+	},
+	tallTable('addTable.autoPageRepeatHeader', { autoPage: true }, { autoPageRepeatHeader: true }),
+	tallTable('addTable.autoPageHeaderRows', { autoPage: true, autoPageRepeatHeader: true }, { autoPageHeaderRows: 2 }),
+	tallTable('addTable.autoPageSlideStartY', { autoPage: true }, { autoPageSlideStartY: 2 }),
+	{
+		id: 'addTable.autoPagePlaceholder',
+		covers: ['addTable.autoPagePlaceholder'],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.defineSlideMaster({
+				title: 'PROBE_TITLE_MASTER',
+				objects: [
+					{ placeholder: { options: { name: 'title', type: 'title', x: 0.5, y: 0.2, w: 9, h: 0.6 }, text: '' } },
+				],
+			})
+			const slide = pptx.addSlide({ masterTitle: 'PROBE_TITLE_MASTER' })
+			slide.addText('Probe title', { placeholder: 'title' })
+			slide.addTable(
+				Array.from({ length: 20 }, (_, row) => [{ text: `r${row}a` }, { text: `r${row}b` }]),
+				{
+					x: 1,
+					y: 1,
+					w: 5,
+					rowH: 0.5,
+					objectName: 'probe',
+					autoPage: true,
+					...(on ? { autoPagePlaceholder: true } : {}),
+				}
+			)
+		},
+	},
+	table('addTable.bold', { bold: true }),
+	table('addTable.border.type:dash', { border: { type: 'dash', color: '9B1B30', width: 2 } }, ['addTable.border.type']),
+	tableOn(
+		'addTable.border.width',
+		{ border: { type: 'solid', color: '9B1B30' } },
+		{ border: { type: 'solid', color: '9B1B30', width: 4 } }
+	),
+	tableOn(
+		'addTable.border.cap:round',
+		{ border: { type: 'solid', color: '9B1B30', width: 2 } },
+		{ border: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } }
+	),
+	tableOn(
+		'addTable.border.dashType:dash',
+		{ border: { type: 'solid', color: '9B1B30', width: 2 } },
+		{ border: { type: 'solid', color: '9B1B30', width: 2, dashType: 'dash' } }
+	),
+	tableOn(
+		'addTable.border.transparency',
+		{ border: { type: 'solid', color: '9B1B30', width: 2 } },
+		{ border: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } }
+	),
+	{
+		id: 'addTable.breakLine',
+		covers: ['addTable.breakLine'],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addTable(
+				[
+					[{ text: [{ text: 'First run' }, { text: 'Second run' }] }, { text: 'b' }],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				{ ...BOX, objectName: 'probe', ...(on ? { breakLine: true } : {}) }
+			)
+		},
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...table('addTable.bullet', { bullet: true }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...tableOn('addTable.bullet.characterCode', { bullet: true }, { bullet: { characterCode: '25BA' } }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...tableOn('addTable.bullet.color', { bullet: true }, { bullet: { color: '9B1B30' } }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...tableOn('addTable.bullet.fontFace', { bullet: true }, { bullet: { fontFace: 'Wingdings' } }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...tableOn('addTable.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...tableOn('addTable.bullet.indent', { bullet: true }, { bullet: { indent: 10 } }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...tableOn(
+			'addTable.bullet.numberStartAt',
+			{ bullet: { type: 'number' } },
+			{ bullet: { type: 'number', numberType: 'romanUcPeriod', numberStartAt: 3 } },
+			['addTable.bullet.numberStartAt', 'addTable.bullet.numberType']
+		),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...tableOn('addTable.bullet.size', { bullet: true }, { bullet: { size: 80 } }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...table('addTable.bullet.type:number', { bullet: { type: 'number' } }, ['addTable.bullet.type']),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...table('addTable.caps:all', { caps: 'all' }, ['addTable.caps']),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	table('addTable.color', { color: '9B1B30' }),
+	table('addTable.columns', { columns: [{ fill: { color: 'F0C808' } }] }),
+	table('addTable.colW', { colW: [2, 3] }),
+	table('addTable.fill.color', { fill: { color: 'F0C808' } }),
+	table('addTable.fill.type:solid', { fill: { type: 'solid', color: 'F0C808' } }, [
+		'addTable.fill',
+		'addTable.fill.type',
+	]),
+	tableOn('addTable.fill.transparency', { fill: { color: 'F0C808' } }, { fill: { color: 'F0C808', transparency: 40 } }),
+	table(
+		'addTable.fill.gradient.linear',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B', transparency: 30 },
+					],
+				},
+			},
+		},
+		[
+			'addTable.fill.gradient.kind',
+			'addTable.fill.gradient.angle',
+			'addTable.fill.gradient.stops.color',
+			'addTable.fill.gradient.stops.position',
+			'addTable.fill.gradient.stops.transparency',
+		]
+	),
+	tableOn(
+		'addTable.fill.gradient.scaled',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					scaled: true,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	tableOn(
+		'addTable.fill.gradient.rotateWithShape',
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		{
+			fill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	table(
+		'addTable.fill.gradient.center',
+		{
+			fill: {
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		['addTable.fill.gradient.center.x', 'addTable.fill.gradient.center.y']
+	),
+	table('addTable.fill.pattern', { fill: { pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } }, [
+		'addTable.fill.pattern.preset',
+		'addTable.fill.pattern.fgColor',
+		'addTable.fill.pattern.bgColor',
+	]),
+	table('addTable.fill.image.data', { fill: { image: { data: PNG } } }),
+	tableOn(
+		'addTable.fill.image.crop',
+		{ fill: { image: { data: PNG } } },
+		{ fill: { image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } } },
+		[
+			'addTable.fill.image.crop.l',
+			'addTable.fill.image.crop.t',
+			'addTable.fill.image.crop.r',
+			'addTable.fill.image.crop.b',
+		]
+	),
+	fitTable('addTable.fit:shrink', { fit: 'shrink' }, ['addTable.fit']),
+	{
+		...fitTable('addTable.fit.shrink', { fit: { type: 'shrink', fontScale: 80, lnSpcReduction: 10 } }, [
+			'addTable.fit.type',
+			'addTable.fit.fontScale',
+			'addTable.fit.lnSpcReduction',
+		]),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'only fit: shrink is acted on in a table (TableProps.fit): PowerPoint has no autofit in a cell, so the object form has no flag to write and a row already grows to fit its text (ts-pptx#84)',
+		},
+	},
+	tableOn('addTable.fitColumns', { x: 1, colW: [6, 6] }, { fitColumns: 'shrink' }),
+	table('addTable.fontFace', { fontFace: 'Georgia' }),
+	{
+		...tableOn('addTable.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	table('addTable.fontSize', { fontSize: 28 }),
+	table('addTable.h', { h: 2 }),
+	tableOn(
+		'addTable.hasBandedColumns',
+		{ tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' },
+		{ hasBandedColumns: true }
+	),
+	tableOn('addTable.hasBandedRows', { tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' }, { hasBandedRows: true }),
+	tableOn(
+		'addTable.hasFirstColumn',
+		{ tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' },
+		{ hasFirstColumn: true }
+	),
+	tableOn('addTable.hasFooter', { tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' }, { hasFooter: true }),
+	tableOn('addTable.hasHeader', { tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' }, { hasHeader: true }),
+	tableOn('addTable.hasLastColumn', { tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' }, { hasLastColumn: true }),
+	table('addTable.headerRow', { headerRow: { bold: true, fill: { color: 'F0C808' } } }),
+	{
+		...table('addTable.highlight', { highlight: 'FFFF00' }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	table('addTable.italic', { italic: true }),
+	{
+		...table('addTable.lang', { lang: 'fr-FR' }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	table('addTable.margin', { margin: [10, 20, 10, 20] }),
+	{
+		...table('addTable.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noAdjustHandles is not supported on a:graphicFrameLocks and drops it: a table frame carries only noGrp, noDrilldown, noSelect, noChangeAspect, noMove and noResize',
+		},
+	},
+	{
+		...table('addTable.objectLock.noChangeArrowheads', { objectLock: { noChangeArrowheads: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noChangeArrowheads is not supported on a:graphicFrameLocks and drops it: a table frame carries only noGrp, noDrilldown, noSelect, noChangeAspect, noMove and noResize',
+		},
+	},
+	table('addTable.objectLock.noChangeAspect', { objectLock: { noChangeAspect: true } }),
+	{
+		...table('addTable.objectLock.noChangeShapeType', { objectLock: { noChangeShapeType: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noChangeShapeType is not supported on a:graphicFrameLocks and drops it: a table frame carries only noGrp, noDrilldown, noSelect, noChangeAspect, noMove and noResize',
+		},
+	},
+	{
+		...table('addTable.objectLock.noCrop', { objectLock: { noCrop: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noCrop is not supported on a:graphicFrameLocks and drops it: a table frame carries only noGrp, noDrilldown, noSelect, noChangeAspect, noMove and noResize',
+		},
+	},
+	table('addTable.objectLock.noDrilldown', { objectLock: { noDrilldown: true } }),
+	{
+		...table('addTable.objectLock.noEditPoints', { objectLock: { noEditPoints: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noEditPoints is not supported on a:graphicFrameLocks and drops it: a table frame carries only noGrp, noDrilldown, noSelect, noChangeAspect, noMove and noResize',
+		},
+	},
+	table('addTable.objectLock.noGrp:false', { objectLock: { noGrp: false } }, ['addTable.objectLock.noGrp']),
+	table('addTable.objectLock.noMove', { objectLock: { noMove: true } }),
+	table('addTable.objectLock.noResize', { objectLock: { noResize: true } }),
+	{
+		...table('addTable.objectLock.noRot', { objectLock: { noRot: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noRot is not supported on a:graphicFrameLocks and drops it: a table frame carries only noGrp, noDrilldown, noSelect, noChangeAspect, noMove and noResize',
+		},
+	},
+	table('addTable.objectLock.noSelect', { objectLock: { noSelect: true } }),
+	{
+		...table('addTable.objectLock.noTextEdit', { objectLock: { noTextEdit: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noTextEdit is not supported on a:graphicFrameLocks and drops it: a table frame carries only noGrp, noDrilldown, noSelect, noChangeAspect, noMove and noResize',
+		},
+	},
+	{
+		...table('addTable.objectLock.noUngrp', { objectLock: { noUngrp: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns that noUngrp is not supported on a:graphicFrameLocks and drops it: a table frame carries only noGrp, noDrilldown, noSelect, noChangeAspect, noMove and noResize',
+		},
+	},
+	table('addTable.objectName', { objectName: 'Renamed probe' }),
+	table('addTable.outerBorder', { outerBorder: { type: 'solid', color: '9B1B30', width: 2 } }, [
+		'addTable.outerBorder.type',
+		'addTable.outerBorder.color',
+		'addTable.outerBorder.width',
+	]),
+	tableOn(
+		'addTable.outerBorder.cap:round',
+		{ outerBorder: { type: 'solid', color: '9B1B30', width: 2 } },
+		{ outerBorder: { type: 'solid', color: '9B1B30', width: 2, cap: 'round' } }
+	),
+	tableOn(
+		'addTable.outerBorder.dashType:dash',
+		{ outerBorder: { type: 'solid', color: '9B1B30', width: 2 } },
+		{ outerBorder: { type: 'solid', color: '9B1B30', width: 2, dashType: 'dash' } }
+	),
+	tableOn(
+		'addTable.outerBorder.transparency',
+		{ outerBorder: { type: 'solid', color: '9B1B30', width: 2 } },
+		{ outerBorder: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } }
+	),
+	{
+		...table('addTable.paraIndent', { paraIndent: 12 }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	{
+		...table('addTable.paraMarginLeft', { paraMarginLeft: 18 }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	tablePlaceholder('addTable.placeholder', undefined, 'tbl'),
+	tablePlaceholder('addTable.placeholder.name', undefined, { name: 'tbl' }),
+	tablePlaceholder('addTable.placeholder.type', undefined, { type: 'tbl' }),
+	tablePlaceholder('addTable.placeholder.idx', { type: 'tbl' }, { type: 'tbl', idx: 13 }),
+	table('addTable.rowH', { rowH: [0.5, 1] }),
+	{
+		...table('addTable.rtl', { rtl: true }),
+		issue: 'https://github.com/shbernal/pptx-ts/issues/226',
+	},
+	{
+		id: 'addTable.slideMargin',
+		covers: ['addTable.slideMargin'],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addTable(
+				[
+					[{ text: 'a' }, { text: 'b' }],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				{ x: 1, y: 1, objectName: 'probe', ...(on ? { slideMargin: [0.5, 2, 0.5, 1] } : {}) }
+			)
+		},
+	},
+	{
+		id: 'addTable.softBreakBefore',
+		covers: ['addTable.softBreakBefore'],
+		author: (pptx: TsPptx, on: boolean) => {
+			pptx.addSlide().addTable(
+				[
+					[{ text: [{ text: 'First run' }, { text: 'Second run' }] }, { text: 'b' }],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				{ ...BOX, objectName: 'probe', ...(on ? { softBreakBefore: true } : {}) }
+			)
+		},
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	table('addTable.tableFill.color', { tableFill: { color: 'F0C808' } }),
+	table('addTable.tableFill.type:solid', { tableFill: { type: 'solid', color: 'F0C808' } }, [
+		'addTable.tableFill',
+		'addTable.tableFill.type',
+	]),
+	tableOn(
+		'addTable.tableFill.transparency',
+		{ tableFill: { color: 'F0C808' } },
+		{ tableFill: { color: 'F0C808', transparency: 40 } }
+	),
+	table(
+		'addTable.tableFill.gradient.linear',
+		{
+			tableFill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B', transparency: 30 },
+					],
+				},
+			},
+		},
+		[
+			'addTable.tableFill.gradient.kind',
+			'addTable.tableFill.gradient.angle',
+			'addTable.tableFill.gradient.stops.color',
+			'addTable.tableFill.gradient.stops.position',
+			'addTable.tableFill.gradient.stops.transparency',
+		]
+	),
+	tableOn(
+		'addTable.tableFill.gradient.scaled',
+		{
+			tableFill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		{
+			tableFill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					scaled: true,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	tableOn(
+		'addTable.tableFill.gradient.rotateWithShape',
+		{
+			tableFill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		{
+			tableFill: {
+				gradient: {
+					kind: 'linear',
+					angle: 45,
+					rotateWithShape: false,
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		}
+	),
+	table(
+		'addTable.tableFill.gradient.center',
+		{
+			tableFill: {
+				gradient: {
+					kind: 'radial',
+					center: { x: 20, y: 70 },
+					stops: [
+						{ position: 0, color: 'F0C808' },
+						{ position: 100, color: '250F6B' },
+					],
+				},
+			},
+		},
+		['addTable.tableFill.gradient.center.x', 'addTable.tableFill.gradient.center.y']
+	),
+	table(
+		'addTable.tableFill.pattern',
+		{ tableFill: { pattern: { preset: 'dkDnDiag', fgColor: '250F6B', bgColor: 'F0C808' } } },
+		['addTable.tableFill.pattern.preset', 'addTable.tableFill.pattern.fgColor', 'addTable.tableFill.pattern.bgColor']
+	),
+	table('addTable.tableFill.image.data', { tableFill: { image: { data: PNG } } }),
+	tableOn(
+		'addTable.tableFill.image.crop',
+		{ tableFill: { image: { data: PNG } } },
+		{ tableFill: { image: { data: PNG, crop: { l: 10, t: 20, r: 30, b: 5 } } } },
+		[
+			'addTable.tableFill.image.crop.l',
+			'addTable.tableFill.image.crop.t',
+			'addTable.tableFill.image.crop.r',
+			'addTable.tableFill.image.crop.b',
+		]
+	),
+	table('addTable.tableStyle', { tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' }),
+	{
+		...table('addTable.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
+			'addTable.tabStops.position',
+			'addTable.tabStops.alignment',
+		]),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	table('addTable.textDirection:vert270', { textDirection: 'vert270' }, ['addTable.textDirection']),
+	{
+		...table('addTable.textWarp', { textWarp: 'textArchUp' }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer warns table/option-not-supported and drops it: a table cell has no a:bodyPr warp, and PowerPoint refuses WarpFormat on a cell (ts-pptx#84)',
+		},
+	},
+	{
+		...table('addTable.transparency', { transparency: 40 }),
+		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
+	},
+	table('addTable.underline.style:dbl', { underline: { style: 'dbl' } }, ['addTable.underline.style']),
+	tableOn(
+		'addTable.underline.color',
+		{ underline: { style: 'sng' } },
+		{ underline: { style: 'sng', color: '9B1B30' } }
+	),
+	table('addTable.valign:bottom', { valign: 'bottom' }, ['addTable.valign']),
+	table('addTable.w', { w: 6 }),
+	table('addTable.x', { x: 2 }),
+	table('addTable.y', { y: 2 }),
 	slide(
 		'slide.background.color',
 		(target) => {
@@ -2730,6 +3475,14 @@ export const PROBES: Probe[] = [
 				'the writer warns that noTextEdit is not supported on a:picLocks and drops it: a picture has no text body to lock',
 		},
 	},
+	{
+		...image('addImage.objectLock.noUngrp', { objectLock: { noUngrp: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer drops noUngrp on a:picLocks: it is a group lock (a:grpSpLocks only), which a picture does not have',
+		},
+	},
 	image('addImage.objectName', { objectName: 'Renamed probe' }),
 	{
 		id: 'addImage.placeholder',
@@ -2744,6 +3497,9 @@ export const PROBES: Probe[] = [
 				.addImage({ data: PNG, ...BOX, objectName: 'probe', ...(on ? { placeholder: 'pic' } : {}) })
 		},
 	},
+	imagePlaceholder('addImage.placeholder.name', undefined, { name: 'pic' }),
+	imagePlaceholder('addImage.placeholder.type', undefined, { type: 'pic' }),
+	imagePlaceholder('addImage.placeholder.idx', { type: 'pic' }, { type: 'pic', idx: 13 }),
 	image('addImage.points', { points: [{ x: 0, y: 0 }, { x: 5, y: 0 }, { x: 2.5, y: 1.5 }, { close: true }] }, [
 		'addImage.points.x',
 		'addImage.points.y',
@@ -2883,6 +3639,7 @@ export const PROBES: Probe[] = [
 	group('addGroup.objectLock.noRot', {}, { objectLock: { noRot: true } }),
 	group('addGroup.objectLock.noSelect', {}, { objectLock: { noSelect: true } }),
 	{ ...group('addGroup.objectLock.noTextEdit', {}, { objectLock: { noTextEdit: true } }), accepted: NOT_A_GROUP_LOCK },
+	group('addGroup.objectLock.noUngrp', {}, { objectLock: { noUngrp: true } }),
 	theme('theme.headFontFace', { headFontFace: 'Georgia' }),
 	theme('theme.bodyFontFace', { bodyFontFace: 'Verdana' }),
 	theme('theme.headFontFaceEA', { headFontFaceEA: 'Yu Gothic' }),
@@ -2938,6 +3695,14 @@ export const PROBES: Probe[] = [
 			kind: 'inert',
 			reason:
 				'the writer warns that noTextEdit is not valid on a:picLocks and drops it: it is a shape lock (a:spLocks), and a media picture has no text body',
+		},
+	},
+	{
+		...media('addMedia.objectLock.noUngrp', { objectLock: { noUngrp: true } }),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'the writer drops noUngrp on a:picLocks: it is a group lock (a:grpSpLocks only), which a media picture does not have',
 		},
 	},
 	media('addMedia.objectName', { objectName: 'Renamed probe' }),
@@ -5039,4 +5804,15 @@ export const SKIPPED: Record<string, string> = {
 	'addMedia.path': 'the file-path spelling of the media source; the media part it writes is exercised by addMedia.extn',
 	'addAnimation.shapeIndex':
 		'selects the target by add order, the alternative to objectName; all it changes is p:spTgt@spid and p:bldP@spid, which the fact diff masks as ids, and the effect it targets is exercised by addAnimation.preset',
+	'addTable.autoPageCharWeight':
+		'an auto-paging knob that only weighs where autoPage splits a table, and writes no XML of its own',
+	'addTable.autoPageLineWeight':
+		'an auto-paging knob that only weighs where autoPage splits a table, and writes no XML of its own',
+	'addTable.bullet.image.path':
+		'the file-path spelling of the bullet picture source; the bullet it writes is exercised by addTable.bullet.image.data',
+	'addTable.fill.image.path':
+		'the file-path spelling of the picture source; the picture it writes is exercised by addTable.fill.image.data',
+	'addTable.tableFill.image.path':
+		'the file-path spelling of the picture source; the picture it writes is exercised by addTable.tableFill.image.data',
+	'addTable.verbose': 'a development flag that logs the auto-paging trace to the console and writes no XML of its own',
 }

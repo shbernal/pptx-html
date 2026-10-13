@@ -72,6 +72,7 @@ function unequalRows(span: { columns: number; rows: number } | null): TableNode 
 			geometrySource: 'own',
 		},
 		render: 'drawn',
+		fill: { kind: 'inherit' },
 		columns: [{ widthEmu: inch(2) }, { widthEmu: inch(2) }],
 		rows: [
 			{ heightEmu: inch(0.5), cells: [origin, cell(0, 1)] },
@@ -181,5 +182,28 @@ describe('a cell draws six lines, not four', () => {
 		// also how PowerPoint paints them.
 		const { html } = await renderDeck(irWith(struckTable({ top: RULE, tlToBr: RULE })), NO_ASSETS)
 		expect(cellLinesOf(html, 0, 0)).toEqual([`0 0 ${inch(2)} 0`, `0 0 ${inch(2)} ${inch(0.5)}`])
+	})
+})
+
+describe("a table's own background", () => {
+	const BACKGROUND = { kind: 'solid', color: { kind: 'srgb', hex: 'F0C808' } } as const
+
+	/** The `<rect>`s drawn before the first cell's group: the table's own layer. */
+	function underCells(html: string): string[] {
+		const before = html.slice(0, html.indexOf(`data-pxh-node="${cellNodeId(TABLE_ID, 0, 0)}"`))
+		const table = before.slice(before.lastIndexOf(`data-pxh-node="${TABLE_ID}"`))
+		return [...table.matchAll(/<rect [^>]*>/g)].map((match) => match[0])
+	}
+
+	it('paints once across the whole frame, under the cells', async () => {
+		const table = unequalRows(null)
+		table.fill = BACKGROUND
+		const { html } = await renderDeck(irWith(table), NO_ASSETS)
+		expect(underCells(html)).toEqual([`<rect x="0" y="0" width="${inch(4)}" height="${inch(3)}" fill="#F0C808"/>`])
+	})
+
+	it('paints nothing when the table states none', async () => {
+		const { html } = await renderDeck(irWith(unequalRows(null)), NO_ASSETS)
+		expect(underCells(html)).toEqual([])
 	})
 })

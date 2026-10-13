@@ -249,6 +249,7 @@ function runPropsOf(run: ReadRun, scope: ImportScope): RunProperties {
 		...enumField(run.strike, STRIKE, 'strike', scope, 'text.strike', 'strikethrough style'),
 		...(color === undefined ? {} : { color }),
 		...(run.charSpacingPt === null ? {} : { spacingPt: run.charSpacingPt }),
+		...(run.kerningPt === null ? {} : { kerningPt: run.kerningPt }),
 		...(run.baselinePct === null ? {} : { baselinePct: run.baselinePct }),
 		...hyperlinkFields(run, scope),
 	}

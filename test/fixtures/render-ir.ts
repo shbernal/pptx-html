@@ -268,6 +268,7 @@ const GRID: TableNode = {
 	name: 'Table 1',
 	placement: at(0.5, 1, 6, 1.2),
 	render: 'drawn',
+	fill: { kind: 'inherit' },
 	columns: [{ widthEmu: inch(3) }, { widthEmu: inch(3) }],
 	rows: [
 		{

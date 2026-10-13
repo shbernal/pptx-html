@@ -36,6 +36,12 @@ model is expected to move.
 
 ### Fixed
 
+- **A table's own background is drawn.** `addTable`'s `tableFill` (`a:tblPr` fill:
+  solid, gradient, pattern or picture) survived the round trip but `renderDeck`
+  never painted it, so an unfilled cell showed the slide instead of the table
+  behind it. `TableNode.fill` now carries it and the renderer paints it once under
+  the grid. `IR_VERSION` goes to 9, so a document rendered by an older build is
+  refused with "re-render it" rather than read without the field.
 - **A slide number survives the loop.** `emitDeck` replays `SlideIr.slideNumber`
   alongside the slide's background and transition, so a deck's slide-number
   placeholder, its position and its formatting come back instead of being dropped.
