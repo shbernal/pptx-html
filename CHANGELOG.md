@@ -46,6 +46,10 @@ model is expected to move.
   the preset's path, bends included, and are never filled.
 - **A hexagon draws as a hexagon**, as a shape and as a picture's clip, instead of
   as its bounding box.
+- **Pattern fills draw their pattern.** The 54 `a:pattFill` presets were painted as
+  their background colour alone. They now draw their eight-by-eight tile in both
+  colours, at the pixel scale PowerPoint shows at 100 %. A preset outside the 54
+  still falls back to the background colour, marked `data-pxh-approx`.
 - **A table's own background is drawn.** `addTable`'s `tableFill` (`a:tblPr` fill:
   solid, gradient, pattern or picture) survived the round trip but `renderDeck`
   never painted it, so an unfilled cell showed the slide instead of the table

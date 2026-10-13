@@ -303,6 +303,125 @@ function pictureDef(assetName: string, defs: Defs): string {
 	)
 }
 
+/**
+ * The 54 `ST_PresetPatternVal` tiles, each eight rows of eight pixels, top row
+ * first, written as one hex byte per row with the most significant bit leftmost.
+ * A set bit paints the foreground colour and a clear one the background.
+ *
+ * The presets are GDI+'s hatch styles under OOXML names, one for one, and
+ * PowerPoint draws them as such: `lgGrid` is GDI+'s `HatchStyleLargeGrid`, which
+ * GDI+ itself defines as `HatchStyleCross`, hence the two identical rows. The
+ * bitmaps are transcribed from Wine's GDI+ (`dlls/gdiplus/brush.c`), which stores
+ * each tile bottom row first; the order here is already flipped.
+ *
+ * Wine anti-aliases the four plain diagonals and their cross. This draws their
+ * bits alone, so those five come out a pixel crisper than PowerPoint's.
+ */
+const PATTERN_TILES: Record<string, string> = {
+	pct5: '8000000008000000',
+	pct10: '8000080080000800',
+	pct20: '8800220088002200',
+	pct25: '8822882288228822',
+	pct30: 'aa44aa11aa44aa11',
+	pct40: 'aa55aa51aa55aa15',
+	pct50: 'aa55aa55aa55aa55',
+	pct60: 'ee55bb55ee55bb55',
+	pct70: '77dd77dd77dd77dd',
+	pct75: '77ffddff77ffddff',
+	pct80: 'effffeffeffffeff',
+	pct90: 'fffffff7ffffff7f',
+	horz: 'ff00000000000000',
+	vert: '8080808080808080',
+	ltHorz: 'ff000000ff000000',
+	ltVert: '8888888888888888',
+	dkHorz: 'ffff0000ffff0000',
+	dkVert: 'cccccccccccccccc',
+	narHorz: 'ff00ff00ff00ff00',
+	narVert: '5555555555555555',
+	dashHorz: 'f00000000f000000',
+	dashVert: '8080808008080808',
+	cross: 'ff80808080808080',
+	dnDiag: '8040201008040201',
+	upDiag: '0102040810204080',
+	ltDnDiag: '8844221188442211',
+	ltUpDiag: '1122448811224488',
+	dkDnDiag: 'cc663399cc663399',
+	dkUpDiag: '3366cc993366cc99',
+	wdDnDiag: 'c1e070381c0e0783',
+	wdUpDiag: '83070e1c3870e0c1',
+	dashDnDiag: '0000884422110000',
+	dashUpDiag: '0000112244880000',
+	diagCross: '8142241818244281',
+	smCheck: '9966669999666699',
+	lgCheck: 'f0f0f0f00f0f0f0f',
+	smGrid: 'ff888888ff888888',
+	lgGrid: 'ff80808080808080',
+	dotGrid: 'aa00800080008000',
+	smConfetti: '8008400210012004',
+	lgConfetti: 'b130031bd8c00c8d',
+	horzBrick: 'ff808080ff080808',
+	diagBrick: '0102040818244281',
+	solidDmnd: '10387cfe7c381000',
+	openDmnd: '8244281028448201',
+	dotDmnd: '8000220008002200',
+	plaid: 'aa55aa55f0f0f0f0',
+	sphere: '77898f8f7798f8f8',
+	weave: '8854224588142251',
+	divot: '0010081000800180',
+	shingle: '038448300c020101',
+	wave: '001825c0001825c0',
+	trellis: 'ff66ff99ff66ff99',
+	zigZag: '8142241881422418',
+}
+
+/**
+ * One tile pixel, in EMU. PowerPoint paints a pattern in device pixels rather
+ * than in slide units, so the tile has no size of its own in the file; 96 DPI is
+ * the scale at which a slide shown at 100 % matches it.
+ */
+const PATTERN_PIXEL_EMU = 9525
+
+/**
+ * A preset pattern as an SVG `<pattern>`, or `undefined` for one this cannot draw:
+ * an unknown preset, or a tile missing either colour.
+ *
+ * The tile repeats in the node's own space, so it turns with a rotated shape,
+ * where PowerPoint keeps it upright. A screen pixel of texture is not worth a
+ * counter-transform per flip and rotation.
+ */
+function patternDef(fill: Extract<Fill, { kind: 'pattern' }>, defs: Defs): string | undefined {
+	const { foreground, background } = fill
+	const tile = fill.preset === null ? undefined : PATTERN_TILES[fill.preset]
+	if (tile === undefined || foreground === null || background === null) return undefined
+
+	const runs: string[] = []
+	for (let row = 0; row < 8; row++) {
+		const bits = Number.parseInt(tile.slice(row * 2, row * 2 + 2), 16)
+		let column = 0
+		while (column < 8) {
+			if ((bits & (0x80 >> column)) === 0) {
+				column++
+				continue
+			}
+			const start = column
+			while (column < 8 && (bits & (0x80 >> column)) !== 0) column++
+			runs.push(`M${start} ${row}h${column - start}v1h${start - column}z`)
+		}
+	}
+	const size = 8 * PATTERN_PIXEL_EMU
+	const paint = (color: Color) =>
+		`fill="${cssColor(color)}"${color.alpha === undefined ? '' : ` fill-opacity="${color.alpha}"`}`
+	return defs.add(
+		(id) =>
+			`<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}">` +
+			`<rect width="${size}" height="${size}" ${paint(background)}/>` +
+			(runs.length === 0
+				? ''
+				: `<path transform="scale(${PATTERN_PIXEL_EMU})" shape-rendering="crispEdges" d="${runs.join('')}" ${paint(foreground)}/>`) +
+			`</pattern>`
+	)
+}
+
 export interface Painted {
 	/** SVG presentation attributes, already serialized. */
 	attrs: string
@@ -365,10 +484,11 @@ export function fillPaint(fill: Fill, frame: PaintFrame, defs: Defs): Painted {
 			}
 		}
 		case 'pattern': {
-			// A preset hatch (`a:pattFill/@prst`) is 54 named bitmaps. Painting the
-			// background colour keeps the shape's weight and mass right and leaves the
-			// texture out, which is a coarse picture; inventing a hatch would be a
-			// wrong one.
+			const pattern = patternDef(fill, defs)
+			if (pattern !== undefined) return { attrs: `fill="${pattern}"`, painted: true }
+			// A preset outside the 54, or a tile missing a colour. Painting the colour
+			// there is keeps the shape's weight and mass right and leaves the texture
+			// out, which is a coarse picture; inventing a hatch would be a wrong one.
 			const background = fill.background ?? fill.foreground
 			return {
 				attrs: background === null ? 'fill="none"' : `fill="${cssColor(background)}"`,
