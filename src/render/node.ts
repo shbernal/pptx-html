@@ -28,7 +28,7 @@ import {
 	UNPAINTED_FILL,
 	UNPAINTED_STROKE,
 } from './paint'
-import { renderTextBody } from './text'
+import { renderTextBody, SINGLE_LINE_HEIGHT } from './text'
 
 export interface NodeContext {
 	defs: Defs
@@ -152,19 +152,25 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 	const statedH = node.rows.reduce((sum, row) => sum + (row.heightEmu ?? 0), 0)
 	const autoRows = node.rows.filter((row) => row.heightEmu === null).length
 	const rowFill = autoRows === 0 ? 0 : Math.max(0, box.h - statedH) / autoRows
+	// An auto row is never shorter than its text either: PowerPoint grows it to fit,
+	// and the frame it was written with is often far too short to share out. The
+	// writer gives a table with no `h` a one-inch frame however many rows it has.
+	const heights = node.rows.map((row) => row.heightEmu ?? Math.max(rowFill, contentFloor(row)))
 
-	// The table's own background goes down first, under the whole frame, so a cell
-	// with no fill of its own shows it through and a cell with one covers it.
-	const background = fillPaint(node.fill, { w: box.w, h: box.h, rotation }, context.defs)
+	// The table's own background goes down first, under the whole grid, so a cell
+	// with no fill of its own shows it through and a cell with one covers it. The
+	// grid is the frame unless rows grew past it.
+	const gridH = Math.max(box.h, heights.reduce((sum, height) => sum + height, 0))
+	const background = fillPaint(node.fill, { w: box.w, h: gridH, rotation }, context.defs)
 	const parts: string[] = background.painted
 		? [
-				`<rect x="0" y="0" width="${box.w}" height="${box.h}" ${background.attrs}` +
+				`<rect x="0" y="0" width="${box.w}" height="${gridH}" ${background.attrs}` +
 					`${background.approx === undefined ? '' : ` data-pxh-approx="${background.approx}"`}/>`,
 			]
 		: []
 	let y = 0
 	node.rows.forEach((row, rowIndex) => {
-		const h = row.heightEmu ?? rowFill
+		const h = heights[rowIndex] ?? 0
 		let x = 0
 		row.cells.forEach((cell, columnIndex) => {
 			const w = node.columns[columnIndex]?.widthEmu ?? columnFill
@@ -188,7 +194,7 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 			const cellH =
 				span === null
 					? h
-					: node.rows.slice(rowIndex, rowIndex + span.rows).reduce((sum, spanned) => sum + (spanned.heightEmu ?? rowFill), 0)
+					: heights.slice(rowIndex, rowIndex + span.rows).reduce((sum, spanned) => sum + spanned, 0)
 
 			// The cell's own fill wins, `none` included; only a cell that states none
 			// shows the table style's shading.
@@ -216,6 +222,29 @@ function renderTable(node: TableNode, box: Box, context: NodeContext): string {
 	})
 	return parts.join('')
 }
+
+/**
+ * How tall an auto row's text needs it to be: each cell's insets plus one line per
+ * paragraph at its largest run, and the tallest cell wins. A floor rather than a
+ * measurement, so a paragraph that wraps can still outgrow it; a cell spanning
+ * several rows is left out, because its text is shared among them.
+ */
+function contentFloor(row: TableNode['rows'][number]): number {
+	let floor = 0
+	for (const cell of row.cells) {
+		if (cell.covered || cell.text === null || (cell.span !== null && cell.span.rows > 1)) continue
+		const { top, bottom } = cell.text.insetsPt
+		const lines = cell.text.paragraphs.reduce((sum, paragraph) => {
+			const sizes = paragraph.runs.map((run) => run.props.sizePt ?? run.resolved.sizePt ?? DEFAULT_SIZE_PT)
+			return sum + (sizes.length === 0 ? DEFAULT_SIZE_PT : Math.max(...sizes)) * SINGLE_LINE_HEIGHT
+		}, 0)
+		floor = Math.max(floor, (top + bottom + lines) * EMU_PER_POINT)
+	}
+	return Math.round(floor)
+}
+
+/** PowerPoint's size for text that states none anywhere in its chain. */
+const DEFAULT_SIZE_PT = 18
 
 /**
  * A cell's six lines, drawn separately so each keeps its own stroke: the four

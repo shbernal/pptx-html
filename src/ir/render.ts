@@ -831,7 +831,7 @@ export interface TableCell {
 }
 
 export interface TableRow {
-	/** `a:tr/@h`. `null` when the row height is left to the content. */
+	/** `a:tr/@h`. `null` when the row height is left to the content, which the file spells `0`. */
 	heightEmu: number | null
 	cells: TableCell[]
 }

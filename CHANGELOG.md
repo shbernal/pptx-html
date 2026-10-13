@@ -50,6 +50,12 @@ model is expected to move.
   their background colour alone. They now draw their eight-by-eight tile in both
   colours, at the pixel scale PowerPoint shows at 100 %. A preset outside the 54
   still falls back to the background colour, marked `data-pxh-approx`.
+- **A table row with no set height is drawn.** `addTable` without `h` or `rowH`
+  writes `a:tr/@h="0"`, PowerPoint's spelling of a row sized to its content, and
+  the importer took it as a stated height of zero, so the whole table drew at
+  nothing. `TableRow.heightEmu` is now `null` for such a row, as its type already
+  documented, and the renderer shares the frame out among those rows without
+  drawing any shorter than one line per paragraph plus the cell's insets.
 - **A table's own background is drawn.** `addTable`'s `tableFill` (`a:tblPr` fill:
   solid, gradient, pattern or picture) survived the round trip but `renderDeck`
   never painted it, so an unfilled cell showed the slide instead of the table

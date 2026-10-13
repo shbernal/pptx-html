@@ -76,7 +76,7 @@ function px(points: number): number {
  * line gap, which for the faces these decks use lands near 1.2 — Calibri reports
  * 1.22. A stand-in, so the frames that use it say so.
  */
-const SINGLE_LINE_HEIGHT = 1.2
+export const SINGLE_LINE_HEIGHT = 1.2
 
 /**
  * The size a run is painted at: what it states, or what it inherits, times the

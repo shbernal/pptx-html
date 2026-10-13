@@ -308,7 +308,10 @@ function tableNodeOf(frame: GraphicFrame, table: Table, scope: ImportScope): Ren
 	const base = baseOf(frame, scope)
 	const columns: TableColumn[] = table.columnWidths.map((widthEmu) => ({ widthEmu }))
 	const rows: TableRow[] = table.rows.map((row, rowIndex) => ({
-		heightEmu: row.heightEmu,
+		// `a:tr/@h` is required, so a row left to its content says so with `0`, which
+		// is what every `addTable` without `h` or `rowH` writes. Kept as `0` it reads
+		// as a stated height and the row draws at nothing.
+		heightEmu: row.heightEmu === 0 ? null : row.heightEmu,
 		cells: row.cells.map((cell, columnIndex) => cellOf(cell, base.id, rowIndex, columnIndex, scope)),
 	}))
 	// `Table` has every fill accessor a cell has except `fillNoFill`, and a table that

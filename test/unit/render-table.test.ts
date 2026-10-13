@@ -239,3 +239,33 @@ describe("a cell's table-style shading", () => {
 		expect(await cellRect({ kind: 'none' }, STYLED)).not.toContain('#CCCCCC')
 	})
 })
+
+describe('a row left to its content', () => {
+	/** A one-column table of `count` auto rows in a frame `frameH` tall, each row one 12pt line. */
+	function autoRows(count: number, frameH: number): TableNode {
+		const table = unequalRows(null)
+		table.placement!.box.h = frameH
+		table.columns = [{ widthEmu: inch(4) }]
+		const text = {
+			paragraphs: [{ props: { level: 0 }, runs: [{ text: 'x', props: { sizePt: 12 }, resolved: { sizePt: 12 } }] }],
+			autofit: 'none',
+			anchor: 'top',
+			wrap: true,
+			insetsPt: { left: 7.2, right: 7.2, top: 3.6, bottom: 3.6 },
+		} as TableNode['rows'][number]['cells'][number]['text']
+		table.rows = Array.from({ length: count }, (_, row) => ({ heightEmu: null, cells: [{ ...cell(row, 0), text }] }))
+		return table
+	}
+
+	it('shares out the frame when the frame is tall enough', async () => {
+		const { html } = await renderDeck(irWith(autoRows(2, inch(3))), NO_ASSETS)
+		expect(cellHeight(html, 0, 0)).toBe(inch(1.5))
+	})
+
+	it('is never shorter than its text', async () => {
+		// Five rows in the one-inch frame `addTable` writes when given no `h`: a fifth
+		// of an inch is less than a 12pt line plus its insets, which is 21.6pt.
+		const { html } = await renderDeck(irWith(autoRows(5, inch(1))), NO_ASSETS)
+		expect(cellHeight(html, 4, 0)).toBe(21.6 * 12_700)
+	})
+})

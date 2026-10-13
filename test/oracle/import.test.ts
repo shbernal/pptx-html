@@ -536,6 +536,14 @@ describe('tables', () => {
 		expect(grid.rows).toHaveLength(3)
 	})
 
+	it('reads a row the writer left to its content as unstated, not as zero tall', async () => {
+		// `addTable` with no `h` or `rowH` writes `a:tr/@h="0"`, the file's spelling of
+		// an auto row. Imported as a stated `0`, the renderer drew every row at nothing.
+		const grid = await nodeNamed('table', 'grid')
+		if (grid.kind !== 'table') return
+		expect(grid.rows.map((row) => row.heightEmu)).toEqual([null, null, null])
+	})
+
 	it('imports per-cell paint rather than a table-wide approximation', async () => {
 		const grid = await nodeNamed('table', 'grid')
 		if (grid.kind !== 'table') return
