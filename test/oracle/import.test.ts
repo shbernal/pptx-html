@@ -586,4 +586,15 @@ describe('tables', () => {
 		expect(plain?.borders.tlToBr).toStrictEqual({ kind: 'inherit' })
 		expect(plain?.borders.blToTr).toStrictEqual({ kind: 'inherit' })
 	})
+
+	it("reads a table's own background, apart from its cells'", async () => {
+		// `a:tblPr`'s fill lives on the table, not on the cells: a cell that states none
+		// shows it through rather than inheriting a copy of it.
+		const backed = await nodeNamed('table-fill', 'backed')
+		if (backed.kind !== 'table') return
+		expect(backed.fill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: 'E8E4F5' } })
+		const [covered, through] = backed.rows[0]?.cells ?? []
+		expect(covered?.fill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: 'FFFFFF' } })
+		expect(through?.fill).toStrictEqual({ kind: 'inherit' })
+	})
 })

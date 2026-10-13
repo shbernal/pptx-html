@@ -302,6 +302,25 @@ export const CORPUS = [
 		}
 	),
 
+	deck(
+		'table-fill',
+		'primitive',
+		"a table's own background, under a cell that covers it and one that does not",
+		(pptx) => {
+			// `a:tblPr`'s fill is not a default for the cells: `covered` states a fill of its
+			// own and hides the background, `through` states none and shows it. A lane that
+			// copied the table's fill onto every cell, or dropped it, differs on one of them.
+			pptx.addSlide().addTable([[{ text: 'covered', options: { fill: { color: 'FFFFFF' } } }, { text: 'through' }]], {
+				x: 0.5,
+				y: 0.5,
+				w: 6,
+				colW: [3, 3],
+				tableFill: { color: 'E8E4F5' },
+				objectName: 'backed',
+			})
+		}
+	),
+
 	deck('picture', 'primitive', 'embedded media — the case hash-addressed assets must survive', (pptx) => {
 		pptx.addSlide().addImage({ data: PIXEL_PNG, x: 1, y: 1, w: 2, h: 2, objectName: 'photo' })
 	}),
