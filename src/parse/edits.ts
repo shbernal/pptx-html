@@ -35,7 +35,7 @@
  * prevent, and it would look exactly like success.
  */
 
-import type { CallIr, DeckIr, IrValue } from 'pptx-ts/script'
+import { type CallIr, type DeckIr, type IrValue, irArgs } from 'pptx-ts/script'
 import {
 	type Bullet,
 	type Color,
@@ -546,7 +546,8 @@ function patchLevel(
 			)
 		}
 		if (edits.deleted.has(node.id)) return
-		patchNode(node, call.method, call.args, edits, warnings)
+		// `irArgs` is the call's own array, widened: the patch below edits it in place.
+		patchNode(node, call.method, irArgs(call), edits, warnings)
 		kept.push(call)
 	})
 	return kept

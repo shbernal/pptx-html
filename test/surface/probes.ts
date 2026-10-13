@@ -841,6 +841,7 @@ export const PROBES: Probe[] = [
 	text('addText.bold', { bold: true }),
 	text('addText.italic', { italic: true }),
 	text('addText.underline.style:dbl', { underline: { style: 'dbl' } }),
+	text('addText.underline:true', { underline: true }),
 	text('addText.strike:dblStrike', { strike: 'dblStrike' }),
 	text('addText.charSpacing', { charSpacing: 4 }),
 	text('addText.kerning', { kerning: 20 }),
@@ -1993,29 +1994,23 @@ export const PROBES: Probe[] = [
 	cell('addTable.cell.paraMarginLeft', { paraMarginLeft: 18 }),
 	cell('addTable.cell.paraSpaceAfter', { paraSpaceAfter: 12 }),
 	cell('addTable.cell.paraSpaceBefore', { paraSpaceBefore: 12 }),
-	{
-		...cell(
-			'addTable.cell.shadow.outer',
-			{ shadow: { type: 'outer', angle: 60, blur: 6, color: '250F6B', offset: 4, transparency: 40 } },
-			[
-				'addTable.cell.shadow.type',
-				'addTable.cell.shadow.angle',
-				'addTable.cell.shadow.blur',
-				'addTable.cell.shadow.color',
-				'addTable.cell.shadow.offset',
-				'addTable.cell.shadow.transparency',
-			]
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/223',
-	},
-	{
-		...cellOn(
-			'addTable.cell.shadow.rotateWithShape',
-			{ shadow: { type: 'outer', blur: 6 } },
-			{ shadow: { type: 'outer', blur: 6, rotateWithShape: true } }
-		),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/223',
-	},
+	cell(
+		'addTable.cell.shadow.outer',
+		{ shadow: { type: 'outer', angle: 60, blur: 6, color: '250F6B', offset: 4, transparency: 40 } },
+		[
+			'addTable.cell.shadow.type',
+			'addTable.cell.shadow.angle',
+			'addTable.cell.shadow.blur',
+			'addTable.cell.shadow.color',
+			'addTable.cell.shadow.offset',
+			'addTable.cell.shadow.transparency',
+		]
+	),
+	cellOn(
+		'addTable.cell.shadow.rotateWithShape',
+		{ shadow: { type: 'outer', blur: 6 } },
+		{ shadow: { type: 'outer', blur: 6, rotateWithShape: true } }
+	),
 	cellRun('addTable.cell.softBreakBefore', 1, { softBreakBefore: true }),
 	cell('addTable.cell.strike:dblStrike', { strike: 'dblStrike' }),
 	cell('addTable.cell.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
@@ -2029,6 +2024,7 @@ export const PROBES: Probe[] = [
 	},
 	cell('addTable.cell.transparency', { transparency: 40 }),
 	cell('addTable.cell.underline.style:dbl', { underline: { style: 'dbl' } }),
+	cell('addTable.cell.underline:true', { underline: true }),
 	cellOn(
 		'addTable.cell.underline.color',
 		{ underline: { style: 'sng' } },
@@ -2108,53 +2104,22 @@ export const PROBES: Probe[] = [
 				{ ...BOX, objectName: 'probe', ...(on ? { breakLine: true } : {}) }
 			)
 		},
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
 	},
-	{
-		...table('addTable.bullet', { bullet: true }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...tableOn('addTable.bullet.characterCode', { bullet: true }, { bullet: { characterCode: '25BA' } }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...tableOn('addTable.bullet.color', { bullet: true }, { bullet: { color: '9B1B30' } }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...tableOn('addTable.bullet.fontFace', { bullet: true }, { bullet: { fontFace: 'Wingdings' } }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...tableOn('addTable.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...tableOn('addTable.bullet.indent', { bullet: true }, { bullet: { indent: 10 } }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...tableOn(
-			'addTable.bullet.numberStartAt',
-			{ bullet: { type: 'number' } },
-			{ bullet: { type: 'number', numberType: 'romanUcPeriod', numberStartAt: 3 } },
-			['addTable.bullet.numberStartAt', 'addTable.bullet.numberType']
-		),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...tableOn('addTable.bullet.size', { bullet: true }, { bullet: { size: 80 } }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...table('addTable.bullet.type:number', { bullet: { type: 'number' } }, ['addTable.bullet.type']),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...table('addTable.caps:all', { caps: 'all' }, ['addTable.caps']),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
+	table('addTable.bullet', { bullet: true }),
+	tableOn('addTable.bullet.characterCode', { bullet: true }, { bullet: { characterCode: '25BA' } }),
+	tableOn('addTable.bullet.color', { bullet: true }, { bullet: { color: '9B1B30' } }),
+	tableOn('addTable.bullet.fontFace', { bullet: true }, { bullet: { fontFace: 'Wingdings' } }),
+	tableOn('addTable.bullet.image.data', { bullet: true }, { bullet: { image: { data: PNG } } }),
+	tableOn('addTable.bullet.indent', { bullet: true }, { bullet: { indent: 10 } }),
+	tableOn(
+		'addTable.bullet.numberStartAt',
+		{ bullet: { type: 'number' } },
+		{ bullet: { type: 'number', numberType: 'romanUcPeriod', numberStartAt: 3 } },
+		['addTable.bullet.numberStartAt', 'addTable.bullet.numberType']
+	),
+	tableOn('addTable.bullet.size', { bullet: true }, { bullet: { size: 80 } }),
+	table('addTable.bullet.type:number', { bullet: { type: 'number' } }, ['addTable.bullet.type']),
+	table('addTable.caps:all', { caps: 'all' }, ['addTable.caps']),
 	table('addTable.color', { color: '9B1B30' }),
 	table('addTable.columns', { columns: [{ fill: { color: 'F0C808' } }] }),
 	table('addTable.colW', { colW: [2, 3] }),
@@ -2290,10 +2255,7 @@ export const PROBES: Probe[] = [
 	},
 	tableOn('addTable.fitColumns', { x: 1, colW: [6, 6] }, { fitColumns: 'shrink' }),
 	table('addTable.fontFace', { fontFace: 'Georgia' }),
-	{
-		...tableOn('addTable.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
+	tableOn('addTable.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
 	table('addTable.fontSize', { fontSize: 28 }),
 	table('addTable.h', { h: 2 }),
 	tableOn(
@@ -2311,15 +2273,9 @@ export const PROBES: Probe[] = [
 	tableOn('addTable.hasHeader', { tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' }, { hasHeader: true }),
 	tableOn('addTable.hasLastColumn', { tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' }, { hasLastColumn: true }),
 	table('addTable.headerRow', { headerRow: { bold: true, fill: { color: 'F0C808' } } }),
-	{
-		...table('addTable.highlight', { highlight: 'FFFF00' }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
+	table('addTable.highlight', { highlight: 'FFFF00' }),
 	table('addTable.italic', { italic: true }),
-	{
-		...table('addTable.lang', { lang: 'fr-FR' }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
+	table('addTable.lang', { lang: 'fr-FR' }),
 	table('addTable.margin', { margin: [10, 20, 10, 20] }),
 	{
 		...table('addTable.objectLock.noAdjustHandles', { objectLock: { noAdjustHandles: true } }),
@@ -2412,23 +2368,14 @@ export const PROBES: Probe[] = [
 		{ outerBorder: { type: 'solid', color: '9B1B30', width: 2 } },
 		{ outerBorder: { type: 'solid', color: '9B1B30', width: 2, transparency: 40 } }
 	),
-	{
-		...table('addTable.paraIndent', { paraIndent: 12 }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
-	{
-		...table('addTable.paraMarginLeft', { paraMarginLeft: 18 }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
+	table('addTable.paraIndent', { paraIndent: 12 }),
+	table('addTable.paraMarginLeft', { paraMarginLeft: 18 }),
 	tablePlaceholder('addTable.placeholder', undefined, 'tbl'),
 	tablePlaceholder('addTable.placeholder.name', undefined, { name: 'tbl' }),
 	tablePlaceholder('addTable.placeholder.type', undefined, { type: 'tbl' }),
 	tablePlaceholder('addTable.placeholder.idx', { type: 'tbl' }, { type: 'tbl', idx: 13 }),
 	table('addTable.rowH', { rowH: [0.5, 1] }),
-	{
-		...table('addTable.rtl', { rtl: true }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/226',
-	},
+	table('addTable.rtl', { rtl: true }),
 	{
 		id: 'addTable.slideMargin',
 		covers: ['addTable.slideMargin'],
@@ -2454,7 +2401,6 @@ export const PROBES: Probe[] = [
 				{ ...BOX, objectName: 'probe', ...(on ? { softBreakBefore: true } : {}) }
 			)
 		},
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
 	},
 	table('addTable.tableFill.color', { tableFill: { color: 'F0C808' } }),
 	table('addTable.tableFill.type:solid', { tableFill: { type: 'solid', color: 'F0C808' } }, [
@@ -2578,13 +2524,10 @@ export const PROBES: Probe[] = [
 		]
 	),
 	table('addTable.tableStyle', { tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}' }),
-	{
-		...table('addTable.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
-			'addTable.tabStops.position',
-			'addTable.tabStops.alignment',
-		]),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
+	table('addTable.tabStops', { tabStops: [{ position: 1.5, alignment: 'r' }] }, [
+		'addTable.tabStops.position',
+		'addTable.tabStops.alignment',
+	]),
 	table('addTable.textDirection:vert270', { textDirection: 'vert270' }, ['addTable.textDirection']),
 	{
 		...table('addTable.textWarp', { textWarp: 'textArchUp' }),
@@ -2594,11 +2537,9 @@ export const PROBES: Probe[] = [
 				'the writer warns table/option-not-supported and drops it: a table cell has no a:bodyPr warp, and PowerPoint refuses WarpFormat on a cell (ts-pptx#84)',
 		},
 	},
-	{
-		...table('addTable.transparency', { transparency: 40 }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/227',
-	},
+	table('addTable.transparency', { transparency: 40 }),
 	table('addTable.underline.style:dbl', { underline: { style: 'dbl' } }, ['addTable.underline.style']),
+	table('addTable.underline:true', { underline: true }),
 	tableOn(
 		'addTable.underline.color',
 		{ underline: { style: 'sng' } },
@@ -2871,6 +2812,7 @@ export const PROBES: Probe[] = [
 		'slide.slideNumber.underline.style',
 		'slide.slideNumber.underline.color',
 	]),
+	slideNumber('slide.slideNumber.underline:true', { underline: true }),
 	slideNumber('slide.slideNumber.textDirection:vert', { textDirection: 'vert' }, {}, [
 		'slide.slideNumber.textDirection',
 	]),
@@ -2894,6 +2836,7 @@ export const PROBES: Probe[] = [
 		'addNotes.options.underline.style',
 		'addNotes.options.underline.color',
 	]),
+	notes('addNotes.options.underline:true', { underline: true }),
 	notes('addNotes.options.hyperlink.url', { hyperlink: { url: 'https://example.com/', tooltip: 'Example' } }, [
 		'addNotes.options.hyperlink.url',
 		'addNotes.options.hyperlink.tooltip',
@@ -3185,6 +3128,7 @@ export const PROBES: Probe[] = [
 		'defineSlideMaster.slideNumber.underline.style',
 		'defineSlideMaster.slideNumber.underline.color',
 	]),
+	masterNumber('defineSlideMaster.slideNumber.underline:true', { underline: true }),
 	masterNumber('defineSlideMaster.slideNumber.textDirection:vert', { textDirection: 'vert' }, {}, [
 		'defineSlideMaster.slideNumber.textDirection',
 	]),
@@ -3734,15 +3678,13 @@ export const PROBES: Probe[] = [
 	media('addMedia.y', { y: 2 }),
 	{
 		...comment('addComment', {}, ['addComment.author', 'addComment.text']),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/221',
+		// The comment itself survives since #221; it comes back renumbered (idx 1 -> 2).
+		issue: 'https://github.com/shbernal/pptx-ts/issues/244',
 	},
 	comment('addComment.initials', { initials: 'XQ' }),
-	{ ...comment('addComment.x', { x: 3 }), issue: 'https://github.com/shbernal/pptx-ts/issues/221' },
-	{ ...comment('addComment.y', { y: 4 }), issue: 'https://github.com/shbernal/pptx-ts/issues/221' },
-	{
-		...comment('addComment.date', { date: '2026-01-02T03:04:05.000Z' }),
-		issue: 'https://github.com/shbernal/pptx-ts/issues/221',
-	},
+	comment('addComment.x', { x: 3 }),
+	comment('addComment.y', { y: 4 }),
+	comment('addComment.date', { date: '2026-01-02T03:04:05.000Z' }),
 	animation('addAnimation.preset', { preset: 'fadeIn', objectName: 'probe' }, undefined, [
 		'addAnimation.preset',
 		'addAnimation.objectName',
@@ -5030,6 +4972,14 @@ export const PROBES: Probe[] = [
 			{ underline: { style: 'dbl', color: '9B1B30' } },
 			['addChart.underline.style', 'addChart.underline.color']
 		),
+		accepted: {
+			kind: 'inert',
+			reason:
+				'a chart styles its text through its own options (titleBold, legendFontSize, dataLabelColor, ...) and reads no TextBaseProps key; the writer warns that it has no effect (#138, answered by #162)',
+		},
+	},
+	{
+		...chartOn('addChart.underline:true', 'bar', { showTitle: true, title: 'Probe title' }, { underline: true }),
 		accepted: {
 			kind: 'inert',
 			reason:

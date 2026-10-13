@@ -26,7 +26,7 @@
 
 import TsPptx, { EMU_PER_INCH } from 'pptx-ts'
 import { type LayoutHandle, Presentation } from 'pptx-ts/read'
-import { type AssetIr, type CallIr, type DeckIr, type IrValue, isAssetRef, type SlideIr } from 'pptx-ts/script'
+import { type AssetIr, type DeckIr, type IrValue, irArgs, isAssetRef, type SlideIr } from 'pptx-ts/script'
 import { base64Of } from '../base64'
 
 /**
@@ -137,15 +137,20 @@ function authorSlide(generator: TsPptx, slide: SlideIr, assets: ReadonlyMap<stri
 	if (slide.transition) properties.transition = hydrate(slide.transition as unknown as IrValue, assets)
 	if (slide.slideNumber) properties.slideNumber = hydrate(slide.slideNumber, assets)
 	// One or the other: the IR states runs only when one carries formatting.
-	if (slide.notesRuns !== undefined) invoke(methods, { method: 'addNotes', args: [slide.notesRuns] }, assets)
-	else if (slide.notesText !== undefined) invoke(methods, { method: 'addNotes', args: [slide.notesText] }, assets)
-	for (const call of slide.calls) invoke(methods, call, assets)
+	if (slide.notesRuns !== undefined) invoke(methods, 'addNotes', [slide.notesRuns], assets)
+	else if (slide.notesText !== undefined) invoke(methods, 'addNotes', [slide.notesText], assets)
+	for (const call of slide.calls) invoke(methods, call.method, irArgs(call), assets)
 }
 
-function invoke(slide: Record<string, unknown>, call: CallIr, assets: ReadonlyMap<string, AssetIr>): void {
-	const method = slide[call.method]
-	if (typeof method !== 'function') throw new Error(`the write API has no method ${call.method}`)
-	;(method as (...args: unknown[]) => unknown).call(slide, ...call.args.map((arg) => hydrate(arg, assets)))
+function invoke(
+	slide: Record<string, unknown>,
+	name: string,
+	args: readonly IrValue[],
+	assets: ReadonlyMap<string, AssetIr>
+): void {
+	const method = slide[name]
+	if (typeof method !== 'function') throw new Error(`the write API has no method ${name}`)
+	;(method as (...args: unknown[]) => unknown).call(slide, ...args.map((arg) => hydrate(arg, assets)))
 }
 
 /**

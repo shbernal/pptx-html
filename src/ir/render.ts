@@ -714,8 +714,9 @@ export interface TableCell {
 	 * What the table style paints in this cell when {@link fill} is `inherit`: the
 	 * `wholeTbl`/banding/first-row shading the style's options select for its
 	 * region, resolved by the read model. `inherit` when the style supplies nothing
-	 * the read model can resolve, which includes a built-in style the deck does not
-	 * define (pptx-ts#241).
+	 * the read model can resolve, which includes a built-in style a deck names
+	 * without defining it in `tableStyles.xml`. pptx-ts writes the definition; not
+	 * every writer does.
 	 *
 	 * Render-only. The write path never reads `RenderIr`, and the style itself goes
 	 * back as `tableStyle` plus its six options, so a restyled deck still restyles

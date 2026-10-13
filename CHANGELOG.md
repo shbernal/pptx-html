@@ -32,7 +32,11 @@ model is expected to move.
   `slide.color`, and hyperlinked table cells. A third adds table-cell border and
   diagonal caps and transparency, table-cell picture bullets, `hyperlink.action`
   runs without a forced colour, `sizing: 'contain'` pictures, and a picture's or
-  empty placeholder's binding to its layout placeholder.
+  empty placeholder's binding to its layout placeholder. A fourth adds a built-in
+  table style's definition, table-level text options (bullets, caps, highlight,
+  language, paragraph indents, tab stops, transparency and the rest), a cell's
+  text shadow, a table's `rtl`, a comment's position and date, and
+  `underline: true` as shorthand for a single underline.
 
 ### Fixed
 
@@ -48,9 +52,13 @@ model is expected to move.
   that stated that colour. `TableCell.fill` is now the cell's own fill only, and
   the style's shading is in `TableCell.styleFill`, which the renderer paints when
   the cell states none. The write path is unchanged: it never read `RenderIr`, and
-  it writes the style back by reference. Part of `IR_VERSION` 9. A table written
-  by pptx-ts still draws unstyled, because `addTable` names a built-in style
-  without defining it (pptx-ts#241).
+  it writes the style back by reference. Part of `IR_VERSION` 9.
+- **A table with a built-in style draws its header and banding.** `addTable` named
+  the style without writing its definition, so nothing could resolve what the six
+  Table Style Options paint (pptx-ts#241). The `pptx-ts` bump below carries the
+  fix. A cell's text still draws black under a style that colours it, because
+  the writer gives every uncoloured cell run an explicit black fill
+  (pptx-ts#243).
 - **A slide number survives the loop.** `emitDeck` replays `SlideIr.slideNumber`
   alongside the slide's background and transition, so a deck's slide-number
   placeholder, its position and its formatting come back instead of being dropped.

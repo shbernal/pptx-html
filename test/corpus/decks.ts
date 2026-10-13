@@ -321,6 +321,31 @@ export const CORPUS = [
 		}
 	),
 
+	deck('table-style', 'primitive', "a built-in table style's header and banding, under a cell's own fill", (pptx) => {
+		// The style is a reference: its header and band shading reach a cell only
+		// when the cell states no fill of its own. `own` states one, so a lane that
+		// let the style paint over it, or copied the style's colour into every
+		// cell, differs here. Resolvable only since pptx-ts#241, which made
+		// `addTable` write the built-in style's definition into `tableStyles.xml`.
+		pptx.addSlide().addTable(
+			[
+				[{ text: 'head' }, { text: 'own', options: { fill: { color: 'F0C808' } } }],
+				[{ text: 'band' }, { text: 'x' }],
+				[{ text: 'plain' }, { text: 'y' }],
+			],
+			{
+				x: 0.5,
+				y: 0.5,
+				w: 6,
+				colW: [3, 3],
+				tableStyle: '{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}',
+				hasHeader: true,
+				hasBandedRows: true,
+				objectName: 'styled',
+			}
+		)
+	}),
+
 	deck('picture', 'primitive', 'embedded media — the case hash-addressed assets must survive', (pptx) => {
 		pptx.addSlide().addImage({ data: PIXEL_PNG, x: 1, y: 1, w: 2, h: 2, objectName: 'photo' })
 	}),
