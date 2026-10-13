@@ -706,7 +706,7 @@
 	"addTable.cell.fill.transparency": "survives/authored",
 	"addTable.cell.fill.type:none": "survives/authored",
 	"addTable.cell.fill.type:solid": "survives/authored",
-	"addTable.cell.fit:shrink": "inert/authored/unrendered",
+	"addTable.cell.fit:shrink": "survives/authored",
 	"addTable.cell.fit.shrink": "inert/authored/unrendered",
 	"addTable.cell.fontFace": "survives/authored",
 	"addTable.cell.fontFaceEA": "survives/authored/unrendered",

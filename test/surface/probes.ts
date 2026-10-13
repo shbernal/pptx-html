@@ -351,6 +351,27 @@ function fitTable(id: string, options: TableProps, covers = [id.split(':')[0] as
 	}
 }
 
+/** {@link fitTable} with `options` on the first cell instead of the table. */
+function fitCell(id: string, options: TableCellProps, covers = [id.split(':')[0] as string]): Probe {
+	return {
+		id,
+		covers,
+		author: async (pptx: TsPptx, on: boolean) => {
+			await pptx.registerFontMetrics(
+				'Probe Mono',
+				Uint8Array.from(atob(FONT), (char) => char.charCodeAt(0))
+			)
+			pptx.addSlide().addTable(
+				[
+					[{ text: 'a', options: on ? options : {} }, { text: 'b' }],
+					[{ text: 'c' }, { text: 'd' }],
+				],
+				{ ...BOX, objectName: 'probe', fontFace: 'Probe Mono', fontSize: 60 }
+			)
+		},
+	}
+}
+
 /** A slide holding the probe text box; `apply` sets the slide's own properties on the probe side only. */
 function slide(id: string, apply: (slide: Slide) => void, covers = [id.split(':')[0] as string]): Probe {
 	return slideOn(id, () => {}, apply, covers)
@@ -1937,17 +1958,18 @@ export const PROBES: Probe[] = [
 			'addTable.cell.fill.image.crop.b',
 		]
 	),
+	fitCell('addTable.cell.fit:shrink', { fit: 'shrink' }),
 	{
-		...cell('addTable.cell.fit:shrink', { fit: 'shrink' }),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/84',
-	},
-	{
-		...cell('addTable.cell.fit.shrink', { fit: { type: 'shrink', fontScale: 80, lnSpcReduction: 10 } }, [
+		...fitCell('addTable.cell.fit.shrink', { fit: { type: 'shrink', fontScale: 80, lnSpcReduction: 10 } }, [
 			'addTable.cell.fit.type',
 			'addTable.cell.fit.fontScale',
 			'addTable.cell.fit.lnSpcReduction',
 		]),
-		unwritten: 'https://github.com/shbernal/pptx-ts/issues/84',
+		accepted: {
+			kind: 'inert',
+			reason:
+				'only fit: shrink is acted on in a cell (TableCellProps.fit): PowerPoint has no autofit in a cell, so the object form has no flag to write and a row already grows to fit its text (ts-pptx#84)',
+		},
 	},
 	cell('addTable.cell.fontFace', { fontFace: 'Georgia' }),
 	cellOn('addTable.cell.fontFaceEA', { fontFace: 'Georgia' }, { fontFaceEA: 'MS Mincho' }),
