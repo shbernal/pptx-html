@@ -325,7 +325,7 @@ export const CORPUS = [
 		// The style is a reference: its header and band shading reach a cell only
 		// when the cell states no fill of its own. `own` states one, so a lane that
 		// let the style paint over it, or copied the style's colour into every
-		// cell, differs here. Resolvable only since pptx-ts#241, which made
+		// cell, differs here. Resolvable only since pptx-ts issue 241, which made
 		// `addTable` write the built-in style's definition into `tableStyles.xml`.
 		pptx.addSlide().addTable(
 			[
