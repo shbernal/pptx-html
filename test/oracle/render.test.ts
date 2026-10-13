@@ -47,6 +47,9 @@ describe('every corpus deck renders and comes back whole', () => {
 			const { html, warnings } = await renderDeck(ir, { bytes })
 
 			expect(html.startsWith('<!doctype html>')).toBe(true)
+			// Strict, so this is also the importer's JSON-native check: an explicit
+			// `undefined`, a `Uint8Array`, a class instance or a non-finite number in
+			// the model cannot survive `JSON.parse` unchanged.
 			expect(JSON.parse(blockOf(html, ISLAND_ID))).toStrictEqual(ir)
 			// One `<section>` per slide, whatever the slides contain.
 			expect(html.match(/class="pxh-slide"/g)?.length ?? 0).toBe(ir.slides.length)

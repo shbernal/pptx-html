@@ -137,10 +137,10 @@ type Lane = 'authored' | 'carried' | 'template' | 'mixed'
  * nothing accounts for it, so it is on the frontier. `moot`: the option wrote
  * nothing or a lane threw, so there was nothing to paint.
  */
-export type Paint = 'rendered' | 'invisible' | 'unread' | 'unrendered' | 'moot'
+type Paint = 'rendered' | 'invisible' | 'unread' | 'unrendered' | 'moot'
 
 /** {@link Paint} for an observation, from the probe's own annotations. */
-export function paintState(probe: Probe, seen: Pick<Observation, 'status' | 'rendered'>): Paint {
+function paintState(probe: Probe, seen: Pick<Observation, 'status' | 'rendered'>): Paint {
 	if (seen.status === 'inert' || seen.status === 'crash') return 'moot'
 	if (seen.rendered) return 'rendered'
 	if (probe.unread) return 'unread'

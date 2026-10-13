@@ -37,51 +37,6 @@ async function nodeNamed(deck: string, name: string): Promise<RenderNode> {
 	return node
 }
 
-describe('the imported model survives the JSON island', () => {
-	for (const entry of CORPUS) {
-		it(`${entry.name} imports to a JSON-native model`, async () => {
-			// The island's wire rules, applied to what the importer really emits: no
-			// `undefined`, no `Uint8Array`, no exotic prototypes, no non-finite numbers. A mapper
-			// that returned a `Buffer` or wrote an explicit `undefined` would pass
-			// every structural assertion below and fail only on the way back.
-			const ir = await importCorpus(entry.name)
-			const offenders: string[] = []
-			walk(ir, '$', offenders)
-			expect(offenders).toEqual([])
-			// The JSON round trip is the assertion, not a way to copy: `structuredClone`
-			// here would prove that the model survives structured cloning, which is not
-			// the claim this test makes.
-			// oxlint-disable-next-line unicorn/prefer-structured-clone
-			expect(JSON.parse(JSON.stringify(ir))).toStrictEqual(ir)
-		})
-	}
-})
-
-function walk(value: unknown, path: string, offenders: string[]): void {
-	if (value === null || typeof value === 'boolean' || typeof value === 'string') return
-	if (typeof value === 'number') {
-		if (!Number.isFinite(value)) offenders.push(`${path}: ${value}`)
-		return
-	}
-	if (Array.isArray(value)) {
-		for (const [index, entry] of value.entries()) walk(entry, `${path}[${index}]`, offenders)
-		return
-	}
-	if (typeof value !== 'object') {
-		offenders.push(`${path}: ${typeof value}`)
-		return
-	}
-	if (Object.getPrototypeOf(value) !== Object.prototype) {
-		// The cast is the honest type. `constructor` is declared as always present,
-		// and the one object that has none is `Object.create(null)` — which is inside
-		// this branch, because a null prototype is not `Object.prototype`.
-		const ctor = (value as { constructor?: { name?: string } }).constructor
-		offenders.push(`${path}: ${ctor?.name ?? 'exotic object'}`)
-		return
-	}
-	for (const [key, entry] of Object.entries(value)) walk(entry, `${path}.${key}`, offenders)
-}
-
 describe('identity', () => {
 	it('is stable across two imports of the same bytes', async () => {
 		// The property the whole differ depends on: ids are derived from the source,

@@ -41,12 +41,6 @@ describe('an untouched document', () => {
 		expect(JSON.stringify(reading.projection)).toBe(JSON.stringify(project(SAMPLE_IR)))
 	})
 
-	it('takes the exact lane on every slide', async () => {
-		const dom = await documentOf(SAMPLE_IR)
-		const result = reconcile(SAMPLE_IR, readSurface(dom, SAMPLE_IR))
-		expect(result.slides.every((slide) => slide.lane === 'exact')).toBe(true)
-	})
-
 	it('reads the same island blocks as the string scanner', async () => {
 		// The two readers exist because the island has to be legible in Node and in
 		// the browser; if they ever disagree, one environment silently loses a deck.

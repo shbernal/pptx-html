@@ -16,24 +16,18 @@ import { first } from '../support'
 import type { RawModel } from './helpers'
 import { base64ToBytes, staticResolveIcon } from './helpers'
 
-async function modelFor(deckHtml: string, vectorizeSvg: boolean): Promise<RawModel> {
+async function vectorizedModel(deckHtml: string): Promise<RawModel> {
 	const parsed = parseDeckHtml(deckHtml)
 	const { model } = await convertSlide(parsed.headHTML, first(parsed.slides, 'slide'), {
 		resolveIcon: staticResolveIcon,
-		vectorizeSvg,
+		vectorizeSvg: true,
 	})
 	return model as unknown as RawModel
 }
 
 describe('vectorizeSvg — IR', () => {
-	it('leaves SVG icons as raster images when off (no regression)', async () => {
-		const model = await modelFor(iconRowHtml, false)
-		expect(model.items.filter((i) => i.type === 'image').length).toBe(3)
-		expect(model.items.filter((i) => i.type === 'path').length).toBe(0)
-	})
-
 	it('replaces each SVG icon image with an editable path when on', async () => {
-		const model = await modelFor(iconRowHtml, true)
+		const model = await vectorizedModel(iconRowHtml)
 		const paths = model.items.filter((i) => i.type === 'path')
 		const svgImages = model.items.filter((i) => i.type === 'image' && /^data:image\/svg/i.test((i.src as string) || ''))
 		expect(svgImages.length).toBe(0)

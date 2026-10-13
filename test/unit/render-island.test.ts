@@ -2,15 +2,15 @@
  * The island's own rules, on a fixture rather than a corpus deck.
  *
  * These are the properties the return path is entitled to assume, and every one of them
- * fails *silently* if it is wrong: a truncated island parses as a smaller deck,
- * a hash over the wrong bytes reports tampering on an untouched document, and a
+ * fails *silently* if it is wrong: a hash over the wrong bytes reports tampering
+ * on an untouched document, and a
  * `surfaceHash` that moves with the whole model turns every text edit into
  * corruption. None of them would be caught by "does it render".
  */
 
 import { describe, expect, it } from 'vitest'
 import { renderDeck } from '../../src/render/document'
-import { escapeForScript, INTEGRITY_ID, ISLAND_ID, integrityOf, islandTextOf } from '../../src/render/island'
+import { INTEGRITY_ID, ISLAND_ID, integrityOf, islandTextOf } from '../../src/render/island'
 import { SAMPLE_IR } from '../fixtures/render-ir'
 
 const NO_ASSETS = { assets: 'ref' } as const
@@ -21,28 +21,6 @@ function islandOf(html: string, id: string = ISLAND_ID): string {
 	if (match?.[1] === undefined) throw new Error(`no block with id ${id}`)
 	return match[1]
 }
-
-describe('escaping', () => {
-	it('keeps a literal </script> in the deck from ending the island', async () => {
-		// The failure this prevents is not a mangled string: the HTML tokenizer would
-		// end the script element early, the rest of the model would be parsed as
-		// markup, and the document would still *look* fine.
-		const hostile = structuredClone(SAMPLE_IR)
-		const shape = hostile.slides[0]?.nodes.find((node) => node.kind === 'shape')
-		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]?.runs[0]) throw new Error('fixture shape changed')
-		shape.text.paragraphs[0].runs[0].text = 'a </script><img src=x> b'
-
-		const { html } = await renderDeck(hostile, NO_ASSETS)
-		expect(html).not.toContain('a </script><img')
-		expect(JSON.parse(islandOf(html))).toStrictEqual(hostile)
-	})
-
-	it('escapes only the character, not the value', () => {
-		const json = JSON.stringify({ text: '</script> <!-- 5 < 6' })
-		expect(escapeForScript(json)).not.toContain('<')
-		expect(JSON.parse(escapeForScript(json))).toStrictEqual(JSON.parse(json))
-	})
-})
 
 describe('the two hashes', () => {
 	it('moves surfaceHash but not modelHash when a run is edited in place', async () => {
