@@ -44,6 +44,8 @@ model is expected to move.
   `curvedConnector2`–`5`, which `addConnector` writes for every `elbow` and
   `curved` route, were drawn as the outline of their bounding box. They now draw
   the preset's path, bends included, and are never filled.
+- **A hexagon draws as a hexagon**, as a shape and as a picture's clip, instead of
+  as its bounding box.
 - **A table's own background is drawn.** `addTable`'s `tableFill` (`a:tblPr` fill:
   solid, gradient, pattern or picture) survived the round trip but `renderDeck`
   never painted it, so an unfilled cell showed the slide instead of the table

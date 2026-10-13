@@ -178,6 +178,13 @@ describe('presets', () => {
 		expect(draw('curvedConnector3').d).toBe('M 0 0 C 250 0 500 100 500 200 C 500 300 750 400 1000 400')
 	})
 
+	it('draws a hexagon whose slanted edges meet the top and bottom', () => {
+		// `vf`'s default is what makes `shd2 · sin 60°` come out at exactly half the
+		// height, so the six points sit on the box rather than inside it.
+		const hexagon = pathOf({ kind: 'preset', preset: 'hexagon', adjustValues: {} }, 1000, 400)
+		expect(hexagon.d).toBe('M 0 200 L 100 0 L 900 0 L 1000 200 L 900 400 L 100 400 Z')
+	})
+
 	it('clamps a radius that would exceed the box', () => {
 		// `val 100000` is the whole shorter side, and a radius of that would make the
 		// two corner arcs on one edge overlap and the path self-intersect.

@@ -173,9 +173,9 @@ function rect(w: number, h: number): string {
  * `blockArc` ×1. A later census of slide-ui's 98 generated browser previews
  * supplied the next evidence set: `round2DiagRect` ×6, `rightArrowCallout` ×4,
  * `rightArrow` ×2, `round2SameRect` ×2 and `wedgeRectCallout` ×2. The live
- * samples on pptx-ts's own documentation site supplied the elbow and curved
- * connectors in {@link CONNECTORS}, which `addConnector` writes for every
- * non-straight route. Entries outside
+ * samples on pptx-ts's own documentation site supplied `hexagon`, as a picture's
+ * clip, and the elbow and curved connectors in {@link CONNECTORS}, which
+ * `addConnector` writes for every non-straight route. Entries outside
  * those measured sets still fall back visibly instead of turning an appealing
  * but unevidenced list into dozens of formulas that each have to be right.
  */
@@ -390,6 +390,17 @@ const PRESETS: Record<string, (w: number, h: number, adj: Record<string, string>
 			`L ${coord(sx1)} ${coord(sy2)}`,
 			'Z',
 		].join(' ')
+	},
+	hexagon: (w, h, adj) => {
+		// `vf` stretches the half-height so that, at the default 115470, the two
+		// slanted edges meet the top and bottom exactly: `shd2 · sin 60°` is `h / 2`.
+		const ss = Math.min(w, h)
+		const maxAdj = ss === 0 ? 0 : (50_000 * w) / ss
+		const x1 = (ss * pin(0, adjust(adj, 'adj', 25_000), maxAdj)) / GUIDE_SCALE
+		const shd2 = (h / 2) * (adjust(adj, 'vf', 115_470) / GUIDE_SCALE)
+		const dy1 = shd2 * Math.sin(radians(3_600_000))
+		const [y1, y2] = [coord(h / 2 - dy1), coord(h / 2 + dy1)]
+		return `M 0 ${h / 2} L ${x1} ${y1} L ${w - x1} ${y1} L ${w} ${h / 2} L ${w - x1} ${y2} L ${x1} ${y2} Z`
 	},
 	blockArc: (w, h, adj) => {
 		// Two concentric elliptical arcs joined at both ends. `adj1`/`adj2` are the
