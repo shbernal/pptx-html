@@ -70,6 +70,19 @@ export interface Probe {
 	unwritten?: string
 	/** A loss accepted without an issue, and why. */
 	accepted?: { kind: AcceptedKind; reason: string }
+	/**
+	 * Why the option never reaches the paint model and should not: it is not drawn
+	 * in any context (a lock, a transition, a language tag, a sound). Takes the probe
+	 * off the render frontier. Not for an option that would be painted in context
+	 * and the probe gave it none: give the probe the context instead.
+	 */
+	invisible?: string
+	/**
+	 * The `shbernal/pptx-ts` issue for a painted option the read model has no
+	 * accessor for (`cause: unread`), so the import cannot hand it to the renderer.
+	 * Like `unwritten`, it fails the probe once the option renders, pointing here.
+	 */
+	unread?: string
 }
 
 type ProbeStatus =
@@ -105,6 +118,8 @@ export interface Observation {
 	 * case made visible: the XML round-trips and the HTML never showed it.
 	 */
 	rendered: boolean
+	/** {@link rendered}, accounted for. What the render frontier and the ledger read. */
+	paint: Paint
 	htmlLost: string[]
 	scriptLost: string[]
 	/** The oracle's view of the HTML lane, for spotting the blind spot. */
@@ -114,6 +129,23 @@ export interface Observation {
 }
 
 type Lane = 'authored' | 'carried' | 'template' | 'mixed'
+
+/**
+ * Where a probe stands on the render frontier. `rendered`: the option changed the
+ * paint model. `invisible`: it did not, and the probe says why it never should.
+ * `unread`: it did not, and the gap is filed upstream. `unrendered`: it did not, and
+ * nothing accounts for it, so it is on the frontier. `moot`: the option wrote
+ * nothing or a lane threw, so there was nothing to paint.
+ */
+export type Paint = 'rendered' | 'invisible' | 'unread' | 'unrendered' | 'moot'
+
+/** {@link Paint} for an observation, from the probe's own annotations. */
+export function paintState(probe: Probe, seen: Pick<Observation, 'status' | 'rendered'>): Paint {
+	if (seen.status === 'inert' || seen.status === 'crash') return 'moot'
+	if (seen.rendered) return 'rendered'
+	if (probe.unread) return 'unread'
+	return probe.invisible ? 'invisible' : 'unrendered'
+}
 
 /**
  * The part kinds `emitDeck` takes from the source package rather than writing:
@@ -193,6 +225,7 @@ export async function observe(probe: Probe): Promise<Observation> {
 			lane,
 			signature: sig,
 			rendered,
+			paint: paintState(probe, { status, rendered }),
 			htmlLost,
 			scriptLost,
 			undeclared: html.report.undeclared.length,
@@ -205,6 +238,7 @@ export async function observe(probe: Probe): Promise<Observation> {
 			lane: 'authored',
 			signature: sig,
 			rendered: false,
+			paint: 'moot',
 			htmlLost: [],
 			scriptLost: [],
 			undeclared: 0,
@@ -232,6 +266,8 @@ export function disagreement(probe: Probe, seen: Observation): string | null {
 		return '`unwritten` accounts for the probe on its own: drop `issue` and `accepted`'
 	if (unwritten && seen.status !== 'inert')
 		return `the option writes now (${seen.status}): remove \`unwritten\`, close ${unwritten} citing this probe, then classify the round trip`
+	const paint = paintProblem(probe, seen)
+	if (paint) return paint
 	switch (seen.status) {
 		case 'survives':
 			if (issue) return `survives now: the pinned loss is gone. Remove \`issue\`, then close ${issue} citing this probe`
@@ -252,4 +288,20 @@ export function disagreement(probe: Probe, seen: Observation): string | null {
 		case 'crash':
 			return issue || accepted ? null : `a lane threw (${seen.error}): fix it, or file it and set \`issue\``
 	}
+}
+
+/**
+ * The render half of {@link disagreement}. An unrendered probe with neither
+ * annotation is not a disagreement: it is the render frontier, which the score
+ * counts. A stale annotation is one, for the same reason a stale `issue` is.
+ */
+function paintProblem(probe: Probe, seen: Observation): string | null {
+	const { invisible, unread } = probe
+	if (invisible !== undefined && !invisible.trim()) return '`invisible` needs a reason'
+	if (unread && !ISSUE_URL.test(unread)) return `unread must be a shbernal/pptx-ts issue URL, got ${unread}`
+	if (unread && invisible)
+		return '`invisible` and `unread` contradict each other: an option is either never painted or not yet read'
+	if (seen.rendered && unread) return `renders now: remove \`unread\`, then close ${unread} citing this probe`
+	if (seen.rendered && invisible) return `renders now, so it is not invisible: remove \`invisible\` (${invisible})`
+	return null
 }

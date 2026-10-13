@@ -17,7 +17,7 @@ explains why the probe judges XML rather than `DeckIr`.
 1. **Pick.** Run `pnpm run oracle:score --family <family>` and take the first
    frontier path, or the first few if one probe naturally covers them (e.g.
    `underline.style` and `underline.color`).
-2. **Probe.** Add an entry to `PROBES` in `test/surface/probes.ts`, using a helper
+2. **Probe.** Add an entry to `AUTHORED` in `test/surface/probes.ts`, using a helper
    (`text`, `shape`, `table`, `cell`) or a new helper in that file for a new
    family. Use a non-default value. List every path it exercises in `covers`.
 3. **Run.** `pnpm exec vitest run --project oracle test/oracle/surface.test.ts -t '<id>'`.
@@ -38,27 +38,40 @@ explains why the probe judges XML rather than `DeckIr`.
    destroyed, not that the HTML carries the option. Report it as such, and never
    count it toward a fidelity claim.
 
-   The status line also says `not rendered` when the option changed the XML but
-   not the paint model. The lane says where the XML lives; this says whether the
-   HTML showed it, and a `template` survival can be either: a master rectangle is
-   drawn as chrome, a master `other` text style is not. That is not a failure: a lock, a transition or a master
-   slide number is never painted. It is a failure of the *probe* when the option
-   would be painted in context and the probe gave it none: a master text style on
-   a slide with no placeholder to inherit it. Give the probe that context rather
-   than accepting `unrendered`; if the renderer still never sees it, find out
-   whether the import reads it (a local fix) or the read model cannot (file it).
+   The status line also gives the probe's `paint`: whether the option changed
+   the paint model, not just the XML. The lane says where the XML lives; paint
+   says whether the HTML showed it, and a `template` survival can be either: a
+   master rectangle is drawn as chrome, a master `other` text style is not.
+
+5. **The render frontier.** A probe that wrote something and left the paint
+   model unchanged is `unrendered`, and `oracle:score --family` lists it under
+   `render frontier`. It is the same loop over existing probes: pick, classify,
+   fix or file, gate, commit. Each one leaves the frontier one of three ways:
+
+   | finding | what to do |
+   | --- | --- |
+   | never painted in any context (a lock, a transition, a language tag, a sound) | add a rule to `INVISIBLE` in `probes.ts`, or set `invisible: '<reason>'` on the one probe |
+   | the read model has no accessor for it (`cause: unread`) | file it (below) and set `unread` to the issue |
+   | the import reads it and the renderer ignores it | fix it in `src/` (import or render) |
+
+   Before calling a probe `invisible`, ask whether the option would be painted
+   in context and the probe gave it none: a master text style on a slide with no
+   placeholder to inherit it. Then the probe is what needs fixing, not the
+   frontier entry. Giving it the context is a new probe; never edit the old one
+   to make it render. Either annotation fails the probe the day it renders,
+   like a stale `issue`.
 
    `accepted: { kind: 'equivalent' }` is for an output that says the same thing in
    a different spelling. The reason must say how they are equivalent.
    `unsupported` is for losses OOXML or the HTML tier cannot carry. Use either one
    sparingly: every accepted entry is a claim a reviewer will check.
 
-5. **Skip** a path only when probing it would prove nothing: an input source like
+6. **Skip** a path only when probing it would prove nothing: an input source like
    `data`/`path`, or a pagination knob that writes no XML of its own. Put it in
    `SKIPPED` with a reason. "Hard to probe" is not a reason.
-6. **Gate.** `pnpm run oracle:score --family <family> --accept`. It refuses while
+7. **Gate.** `pnpm run oracle:score --family <family> --accept`. It refuses while
    the oracle is red or anything regressed.
-7. **Commit** probes, fixes and `test/surface/ledger.json` together, one item per
+8. **Commit** probes, fixes and `test/surface/ledger.json` together, one item per
    commit, with a conventional subject. Put the score change in the body. The
    "before" is the `coverage` line step 1 printed, before the probe existed;
    measuring it now counts the new probe on both sides:
@@ -98,6 +111,7 @@ The hooks block these during a run. They are listed so you know why:
 ## When to stop
 
 - The family's frontier is empty and the score is green: summarize and stop.
+  A render-frontier run stops on the same condition, read off `rtodo`.
 - The same root cause blocks three probes in a row and is filed: say so and
   stop, since the rest of that area is waiting on one fix.
 - A probe needs a harness change: describe the change and stop.
@@ -107,7 +121,8 @@ Stop hook enforces this.
 
 ## The summary at the end
 
-Write a summary covering the family, the coverage before and after, the
+Write a summary covering the family, the coverage before and after (the
+`render` line too, on a render-frontier run), the
 `survives`/`upstream`/`local`/`accepted` counts, every issue filed (with URL),
 every `accepted` entry with its reason, and anything that needs a human:
 harness changes, suspected false positives in the fact diff.

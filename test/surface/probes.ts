@@ -837,7 +837,7 @@ function theme(id: string, options: ThemeProps, covers = [id.split(':')[0] as st
 	}
 }
 
-export const PROBES: Probe[] = [
+const AUTHORED: Probe[] = [
 	text('addText.bold', { bold: true }),
 	text('addText.italic', { italic: true }),
 	text('addText.underline.style:dbl', { underline: { style: 'dbl' } }),
@@ -5728,6 +5728,31 @@ export const PROBES: Probe[] = [
 		},
 	},
 ]
+
+/**
+ * Options that change the XML and are never painted, in any context: the render
+ * frontier's `invisible`, by category. A probe whose id matches takes the reason.
+ *
+ * A category belongs here only when *no* slide would draw it. One that would be
+ * painted in context, and the probe gave it none, is a probe to fix, not an entry
+ * to add. A rule cannot hide a render regression: a probe it claims that renders
+ * fails on the stale claim, and one that stops rendering falls in rank.
+ */
+const INVISIBLE: [RegExp, string][] = [
+	[/\.objectLock\./, 'an editing lock (`a:*Locks`): restricts what PowerPoint lets a user change, and draws nothing'],
+	[
+		/^slide\.transition\./,
+		'a slide transition: plays between slides in a slideshow, and draws nothing on a static slide',
+	],
+	[/^addAnimation\./, 'an animation: plays during a slideshow, and draws nothing on a static slide'],
+	[/^addMedia\.loop/, 'media playback: changes how the clip plays, not the frame drawn for it'],
+	[/\.lang(:|$)/, 'a proofing language (`a:rPr/@lang`): selects spelling and grammar rules, and draws nothing'],
+]
+
+export const PROBES: Probe[] = AUTHORED.map((probe) => {
+	const reason = INVISIBLE.find(([pattern]) => pattern.test(probe.id))?.[1]
+	return reason ? { ...probe, invisible: reason } : probe
+})
 
 /**
  * Inventory paths deliberately not probed, and why. A path here counts as covered,

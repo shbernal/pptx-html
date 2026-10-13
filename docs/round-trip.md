@@ -144,9 +144,15 @@ its own probe.
   when one gets worse or disappears.
 - **Surviving is not being shown, and the probe says which.** Each probe also
   compares the paint model (`RenderIr` backgrounds, chrome and nodes) with and
-  without the option, and the ledger marks a probe the renderer never saw
-  `unrendered`. Losing the renderer counts as a regression the same way losing
-  the XML does.
+  without the option. A probe the renderer never saw is on the *render
+  frontier* until it is accounted for: `invisible`, with the reason it is never
+  drawn (a lock, a transition, a language tag), or `unread`, with the upstream
+  issue for the missing accessor. A value the import reads and the renderer
+  ignores is not accounted for; it is fixed. `oracle:score` reports render
+  coverage beside XML coverage, and the ratchet ranks the two frontiers alike:
+  losing the renderer, or the annotation that accounted for it, is a regression
+  the same way losing the XML is. Charts are most of what remains, since the
+  paint model draws a chart as a placeholder.
 
 What a probe does *not* prove: facts are compared without position, so it can
 miss a value that moved to the wrong run. It also covers decks the writer

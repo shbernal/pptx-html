@@ -182,6 +182,22 @@ todo 0 for <family> with gate pass, ratchet ok and ledger current, or when the
 skill's stop conditions are met. One probe or fix per commit. Stop after 60 turns.
 ```
 
+A render-frontier run works down the probes that changed the XML but never
+reached the paint model (the skill's step 5). Every family's `todo` is already 0,
+so its condition reads `rtodo` instead:
+
+```text
+/goal Follow the coverage-loop skill's render frontier for this family: <family>.
+Done when `pnpm run oracle:score --family <family>` printed in this conversation
+shows rtodo 0 for <family> with gate pass, ratchet ok and ledger current, or when
+the skill's stop conditions are met. One probe or fix per commit. Stop after 60 turns.
+```
+
+The Stop hook does not hold a run to `rtodo 0`: an `unrendered` probe is work
+left, not a red score, so only the `/goal` condition does. `addChart` is the
+exception to start from: the paint model draws a chart as a placeholder, so its
+frontier is one root cause, not a run.
+
 `/goal`'s evaluator only reads the conversation, which is why the condition asks
 for the score to be printed and why the Stop hook re-checks it independently.
 Review the branch commit by commit. Any `accepted` entry is a claim to check, and

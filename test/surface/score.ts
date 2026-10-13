@@ -13,7 +13,14 @@
  *    state. A probe that disappeared or got worse is a regression and fails the
  *    run. `--accept` records the current state, and refuses while anything is red.
  * 4. **Frontier.** The next unaccounted-for paths of `--family`, which is what a
- *    coverage run works from.
+ *    coverage run works from, and its render frontier: the probes whose option
+ *    changed the XML but never reached the paint model, with neither `invisible`
+ *    nor `unread` to say why.
+ *
+ * Coverage comes in two columns. XML coverage counts option paths a probe or
+ * `SKIPPED` accounts for. Render coverage counts probes, since the paint check is
+ * per probe: those that rendered, or that say why not, over all that wrote
+ * something (an inert or crashed probe has nothing to paint).
  *
  * Exit status is 0 only when the gate is green, nothing regressed, and the ledger
  * is current. That last one is deliberate: a probe nobody accepted is progress
@@ -34,7 +41,7 @@ interface ObservationRecord {
 	covers: string[]
 	status: 'survives' | 'upstream' | 'local' | 'inert' | 'crash'
 	lane: 'authored' | 'carried' | 'template' | 'mixed'
-	rendered: boolean
+	paint: 'rendered' | 'invisible' | 'unread' | 'unrendered' | 'moot'
 }
 
 const ROOT = join(import.meta.dirname, '..', '..')
@@ -45,20 +52,23 @@ const OBSERVATIONS = join(ROOT, '.tmp', 'surface', 'observations.json')
  * Higher is better. A probe may only move up without a human editing the ledger.
  * The round trip decides the rank. Within a status, the lane decides: `survives/template`
  * ranks lowest of the survivals, since the HTML never held it, so relabelling an entry to
- * it is a weaker claim a human has to accept. Whether the renderer was handed the option
- * breaks the remaining ties, so a probe that stops reaching the renderer is a regression
- * even while its XML still comes back.
+ * it is a weaker claim a human has to accept. The render frontier breaks the remaining
+ * ties the same way the XML one does: rendered beats accounted for (`invisible`,
+ * `unread`), which beats `unrendered`. So a probe that stops reaching the renderer is a
+ * regression even while its XML still comes back, and so is dropping the annotation
+ * that took it off the frontier.
  */
 function rank(state: string): number {
-	const [status, lane, rendered] = state.split('/')
-	const paint = rendered === 'unrendered' ? 0 : 1
-	if (status === 'survives') return (lane === 'authored' ? 4 : lane === 'template' ? 2 : 3) * 2 + paint
-	if (status === 'upstream' || status === 'local' || status === 'crash') return 2 + paint
-	return paint
+	const [status, lane, paint = ''] = state.split('/')
+	const painted = { '': 2, invisible: 1, unread: 1 }[paint] ?? 0
+	if (status === 'survives') return (lane === 'authored' ? 4 : lane === 'template' ? 2 : 3) * 3 + painted
+	if (status === 'upstream' || status === 'local') return 3 + painted
+	return status === 'crash' ? 3 : 0
 }
 
-/** A probe's ledger state: `status/lane`, with `/unrendered` when the renderer never saw the option. */
-const stateOf = (seen: ObservationRecord) => `${seen.status}/${seen.lane}${seen.rendered ? '' : '/unrendered'}`
+/** A probe's ledger state: `status/lane`, plus its paint state unless it rendered or had nothing to render. */
+const stateOf = (seen: ObservationRecord) =>
+	`${seen.status}/${seen.lane}${seen.paint === 'rendered' || seen.paint === 'moot' ? '' : `/${seen.paint}`}`
 
 const { values: args } = parseArgs({
 	options: {
@@ -96,11 +106,13 @@ const families = FAMILIES.map((family) => {
 	const own = paths.filter((option) => option.family === family)
 	const probes = observations.filter((seen) => seen.covers.some((path) => own.some((option) => option.path === path)))
 	const statuses: Record<string, number> = {}
+	const paints: Record<string, number> = {}
 	for (const seen of probes) {
 		const key = seen.status === 'survives' ? `survives/${seen.lane}` : seen.status
 		statuses[key] = (statuses[key] ?? 0) + 1
-		if (!seen.rendered) statuses.unrendered = (statuses.unrendered ?? 0) + 1
+		if (seen.paint !== 'moot') paints[seen.paint] = (paints[seen.paint] ?? 0) + 1
 	}
+	const paintable = probes.filter((seen) => seen.paint !== 'moot')
 	return {
 		family,
 		paths: own.length,
@@ -108,6 +120,9 @@ const families = FAMILIES.map((family) => {
 		skipped: own.filter((option) => skippedSet.has(option.path)).length,
 		todo: own.filter((option) => !covered.has(option.path) && !skippedSet.has(option.path)),
 		statuses,
+		render: { probes: paintable.length, done: paintable.filter((seen) => seen.paint !== 'unrendered').length },
+		paints,
+		renderTodo: paintable.filter((seen) => seen.paint === 'unrendered').map((seen) => seen.id),
 	}
 })
 
@@ -141,9 +156,16 @@ const totals = families.reduce(
 	(sum, row) => ({ paths: sum.paths + row.paths, done: sum.done + row.probed + row.skipped }),
 	{ paths: 0, done: 0 }
 )
-const frontier = (args.family ? families.filter((row) => row.family === args.family) : families).flatMap(
-	(row) => row.todo
-)
+// Counted over observations, not family rows: a probe whose covers span two
+// families shows in both rows and must count once here.
+const paintable = observations.filter((seen) => seen.paint !== 'moot')
+const renderTotals = {
+	probes: paintable.length,
+	done: paintable.filter((seen) => seen.paint !== 'unrendered').length,
+}
+const scope = args.family ? families.filter((row) => row.family === args.family) : families
+const frontier = scope.flatMap((row) => row.todo)
+const renderFrontier = [...new Set(scope.flatMap((row) => row.renderTodo))]
 const ok = gate && regressions.length === 0 && ledgerCurrent
 
 if (args.json) {
@@ -155,8 +177,14 @@ if (args.json) {
 				regressions,
 				improvements: accepted ? [] : improvements,
 				coverage: totals,
-				families: families.map(({ todo, ...row }) => ({ ...row, todo: todo.length })),
+				render: renderTotals,
+				families: families.map(({ todo, renderTodo, ...row }) => ({
+					...row,
+					todo: todo.length,
+					renderTodo: renderTodo.length,
+				})),
 				frontier: frontier.slice(0, Number(args.frontier)),
+				renderFrontier: renderFrontier.slice(0, Number(args.frontier)),
 			},
 			null,
 			'\t'
@@ -170,14 +198,18 @@ if (args.json) {
 		`ledger      ${accepted ? 'accepted' : ledgerCurrent ? 'current' : `${improvements.length} change(s) not accepted, run with --accept`}`
 	)
 	console.log(`coverage    ${totals.done}/${totals.paths} option paths (${pct(totals.done, totals.paths)})`)
+	console.log(
+		`render      ${renderTotals.done}/${renderTotals.probes} probes rendered or accounted for (${pct(renderTotals.done, renderTotals.probes)})`
+	)
 	console.log('')
-	console.log('family               paths  probed  skipped  todo   probe results')
-	for (const row of families) {
-		const statuses = Object.entries(row.statuses)
+	console.log('family               paths  probed  skipped  todo  render  rtodo   probe results | paint')
+	const counts = (record: Record<string, number>) =>
+		Object.entries(record)
 			.map(([key, count]) => `${key}=${count}`)
 			.join(' ')
+	for (const row of families) {
 		console.log(
-			`${row.family.padEnd(20)} ${String(row.paths).padStart(5)}  ${String(row.probed).padStart(6)}  ${String(row.skipped).padStart(7)}  ${String(row.todo.length).padStart(4)}   ${statuses}`
+			`${row.family.padEnd(20)} ${String(row.paths).padStart(5)}  ${String(row.probed).padStart(6)}  ${String(row.skipped).padStart(7)}  ${String(row.todo.length).padStart(4)}  ${pct(row.render.done, row.render.probes).padStart(6)}  ${String(row.renderTodo.length).padStart(5)}   ${counts(row.statuses)} | ${counts(row.paints)}`
 		)
 	}
 	for (const line of regressions) console.log(`REGRESSION  ${line}`)
@@ -186,6 +218,9 @@ if (args.json) {
 		console.log('')
 		console.log(`frontier (${args.family}, next ${args.frontier} of ${frontier.length}):`)
 		for (const option of frontier.slice(0, Number(args.frontier))) console.log(`  ${option.path}  ::  ${option.type}`)
+		console.log('')
+		console.log(`render frontier (${args.family}, next ${args.frontier} of ${renderFrontier.length}):`)
+		for (const id of renderFrontier.slice(0, Number(args.frontier))) console.log(`  ${id}`)
 	}
 	if (!gate) console.log(`\n--- oracle output (tail) ---\n${gateTail}`)
 }

@@ -50,7 +50,7 @@ describe('surface probes', () => {
 			observations.push(seen)
 			const problem = disagreement(probe, seen)
 			const detail = [
-				`status ${seen.status} (${seen.lane}${seen.rendered ? '' : ', not rendered'}), oracle: ${seen.undeclared} undeclared / ${seen.declared} declared`,
+				`status ${seen.status} (${seen.lane}, paint ${seen.paint}), oracle: ${seen.undeclared} undeclared / ${seen.declared} declared`,
 				...seen.htmlLost.slice(0, 12).map((fact) => `  html lost   ${fact}`),
 				...seen.scriptLost.slice(0, 12).map((fact) => `  script lost ${fact}`),
 			].join('\n')
