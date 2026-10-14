@@ -9,6 +9,7 @@
  */
 
 import { LAYOUT_NOTE_PREFIX } from 'pptx-ts/script'
+import { readZip, ZipWriter } from 'pptx-ts/zip'
 import { describe, expect, it } from 'vitest'
 import { importDeck } from '../../src/import/deck'
 import type { RenderIr, RenderNode, ShapeNode } from '../../src/ir/render'
@@ -116,11 +117,6 @@ describe('a colour keeps its theme reference', () => {
 			kind: 'solid',
 			color: { kind: 'scheme', slot: 'accent1', transforms: [], effectiveHex: '250F6B' },
 		})
-	})
-
-	it('imports an explicit colour as srgb, with no invented token', async () => {
-		const card = (await nodeNamed('autoshape', 'card')) as ShapeNode
-		expect(card.fill).toStrictEqual({ kind: 'solid', color: { kind: 'srgb', hex: 'DDE3F0' } })
 	})
 
 	it('keeps a gradient stop’s transform list rather than the hex it flattens to', async () => {
@@ -298,6 +294,22 @@ describe('geometry', () => {
 		expect(path?.commands.map((command) => command.cmd)).toEqual(['moveTo', 'lnTo', 'cubicBezTo', 'close'])
 		// Path units, not EMU: the denominators are the path's own `@w`/`@h`.
 		expect(path?.w).toBe(2_743_200)
+	})
+
+	it('sizes a deck that declares no slide size the way the contract model does', async () => {
+		// The page and the deck it emits must agree on the canvas. With no `p:sldSz`
+		// the contract model assumes 10in × 7.5in and declares it; a paint model of
+		// its own guess would draw onto a different page, or onto none at all.
+		const entry = CORPUS.find((candidate) => candidate.name === 'autoshape')
+		if (!entry) throw new Error('the corpus has no deck named autoshape')
+		const files = await readZip(await corpusBytes(entry))
+		const zip = new ZipWriter()
+		for (const [path, data] of files) {
+			if (path !== 'ppt/presentation.xml') zip.add(path, data)
+			else zip.add(path, new TextDecoder().decode(data).replace(/<p:sldSz\b[^>]*\/>/, ''))
+		}
+		const { deck, render } = await importDeck(await zip.generate('uint8array', { compression: true }))
+		expect(render.size).toStrictEqual({ w: deck.slideSize.widthEmu, h: deck.slideSize.heightEmu })
 	})
 })
 

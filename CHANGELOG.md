@@ -40,6 +40,10 @@ model is expected to move.
 
 ### Fixed
 
+- **A deck that declares no slide size renders on a real page.** With no
+  `p:sldSz`, `importDeck` gave the page a 0×0 canvas. It now uses the 10in × 7.5in
+  that `readModelToIr` assumes and declares, so the page matches the deck that
+  `emitDeck` writes.
 - **Elbow and curved connectors draw their route.** `bentConnector2`–`5` and
   `curvedConnector2`–`5`, which `addConnector` writes for every `elbow` and
   `curved` route, were drawn as the outline of their bounding box. They now draw

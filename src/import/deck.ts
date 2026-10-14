@@ -64,10 +64,12 @@ export async function importPresentation(presentation: Presentation): Promise<Im
 	const slideNumberByPart = new Map<string, number>()
 	for (const slide of presentation.slides) slideNumberByPart.set(slide.part.partName, slide.index + 1)
 
-	const size = presentation.slideSize
 	const render: RenderIr = {
 		irVersion: IR_VERSION,
-		size: { w: size?.widthEmu ?? 0, h: size?.heightEmu ?? 0 },
+		// The contract model's size, not the package's: with no `p:sldSz` it assumes
+		// the size PowerPoint opens such a deck at and declares it, and the page has
+		// to be the canvas the emitted deck will have.
+		size: { w: deck.slideSize.widthEmu, h: deck.slideSize.heightEmu },
 		slides: presentation.slides.map((slide) => renderSlideOf(slide, deck, assets, slideNumberByPart)),
 		assets: assets.manifest,
 	}
