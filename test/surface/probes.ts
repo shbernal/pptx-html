@@ -1718,10 +1718,20 @@ const AUTHORED: Probe[] = [
 			'addShape.guides.name',
 			'addShape.guides.formula',
 		]),
-		// A guide paints only through a path point that names it, which pptx-ts can
-		// neither write nor read back: the reader turns `x="g0"` into 0. Once it can,
-		// the probe that proves rendering is a new one whose path uses the guide.
-		unread: 'https://github.com/shbernal/pptx-ts/issues/255',
+		// The paint model carries the guides, so this counts as rendered, but no point
+		// here names one. `addShape.guides:path` is the probe that draws through one.
+	},
+	{
+		...shapeOn(
+			'addShape.guides:path',
+			'custGeom',
+			{ points: CUST },
+			{
+				guides: [{ name: 'g0', formula: '*/ w 1 4' }],
+				points: [{ x: 0, y: 1.5 }, { x: 'g0', y: 't' }, { x: 5, y: 1.5 }, { close: true as const }],
+			},
+			['addShape.guides.name', 'addShape.guides.formula']
+		),
 	},
 	{
 		...shapeOn(

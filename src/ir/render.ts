@@ -47,9 +47,16 @@ import type { AssetRef, FidelityNote, SlideLayoutIr, SlideSource } from 'pptx-ts
 // `SlideSource` is two unrelated types upstream: `'authored' | 'carried'` here in
 // `/script`, and the `{ extractSlides() }` interface in `/read`. Importing both
 // into one file silently shadows one of them.
-import type { ColorMapToken, ColorTransform, GeometryCommand, LineSpacing, ThemeColorSlot } from 'pptx-ts/read'
+import type {
+	ColorMapToken,
+	ColorTransform,
+	CustomGeometryGuide,
+	GeometryCommand,
+	LineSpacing,
+	ThemeColorSlot,
+} from 'pptx-ts/read'
 
-export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
+export type { AssetRef, CustomGeometryGuide, FidelityNote, GeometryCommand, SlideSource }
 
 /**
  * The shape version of this IR. The HTML island carries it and the parser
@@ -87,8 +94,11 @@ export type { AssetRef, FidelityNote, GeometryCommand, SlideSource }
  * were — a table has a background whether or not it states one, and `inherit` is
  * the spelling of "states none". The same version adds {@link TableCell.styleFill},
  * the table style's shading kept apart from the cell's own {@link TableCell.fill}.
+ * `9` → `10` is another required key: a custom {@link Geometry} carries its
+ * `guides`, because a path coordinate may now be a guide's name rather than a
+ * number, and a v9 document has no formulas to resolve one against.
  */
-export const IR_VERSION = 9
+export const IR_VERSION = 10
 
 /** English Metric Units per inch. */
 export const EMU_PER_INCH = 914_400
@@ -264,7 +274,16 @@ export type Geometry =
 			 */
 			adjustValues: Record<string, string>
 	  }
-	| { kind: 'custom'; paths: GeometryPath[] }
+	| {
+			kind: 'custom'
+			paths: GeometryPath[]
+			/**
+			 * `a:gdLst`, in document order: the formulas a coordinate that names a guide
+			 * takes its value from. Carried as the read model states them, unevaluated,
+			 * because evaluating needs the box the path is drawn into.
+			 */
+			guides: CustomGeometryGuide[]
+	  }
 
 /** One `<a:path>` of a freeform geometry. Order of `commands` *is* the geometry. */
 export interface GeometryPath {

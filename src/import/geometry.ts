@@ -37,7 +37,7 @@ export function geometryOf(shape: AnyShape, scope: ImportScope): Geometry {
 			stroke: path.stroke,
 			commands: path.commands,
 		}))
-		if (paths.length > 0) return { kind: 'custom', paths }
+		if (paths.length > 0) return { kind: 'custom', paths, guides: custom.guides }
 	}
 
 	const preset = shape.presetGeometry

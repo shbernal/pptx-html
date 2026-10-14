@@ -191,6 +191,7 @@ const FREEFORM: ShapeNode = {
 	render: 'drawn',
 	geometry: {
 		kind: 'custom',
+		guides: [],
 		paths: [
 			{
 				w: 100,

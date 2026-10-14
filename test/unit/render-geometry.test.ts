@@ -195,6 +195,7 @@ describe('custom geometry', () => {
 		// and a 0..1000 space describe the same outline at different precisions.
 		const geometry: Geometry = {
 			kind: 'custom',
+			guides: [],
 			paths: [
 				{
 					w: 100,
@@ -213,6 +214,7 @@ describe('custom geometry', () => {
 		// zero — scaling by it would put every command at infinity.
 		const geometry: Geometry = {
 			kind: 'custom',
+			guides: [],
 			paths: [{ w: 0, h: 0, fill: 'norm', stroke: true, commands: [{ cmd: 'moveTo', x: 10, y: 20 }] }],
 		}
 		expect(pathOf(geometry, 500, 500).d).toBe('M 10 20')
@@ -224,6 +226,7 @@ describe('custom geometry', () => {
 		// clockwise from the pen at (100, 0), on radii of 100, ends at (200, 100).
 		const geometry: Geometry = {
 			kind: 'custom',
+			guides: [],
 			paths: [
 				{
 					w: 0,
@@ -246,6 +249,7 @@ describe('custom geometry', () => {
 		// region over whatever the line was drawn across.
 		const geometry: Geometry = {
 			kind: 'custom',
+			guides: [],
 			paths: [
 				{
 					w: 0,
@@ -262,8 +266,64 @@ describe('custom geometry', () => {
 		expect(pathOf(geometry, 100, 100).unfilled).toBe(true)
 	})
 
+	it('resolves a coordinate that names a guide or a built-in', () => {
+		// `g0` is a quarter of the path's width and `b` its bottom edge, both in the
+		// path's own units, so they scale into the box like the literals beside them.
+		const geometry: Geometry = {
+			kind: 'custom',
+			guides: [{ name: 'g0', formula: '*/ w 1 4' }],
+			paths: [
+				{
+					w: 100,
+					h: 100,
+					fill: 'norm',
+					stroke: true,
+					commands: [
+						{ cmd: 'moveTo', x: 0, y: 0 },
+						{ cmd: 'lnTo', x: 'g0', y: 'b' },
+					],
+				},
+			],
+		}
+		expect(pathOf(geometry, 400, 200).d).toBe('M 0 0 L 100 200')
+	})
+
+	it('reads a named arc angle as 60,000ths of a degree', () => {
+		// The same quarter turn as the literal case above, spelled with `cd4`.
+		const geometry: Geometry = {
+			kind: 'custom',
+			guides: [],
+			paths: [
+				{
+					w: 0,
+					h: 0,
+					fill: 'norm',
+					stroke: true,
+					commands: [
+						{ cmd: 'moveTo', x: 100, y: 0 },
+						{ cmd: 'arcTo', wR: 100, hR: 100, stAng: -90, swAng: 'cd4' },
+					],
+				},
+			],
+		}
+		expect(pathOf(geometry, 1, 1).d).toBe('M 100 0 A 100 100 0 0 1 200 100')
+	})
+
+	it('marks a geometry whose coordinate names no guide rather than guessing', () => {
+		const geometry: Geometry = {
+			kind: 'custom',
+			guides: [{ name: 'g0', formula: 'nope 1' }],
+			paths: [{ w: 10, h: 10, fill: 'norm', stroke: true, commands: [{ cmd: 'moveTo', x: 'g0', y: 0 }] }],
+		}
+		expect(pathOf(geometry, 100, 50)).toStrictEqual({ d: 'M 0 0 L 100 0 L 100 50 L 0 50 Z', fallback: 'custGeom' })
+	})
+
 	it('falls back to a box when the geometry has no drawable command', () => {
-		const geometry: Geometry = { kind: 'custom', paths: [{ w: 10, h: 10, fill: 'norm', stroke: true, commands: [] }] }
+		const geometry: Geometry = {
+			kind: 'custom',
+			guides: [],
+			paths: [{ w: 10, h: 10, fill: 'norm', stroke: true, commands: [] }],
+		}
 		expect(pathOf(geometry, 100, 50)).toStrictEqual({ d: 'M 0 0 L 100 0 L 100 50 L 0 50 Z', fallback: 'custGeom' })
 	})
 })

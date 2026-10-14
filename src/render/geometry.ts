@@ -32,7 +32,7 @@
  */
 
 import { ANGLE_UNITS_PER_DEGREE } from 'pptx-ts'
-import type { Geometry, GeometryCommand, GeometryPath } from '../ir/render'
+import type { CustomGeometryGuide, Geometry, GeometryCommand, GeometryPath } from '../ir/render'
 import { round3 } from './paint'
 
 export interface PathResult {
@@ -509,7 +509,83 @@ const CONNECTORS: Record<string, (w: number, h: number, adj: Record<string, stri
 	},
 }
 
-/** {@link GeometryCommand} with every coordinate a number. */
+/**
+ * The built-in guides of ECMA-376 §20.1.10.55 for a box of `w` × `h`: the edges,
+ * the centre, the fractions of each side and of the shorter one, and the fixed
+ * angles in 60,000ths of a degree.
+ */
+function builtinGuides(w: number, h: number): Map<string, number> {
+	const ss = Math.min(w, h)
+	const ls = Math.max(w, h)
+	return new Map([
+		['w', w],
+		['h', h],
+		['l', 0],
+		['t', 0],
+		['r', w],
+		['b', h],
+		['hc', w / 2],
+		['vc', h / 2],
+		['ss', ss],
+		['ls', ls],
+		...[2, 3, 4, 5, 6, 8, 10, 32].map((n): [string, number] => [`wd${n}`, w / n]),
+		...[2, 3, 4, 5, 6, 8].map((n): [string, number] => [`hd${n}`, h / n]),
+		...[2, 4, 6, 8, 16, 32].map((n): [string, number] => [`ssd${n}`, ss / n]),
+		['cd2', 10_800_000],
+		['cd4', 5_400_000],
+		['cd8', 2_700_000],
+		['3cd4', 16_200_000],
+		['3cd8', 8_100_000],
+		['5cd8', 13_500_000],
+		['7cd8', 18_900_000],
+	])
+}
+
+/**
+ * The formula operators of ECMA-376 §20.1.9.11. Angles in and out are 60,000ths
+ * of a degree; `at2`, `cat2` and `sat2` use `atan2` for the quadrant reason
+ * {@link onEllipse} gives.
+ */
+const OPERATORS: Record<string, (x: number, y: number, z: number) => number> = {
+	'*/': (x, y, z) => (x * y) / z,
+	'+-': (x, y, z) => x + y - z,
+	'+/': (x, y, z) => (x + y) / z,
+	'?:': (x, y, z) => (x > 0 ? y : z),
+	abs: (x) => Math.abs(x),
+	at2: (x, y) => (Math.atan2(y, x) * 180 * ANGLE_UNITS_PER_DEGREE) / Math.PI,
+	cat2: (x, y, z) => x * Math.cos(Math.atan2(z, y)),
+	cos: (x, y) => x * Math.cos(radians(y)),
+	max: (x, y) => Math.max(x, y),
+	min: (x, y) => Math.min(x, y),
+	mod: (x, y, z) => Math.sqrt(x * x + y * y + z * z),
+	pin,
+	sat2: (x, y, z) => x * Math.sin(Math.atan2(z, y)),
+	sin: (x, y) => x * Math.sin(radians(y)),
+	sqrt: (x) => Math.sqrt(x),
+	tan: (x, y) => x * Math.tan(radians(y)),
+	val: (x) => x,
+}
+
+/**
+ * Every guide's value, in document order so a formula can name any guide above
+ * it. A guide whose formula has an unknown operator or names nothing defined is
+ * left out, and so is anything built on it: a coordinate that names one then
+ * fails to resolve, which {@link pathOf} marks rather than drawing a guess.
+ */
+function guideValues(guides: CustomGeometryGuide[], w: number, h: number): Map<string, number> {
+	const values = builtinGuides(w, h)
+	for (const guide of guides) {
+		const [op, ...args] = guide.formula.trim().split(/\s+/)
+		const operator = op === undefined ? undefined : OPERATORS[op]
+		const operands = args.map((arg) => (/^-?\d+$/.test(arg) ? Number(arg) : values.get(arg)))
+		if (operator === undefined || operands.some((operand) => operand === undefined)) continue
+		const [x = 0, y = 0, z = 0] = operands as number[]
+		values.set(guide.name, operator(x, y, z))
+	}
+	return values
+}
+
+/** {@link GeometryCommand} with every coordinate resolved to a number. */
 type ResolvedCommand = GeometryCommand extends infer C
 	? C extends GeometryCommand
 		? { [K in keyof C]: K extends 'cmd' ? C[K] : number }
@@ -517,26 +593,42 @@ type ResolvedCommand = GeometryCommand extends infer C
 	: never
 
 /**
- * The command when every coordinate is a number, or `undefined` when one names a
- * guide, which this renderer does not evaluate. The caller marks that rather than
- * drawing the point at 0.
+ * A command with each guide name replaced by its value, or `undefined` when one
+ * names no guide. A named `arcTo` angle is a guide value in 60,000ths of a
+ * degree, where the read model's numeric angles are already degrees.
  */
-function numericCommand(command: GeometryCommand): ResolvedCommand | undefined {
-	const named = Object.entries(command).some(([key, value]) => key !== 'cmd' && typeof value !== 'number')
-	return named ? undefined : (command as ResolvedCommand)
+function resolveCommand(command: GeometryCommand, values: Map<string, number>): ResolvedCommand | undefined {
+	const resolved: Record<string, unknown> = { cmd: command.cmd }
+	for (const [key, value] of Object.entries(command)) {
+		if (key === 'cmd') continue
+		if (typeof value === 'number') {
+			resolved[key] = value
+			continue
+		}
+		const named = values.get(value)
+		if (named === undefined) return undefined
+		resolved[key] = key === 'stAng' || key === 'swAng' ? named / ANGLE_UNITS_PER_DEGREE : named
+	}
+	return resolved as ResolvedCommand
 }
 
 /**
  * One `a:path`'s commands, scaled from its own `0..w`/`0..h` units into the box,
- * or `undefined` when a coordinate names a guide.
+ * or `undefined` when a coordinate names a guide that does not resolve.
+ *
+ * The guides are evaluated against the path's own `@w`/`@h` rather than the
+ * shape's extent, so a named coordinate lands in the same unit space as a
+ * literal one. The two readings agree whenever the path's units are the shape's
+ * EMU, which is what both PowerPoint and `pptx-ts` write.
  */
-function customPathData(path: GeometryPath, w: number, h: number): string | undefined {
+function customPathData(path: GeometryPath, guides: CustomGeometryGuide[], w: number, h: number): string | undefined {
 	// `@w`/`@h` of 0 means "the path is already in the shape's coordinate space",
 	// which is also the only sane reading when there is no denominator to divide by.
 	const sx = path.w > 0 ? w / path.w : 1
 	const sy = path.h > 0 ? h / path.h : 1
 	const x = (value: number): number => value * sx
 	const y = (value: number): number => value * sy
+	const values = guideValues(guides, path.w > 0 ? path.w : w, path.h > 0 ? path.h : h)
 
 	// `arcTo` is relative to wherever the pen is, so the conversion needs to track
 	// it: OOXML states an arc by its radii and its start/sweep angles, and SVG
@@ -546,7 +638,7 @@ function customPathData(path: GeometryPath, w: number, h: number): string | unde
 	const parts: string[] = []
 
 	for (const named of path.commands) {
-		const command = numericCommand(named)
+		const command = resolveCommand(named, values)
 		if (command === undefined) return undefined
 		// The pen goes in as two numbers rather than as a thunk over the two `let`s
 		// above. It was a closure only because `segmentOf` needed the value at call
@@ -626,7 +718,7 @@ function endOf(
 export function pathOf(geometry: Geometry, w: number, h: number): PathResult {
 	if (geometry.kind === 'custom') {
 		const drawn = geometry.paths.filter((path) => path.commands.length > 0)
-		const data = drawn.map((path) => customPathData(path, w, h))
+		const data = drawn.map((path) => customPathData(path, geometry.guides, w, h))
 		if (drawn.length === 0 || data.includes(undefined)) return { d: rect(w, h), fallback: 'custGeom' }
 		return {
 			d: data.join(' '),

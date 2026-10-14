@@ -40,6 +40,12 @@ model is expected to move.
 
 ### Fixed
 
+- **A freeform point that names a guide is drawn where the guide puts it.** The
+  read model now returns a custGeom coordinate such as `x="g0"` or `y="t"` as the
+  name, where it used to read it as 0 (pptx-ts#255). The custom `Geometry` carries
+  the shape's `a:gdLst` as `guides`, and `renderDeck` evaluates the formulas and the
+  built-in guides to place the point. A name that resolves to nothing draws the
+  bounding box, marked `data-pxh-approx`. `IR_VERSION` goes to 10.
 - **A comment comes back with its own index.** `emitDeck` replayed a deck's first
   comment as index 2, because `fromTemplate` kept the source's comment-author
   counter after dropping its slides (pptx-ts#244). The `pptx-ts` bump carries the fix.
