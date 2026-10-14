@@ -1110,6 +1110,7 @@
 	"theme.colorScheme.dk2:tx2": "survives/template",
 	"theme.colorScheme.folHlink": "survives/template/invisible",
 	"theme.colorScheme.hlink": "survives/template/unrendered",
+	"theme.colorScheme.hlink:link": "survives/template/unread",
 	"theme.colorScheme.lt1": "survives/template",
 	"theme.colorScheme.lt2": "survives/template/unrendered",
 	"theme.colorScheme.lt2:bg2": "survives/template",

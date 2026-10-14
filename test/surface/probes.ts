@@ -3772,6 +3772,15 @@ const AUTHORED: Probe[] = [
 	themeUsed('theme.colorScheme.accent4:fill', { colorScheme: { accent4: '8A2BE2' } }, filledWith('accent4')),
 	themeUsed('theme.colorScheme.accent5:fill', { colorScheme: { accent5: 'FF7F50' } }, filledWith('accent5')),
 	themeUsed('theme.colorScheme.accent6:fill', { colorScheme: { accent6: '20B2AA' } }, filledWith('accent6')),
+	{
+		...themeUsed('theme.colorScheme.hlink:link', { colorScheme: { hlink: '0050A0' } }, (slide) =>
+			slide.addText([{ text: 'Probe link', options: { hyperlink: { url: 'https://example.com/' } } }], {
+				...BOX,
+				objectName: 'probe',
+			})
+		),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/282',
+	},
 	media('addMedia.altText', { altText: 'A probe description' }),
 	media('addMedia.cover', { cover: PNG }),
 	media('addMedia.extn', { extn: 'mp3' }),
