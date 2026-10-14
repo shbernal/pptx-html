@@ -460,9 +460,14 @@ the deck.
   a lane. Hashing the escaped text is forced, not stylistic: `escapeForScript` has
   no safe inverse, so a reader that un-escaped before hashing would corrupt
   exactly the models most likely to be adversarial.
-- `surfaceHash` is over `project(ir)`. A mismatch means a sanctioned edit. Hash the
-  projection and never the raw DOM, or every browser normalization (attribute
-  order, whitespace, colour serialization) reads as an edit.
+- `surfaceHash` is over `project(ir)`, so it moves with an edit inside the
+  surface and stays put for a change outside it. The parser recomputes it from the
+  island and **throws** when the integrity block states another value: the
+  document's two halves disagree about what it contains. It does not detect edits.
+  Those are found run by run, by comparing what the page states against the
+  island's projection (the lanes below). Hash the projection and never the raw
+  DOM, or every browser normalization (attribute order, whitespace, colour
+  serialization) would read as a disagreement.
 
 ### Four lanes, decided per slide and always reported
 
