@@ -5819,6 +5819,10 @@ const INVISIBLE: [RegExp, string][] = [
 		'a slide transition: plays between slides in a slideshow, and draws nothing on a static slide',
 	],
 	[/^addAnimation\./, 'an animation: plays during a slideshow, and draws nothing on a static slide'],
+	[
+		/^theme\.colorScheme\.folHlink/,
+		'the followed-hyperlink colour: PowerPoint paints a link in it only after the link is clicked in a slideshow, so a static slide never shows it',
+	],
 	[/^addMedia\.loop/, 'media playback: changes how the clip plays, not the frame drawn for it'],
 	[/\.lang(:|$)/, 'a proofing language (`a:rPr/@lang`): selects spelling and grammar rules, and draws nothing'],
 	[

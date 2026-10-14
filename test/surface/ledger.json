@@ -1100,7 +1100,7 @@
 	"theme.colorScheme.accent6": "survives/template/unrendered",
 	"theme.colorScheme.dk1": "survives/template/unrendered",
 	"theme.colorScheme.dk2": "survives/template/unrendered",
-	"theme.colorScheme.folHlink": "survives/template/unrendered",
+	"theme.colorScheme.folHlink": "survives/template/invisible",
 	"theme.colorScheme.hlink": "survives/template/unrendered",
 	"theme.colorScheme.lt1": "survives/template",
 	"theme.colorScheme.lt2": "survives/template/unrendered",
