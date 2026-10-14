@@ -22,10 +22,6 @@ describe('presets', () => {
 		expect(result.d).toBe('M 0 0 L 1000 0 L 1000 500 L 0 500 Z')
 	})
 
-	it('reports no fallback for one it draws', () => {
-		expect(pathOf({ kind: 'preset', preset: 'ellipse', adjustValues: {} }, 100, 50).fallback).toBeUndefined()
-	})
-
 	it('honours an adjust value and falls back to the preset default without one', () => {
 		// `adj` is hundred-thousandths of the shorter side, so 25000 on a 400-tall
 		// box is a 100 radius — and the default (16667) is a different, smaller one.

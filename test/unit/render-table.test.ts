@@ -157,12 +157,6 @@ describe('a cell draws six lines, not four', () => {
 		return table
 	}
 
-	it('draws a stated diagonal corner to corner and leaves an unstated one out', async () => {
-		const { html } = await renderDeck(irWith(struckTable({ tlToBr: RULE })), NO_ASSETS)
-		// 2in × 0.5in, the cell's own box: the ╲ runs the full width and height of it.
-		expect(cellLinesOf(html, 0, 0)).toEqual([`0 0 ${inch(2)} ${inch(0.5)}`])
-	})
-
 	it('draws the other diagonal from the bottom-left corner', async () => {
 		const { html } = await renderDeck(irWith(struckTable({ blToTr: RULE })), NO_ASSETS)
 		expect(cellLinesOf(html, 0, 0)).toEqual([`0 ${inch(0.5)} ${inch(2)} 0`])

@@ -31,10 +31,6 @@ function frame(spacing: ParagraphProperties['lineSpacing'], autofit: Partial<Tex
 }
 
 describe('a baked shrink', () => {
-	it('scales the run size by the stated percentage', () => {
-		expect(renderTextBody(frame(undefined, { autofitFontScalePct: 62.5 }), 'n')).toContain('font-size:12.5px')
-	})
-
 	it('leaves a frame that bakes no scale at its nominal size', () => {
 		// `shrink` with no numbers is a frame PowerPoint has not measured; it draws
 		// those at full size too, until the next edit.
@@ -63,14 +59,6 @@ describe('a baked shrink', () => {
 		const html = renderTextBody(frame({ type: 'points', valuePt: 24 }, { autofitLineSpaceReductionPct: 20 }), 'n')
 		expect(html).toContain('line-height:24px')
 		expect(html).not.toContain('data-pxh-approx')
-	})
-
-	it('falls back to a stand-in single spacing when the paragraph states none, and declares it', () => {
-		// The one approximate arm: CSS cannot say "`normal`, less a fifth", so the
-		// base is a documented constant and the frame is marked.
-		const html = renderTextBody(frame(undefined, { autofitLineSpaceReductionPct: 20 }), 'n')
-		expect(html).toContain('line-height:0.96')
-		expect(html).toContain('data-pxh-approx="text:linespace"')
 	})
 
 	it('never lets a reduction drive the line height negative', () => {

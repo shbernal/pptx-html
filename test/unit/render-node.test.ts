@@ -59,18 +59,6 @@ function transforms(svg: string): Array<string | null> {
 }
 
 describe('a group', () => {
-	it('places none of its children, because they are already placed', () => {
-		const group = groupOf('g1', 4000, 2000, [shape('g1.a', 4000, 2000), shape('g1.b', 5000, 2500)])
-
-		const [outer, first, second] = transforms(renderNode(group, context()))
-
-		// The group draws nothing and offsets nothing; its wrapper stays only to carry the id.
-		expect(outer).toBeNull()
-		// Each child keeps its own slide-absolute placement, unchanged by the group above it.
-		expect(first).toBe('translate(4000 2000)')
-		expect(second).toBe('translate(5000 2500)')
-	})
-
 	it('still carries its identity, so an edit can address it', () => {
 		const group = groupOf('g1', 4000, 2000, [shape('g1.a', 4000, 2000)])
 
@@ -81,8 +69,9 @@ describe('a group', () => {
 		const inner = groupOf('g1.inner', 6000, 3000, [shape('g1.inner.a', 6000, 3000)])
 		const outer = groupOf('g1', 4000, 2000, [inner])
 
-		// Two groups deep is where the old behaviour was worst: the leaf took both
-		// offsets on top of its own.
+		// Neither group offsets anything; its wrapper stays only to carry the id. Two
+		// groups deep is where the old behaviour was worst: the leaf took both offsets
+		// on top of its own.
 		expect(transforms(renderNode(outer, context()))).toEqual([null, null, 'translate(6000 3000)'])
 	})
 })

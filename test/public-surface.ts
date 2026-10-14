@@ -21,6 +21,7 @@
  */
 
 import type {
+	Background,
 	ConvertOptions,
 	ConvertResult,
 	heuristic,
@@ -50,3 +51,15 @@ export const SLIDE: (head: string, slide: string) => Promise<{ model: heuristic.
 	head,
 	slide
 ) => convertSlide(head, slide, OPTIONS)
+
+/**
+ * `Background` means different things in the two lanes: a paint-model union in
+ * `RenderIr`, a DOM-shaped `{ type, value }` in the heuristic lane's model. Before
+ * the namespace, `export type *` from both would have made one silently win.
+ * These only compile while the two stay separately nameable.
+ */
+export const INFERRED: heuristic.SlideModel = {
+	background: { type: 'color', value: 'FFFFFF' },
+	items: [{ type: 'shape', position: { x: 0, y: 0, w: 1, h: 1 }, z: 0, fill: '250F6B' }],
+}
+export const MODELED: Background = { source: 'master', fill: { kind: 'solid', color: { kind: 'srgb', hex: 'FFFFFF' } } }

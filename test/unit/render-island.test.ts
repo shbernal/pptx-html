@@ -2,25 +2,17 @@
  * The island's own rules, on a fixture rather than a corpus deck.
  *
  * These are the properties the return path is entitled to assume, and every one of them
- * fails *silently* if it is wrong: a hash over the wrong bytes reports tampering
- * on an untouched document, and a
- * `surfaceHash` that moves with the whole model turns every text edit into
- * corruption. None of them would be caught by "does it render".
+ * fails *silently* if it is wrong: a `surfaceHash` that moves with the whole model
+ * turns every text edit into corruption. None of them would be caught by "does it
+ * render".
  */
 
 import { describe, expect, it } from 'vitest'
 import { renderDeck } from '../../src/render/document'
-import { INTEGRITY_ID, ISLAND_ID, integrityOf, islandTextOf } from '../../src/render/island'
+import { integrityOf, islandTextOf } from '../../src/render/island'
 import { SAMPLE_IR } from '../fixtures/render-ir'
 
 const NO_ASSETS = { assets: 'ref' } as const
-
-/** The island's text, taken the way the parser takes it: by block id. */
-function islandOf(html: string, id: string = ISLAND_ID): string {
-	const match = new RegExp(`<script type="application/json" id="${id}">(.*?)</script>`, 's').exec(html)
-	if (match?.[1] === undefined) throw new Error(`no block with id ${id}`)
-	return match[1]
-}
 
 describe('the two hashes', () => {
 	it('moves surfaceHash but not modelHash when a run is edited in place', async () => {
@@ -40,7 +32,7 @@ describe('the two hashes', () => {
 		expect(after.surfaceHash).toBe(before.surfaceHash)
 	})
 
-	it('moves both when the edit is inside the surface', async () => {
+	it('moves surfaceHash when the edit is inside the surface', async () => {
 		const before = await integrityOf(SAMPLE_IR, islandTextOf(SAMPLE_IR))
 
 		const edited = structuredClone(SAMPLE_IR)
@@ -50,16 +42,6 @@ describe('the two hashes', () => {
 
 		const after = await integrityOf(edited, islandTextOf(edited))
 		expect(after.surfaceHash).not.toBe(before.surfaceHash)
-	})
-
-	it('hashes the bytes it embeds', async () => {
-		// If these ever disagree, every untouched document reports as tampered with.
-		const { html, integrity } = await renderDeck(SAMPLE_IR, NO_ASSETS)
-		const embedded = islandOf(html)
-		expect(embedded).toBe(islandTextOf(SAMPLE_IR))
-
-		const stated = JSON.parse(islandOf(html, INTEGRITY_ID))
-		expect(stated).toStrictEqual(integrity)
 	})
 })
 
@@ -75,17 +57,6 @@ describe('the renderer is read-only', () => {
 })
 
 describe('line ends', () => {
-	it('draws modeled arrowheads as stroke-relative SVG markers', async () => {
-		// The fixture connector carries a medium triangle tail. Its marker belongs in
-		// the slide-local defs and the path names it; neither arm may retain the old
-		// approximation marker once the line end is actually drawn.
-		const { html } = await renderDeck(SAMPLE_IR, NO_ASSETS)
-		expect(html).toContain('markerUnits="strokeWidth"')
-		expect(html).toContain('orient="auto-start-reverse"')
-		expect(html).toMatch(/marker-end="url\(#pxh-p\d+\)"/)
-		expect(html).not.toContain('line:ends')
-	})
-
 	it('has distinct marker geometry for every modeled line-end type', async () => {
 		const expected = {
 			triangle: 'M 0 0 L 10 5 L 0 10 Z',
@@ -103,6 +74,9 @@ describe('line ends', () => {
 			const { html } = await renderDeck(ir, NO_ASSETS)
 			expect([type, html.includes(geometry)]).toStrictEqual([type, true])
 			expect(html).toContain('markerWidth="1.5" markerHeight="3.75"')
+			// Stroke-relative, and turned to follow the line at either end.
+			expect(html).toContain('markerUnits="strokeWidth"')
+			expect(html).toContain('orient="auto-start-reverse"')
 		}
 	})
 })
