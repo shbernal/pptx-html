@@ -159,7 +159,33 @@ function paragraphOf(paragraph: ReadParagraph, scope: ImportScope): Paragraph {
 		...tabStopFields(paragraph),
 	}
 
-	return { props, runs: paragraph.runs.map((run) => runOf(run, scope)) }
+	return { props, runs: runsOf(paragraph, scope) }
+}
+
+/**
+ * A paragraph's runs, and its fields when they are all it holds.
+ *
+ * The read model keeps fields apart from runs and says nothing of where one sits
+ * among them, so a field is placed only in a paragraph with no runs, where document
+ * order is the whole answer: the slide number `slideNumber` writes is that shape.
+ * Beside a run, placing it would be a guess, and it is noted instead.
+ *
+ * Workaround for pptx-ts#280: https://github.com/shbernal/pptx-ts/issues/280
+ * `Field` has no position among `Paragraph.runs` (an `Equation` has `runIndex`).
+ * Remove when a `Field` carries one, and splice every field in at it instead.
+ */
+function runsOf(paragraph: ReadParagraph, scope: ImportScope): TextRun[] {
+	const { runs, fields } = paragraph
+	if (runs.length === 0) return fields.map((field) => ({ ...runOf(field, scope), field: { type: field.type } }))
+	if (fields.length > 0)
+		note(
+			scope,
+			'text.field',
+			'dropped',
+			'unread',
+			`this paragraph holds ${fields.length} field(s) beside its runs, and the read model does not say where among them a field sits, so the field is not drawn`
+		)
+	return runs.map((run) => runOf(run, scope))
 }
 
 const TAB_ALIGN: Record<string, TabStop['alignment']> = { l: 'l', ctr: 'ctr', r: 'r', dec: 'dec' }

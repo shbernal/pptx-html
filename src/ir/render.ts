@@ -637,6 +637,13 @@ export interface TextRun {
 	 * without this the runs either side of one read as neighbours on one line.
 	 */
 	breaksBefore?: number
+	/**
+	 * Present when the run is a field (`a:fld`), such as a slide number: `text` is the
+	 * value PowerPoint last computed, and `type` its `@type`. Drawn, and not in the
+	 * editable surface, since PowerPoint recomputes the text and an edit to it would
+	 * not survive the next one.
+	 */
+	field?: { type: string | null }
 	/** What this run itself stated. Absent field = inherited. */
 	props: RunProperties
 	/** What to paint. Derived at import; never written back to the deck. */
