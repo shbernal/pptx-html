@@ -5902,7 +5902,10 @@ const INVISIBLE: [RegExp, string][] = [
 		/^theme\.colorScheme\.folHlink/,
 		'the followed-hyperlink colour: PowerPoint paints a link in it only after the link is clicked in a slideshow, so a static slide never shows it',
 	],
-	[/^addMedia\.loop/, 'media playback: changes how the clip plays, not the frame drawn for it'],
+	[
+		/^addMedia\.(loop|extn|type)/,
+		'media playback: changes how the clip plays (its loop, its format, the audio or video player), not the poster frame drawn for it',
+	],
 	[/\.lang(:|$)/, 'a proofing language (`a:rPr/@lang`): selects spelling and grammar rules, and draws nothing'],
 	[
 		/^add(Shape|Image)\.hyperlink\./,
