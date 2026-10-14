@@ -825,6 +825,25 @@ function group(id: string, base: GroupProps, options: GroupProps, covers = [id.s
 	}
 }
 
+/**
+ * `pptx.theme` set on the probe side only, over a title placeholder: the master's title
+ * style names the major font (`+mj-lt`, `+mj-ea`, `+mj-cs`), which no plain text box does.
+ */
+function themeTitle(id: string, options: ThemeProps): Probe {
+	return {
+		id,
+		covers: [id.split(':')[0] as string],
+		author: (pptx: TsPptx, on: boolean) => {
+			if (on) pptx.theme = options
+			pptx.defineSlideMaster({
+				title: 'PROBE',
+				objects: [{ placeholder: { options: { name: 'title', type: 'title', ...BOX }, text: '' } }],
+			})
+			pptx.addSlide({ masterTitle: 'PROBE' }).addText('Probe title', { placeholder: 'title', objectName: 'probe' })
+		},
+	}
+}
+
 /** `pptx.theme` set on the probe side only, over a slide holding the probe text box. */
 function theme(id: string, options: ThemeProps, covers = [id.split(':')[0] as string]): Probe {
 	return {
@@ -3687,9 +3706,15 @@ const AUTHORED: Probe[] = [
 	theme('theme.headFontFace', { headFontFace: 'Georgia' }),
 	theme('theme.bodyFontFace', { bodyFontFace: 'Verdana' }),
 	theme('theme.headFontFaceEA', { headFontFaceEA: 'Yu Gothic' }),
-	theme('theme.bodyFontFaceEA', { bodyFontFaceEA: 'MS Mincho' }),
+	{
+		...theme('theme.bodyFontFaceEA', { bodyFontFaceEA: 'MS Mincho' }),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/281',
+	},
 	theme('theme.headFontFaceCS', { headFontFaceCS: 'Tahoma' }),
-	theme('theme.bodyFontFaceCS', { bodyFontFaceCS: 'Arial' }),
+	{
+		...theme('theme.bodyFontFaceCS', { bodyFontFaceCS: 'Arial' }),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/281',
+	},
 	theme('theme.colorScheme.dk1', { colorScheme: { dk1: '101820' } }),
 	theme('theme.colorScheme.lt1', { colorScheme: { lt1: 'FAF7F0' } }),
 	theme('theme.colorScheme.dk2', { colorScheme: { dk2: '250F6B' } }),
@@ -3702,6 +3727,15 @@ const AUTHORED: Probe[] = [
 	theme('theme.colorScheme.accent6', { colorScheme: { accent6: '20B2AA' } }),
 	theme('theme.colorScheme.hlink', { colorScheme: { hlink: '0050A0' } }),
 	theme('theme.colorScheme.folHlink', { colorScheme: { folHlink: '7A3E9D' } }),
+	themeTitle('theme.headFontFace:title', { headFontFace: 'Georgia' }),
+	{
+		...themeTitle('theme.headFontFaceEA:title', { headFontFaceEA: 'Yu Gothic' }),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/281',
+	},
+	{
+		...themeTitle('theme.headFontFaceCS:title', { headFontFaceCS: 'Tahoma' }),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/281',
+	},
 	media('addMedia.altText', { altText: 'A probe description' }),
 	media('addMedia.cover', { cover: PNG }),
 	media('addMedia.extn', { extn: 'mp3' }),

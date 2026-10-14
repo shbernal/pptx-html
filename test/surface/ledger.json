@@ -1090,8 +1090,8 @@
 	"slide.transition.type": "survives/authored/invisible",
 	"slide.transition.variant": "survives/authored/invisible",
 	"theme.bodyFontFace": "survives/template",
-	"theme.bodyFontFaceCS": "survives/template/unrendered",
-	"theme.bodyFontFaceEA": "survives/template/unrendered",
+	"theme.bodyFontFaceCS": "survives/template/unread",
+	"theme.bodyFontFaceEA": "survives/template/unread",
 	"theme.colorScheme.accent1": "survives/template/unrendered",
 	"theme.colorScheme.accent2": "survives/template/unrendered",
 	"theme.colorScheme.accent3": "survives/template/unrendered",
@@ -1105,6 +1105,9 @@
 	"theme.colorScheme.lt1": "survives/template",
 	"theme.colorScheme.lt2": "survives/template/unrendered",
 	"theme.headFontFace": "survives/template/unrendered",
+	"theme.headFontFace:title": "survives/template",
 	"theme.headFontFaceCS": "survives/template/unrendered",
-	"theme.headFontFaceEA": "survives/template/unrendered"
+	"theme.headFontFaceCS:title": "survives/template/unread",
+	"theme.headFontFaceEA": "survives/template/unrendered",
+	"theme.headFontFaceEA:title": "survives/template/unread"
 }
