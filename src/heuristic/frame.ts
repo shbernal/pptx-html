@@ -17,8 +17,8 @@ interface IconElement extends Element {
 	loadIcon?: () => void
 }
 
-export function escapeAttr(value: unknown): string {
-	return String(value || '')
+export function escapeAttr(value: string): string {
+	return value
 		.replace(/&/g, '&amp;')
 		.replace(/"/g, '&quot;')
 		.replace(/</g, '&lt;')
@@ -27,7 +27,7 @@ export function escapeAttr(value: unknown): string {
 
 function withBaseHref(html: string): string {
 	if (/<base\b/i.test(html)) return html
-	const href = (document.baseURI || window.location.href || '').split('#')[0]
+	const href = (document.baseURI || window.location.href || '').replace(/#.*$/, '')
 	const tag = '<base href="' + escapeAttr(href) + '">'
 	if (/<head\b[^>]*>/i.test(html)) return html.replace(/<head\b([^>]*)>/i, '<head$1>' + tag)
 	if (/<html\b[^>]*>/i.test(html)) return html.replace(/<html\b([^>]*)>/i, '<html$1><head>' + tag + '</head>')
@@ -75,8 +75,8 @@ const iconRendered = (ic: IconElement) => !!(ic.shadowRoot && ic.shadowRoot.quer
 // Wait until the given icon elements have rendered, giving up early once no new
 // icon has resolved for a while (invalid icon names never resolve, so we must
 // not block on them for the full timeout).
-export async function waitForIconEls(icons: IconElement[], timeoutMs?: number, stallMs?: number): Promise<void> {
-	const deadline = Date.now() + (timeoutMs || 6000)
+export async function waitForIconEls(icons: IconElement[], timeoutMs: number, stallMs: number): Promise<void> {
+	const deadline = Date.now() + timeoutMs
 	let best = -1
 	let lastProgress = Date.now()
 	while (Date.now() < deadline) {
@@ -85,7 +85,7 @@ export async function waitForIconEls(icons: IconElement[], timeoutMs?: number, s
 		if (done > best) {
 			best = done
 			lastProgress = Date.now()
-		} else if (Date.now() - lastProgress > (stallMs || 1500)) return
+		} else if (Date.now() - lastProgress > stallMs) return
 		icons.forEach((ic) => {
 			try {
 				if (typeof ic.loadIcon === 'function') ic.loadIcon()

@@ -29,14 +29,14 @@ async function svgDataToPng(dataUrl: string, widthPx: number, heightPx: number):
 }
 
 function imageRef(src: string): { data: string } | { path: string } {
-	if (typeof src === 'string' && /^data:/i.test(src)) return { data: src }
+	if (/^data:/i.test(src)) return { data: src }
 	return { path: src }
 }
 
 function sortedItems(items: Item[]): Item[] {
 	return items
-		.map((item, index) => ({ item, index, z: Number.isFinite(item.z) ? item.z : 0 }))
-		.toSorted((a, b) => a.z - b.z || a.index - b.index)
+		.map((item, index) => ({ item, index }))
+		.toSorted((a, b) => a.item.z - b.item.z || a.index - b.index)
 		.map((entry) => entry.item)
 }
 
@@ -108,7 +108,7 @@ export async function addModelToSlide(
 					x: p.x,
 					y: p.y,
 					w: p.w,
-					h: p.h || 0,
+					h: p.h,
 					line: { color: item.color || '888888', width: item.width || 1, dashType: item.dash || 'solid' },
 				})
 			} else if (item.type === 'table') {

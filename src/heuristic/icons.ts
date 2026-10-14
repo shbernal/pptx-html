@@ -46,7 +46,7 @@ function inlineIconsInHtml(html: string, svgByName: IconProtos): string {
 }
 
 function findIconifyScriptSrc(headHTML: string): string {
-	const doc = new DOMParser().parseFromString('<head>' + (headHTML || '') + '</head>', 'text/html')
+	const doc = new DOMParser().parseFromString('<head>' + headHTML + '</head>', 'text/html')
 	const script = Array.from(doc.querySelectorAll('script[src]')).find((el) =>
 		/iconify/i.test(el.getAttribute('src') || '')
 	)
@@ -92,11 +92,11 @@ async function ensureMainIconify(headHTML: string): Promise<boolean> {
 // name (`prefix:icon`) from api.iconify.design. Returns the SVG string, or null on
 // any failure. Consumers/tests inject an alternative via `opts.resolveIcon`.
 export async function defaultResolveIcon(name: string): Promise<string | null> {
-	const idx = String(name || '').indexOf(':')
+	const idx = name.indexOf(':')
 	if (idx <= 0) return null
 	const prefix = name.slice(0, idx)
 	const icon = name.slice(idx + 1)
-	if (!prefix || !icon) return null
+	if (!icon) return null
 	try {
 		const url =
 			'https://api.iconify.design/' +
@@ -147,9 +147,8 @@ function protoFromSvgString(svgText: string | null): SVGElement | null {
 export async function inlineDeckIcons(
 	headHTML: string,
 	slides: string[],
-	resolveIcon?: IconResolver
+	resolve: IconResolver
 ): Promise<string[] | null> {
-	const resolve = typeof resolveIcon === 'function' ? resolveIcon : defaultResolveIcon
 	try {
 		if (!slides.some((s) => /<iconify-icon/i.test(s))) return null
 		const names = new Set<string>()

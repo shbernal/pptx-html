@@ -73,7 +73,7 @@ export function colorOf(token: string | null, resolved: ResolvedColor | null): C
 			kind: 'scheme',
 			slot: token as SchemeToken,
 			transforms: resolved?.transforms ?? [],
-			effectiveHex: resolved?.effectiveHex ?? resolved?.hex ?? '000000',
+			effectiveHex: resolved?.effectiveHex ?? '000000',
 		}
 		return resolved?.alpha === undefined ? color : { ...color, alpha: resolved.alpha }
 	}

@@ -12,12 +12,12 @@ export interface ParsedDeckHtml {
 	lang: string
 }
 
-export function parseDeckHtml(fullHtml: unknown): ParsedDeckHtml {
+export function parseDeckHtml(fullHtml: string): ParsedDeckHtml {
 	// `head` and `documentElement` are read without a guard, the way `body` is
 	// below. The HTML parser builds all three whatever it is handed, the empty
 	// string included, so the guards that used to be here could not fire — and
 	// guarding two of the three said the opposite about the one that was not.
-	const doc = new DOMParser().parseFromString(String(fullHtml || ''), 'text/html')
+	const doc = new DOMParser().parseFromString(fullHtml, 'text/html')
 	const rawHead = doc.head.innerHTML
 	const headHTML = rawHead
 		.replace(/<script[\s\S]*?<\/script>/gi, (script) => (/iconify|tailwind|material/i.test(script) ? script : ''))
@@ -37,12 +37,12 @@ export function parseDeckHtml(fullHtml: unknown): ParsedDeckHtml {
 	return { headHTML, slides, lang }
 }
 
-export function composeSlideDocument(headHTML: string, slideHTML: string, lang?: string): string {
+export function composeSlideDocument(headHTML: string, slideHTML: string, lang: string): string {
 	const exportCss =
 		'<style>body.magic-exporting .slide,body.magic-exporting .frag,body.exporting .slide,body.exporting .frag{transition:none!important;animation:none!important;opacity:1!important;visibility:visible!important;transform:none!important}</style>'
 	return (
 		'<!doctype html><html lang="' +
-		escapeAttr(lang || 'en') +
+		escapeAttr(lang) +
 		'"><head><meta charset="utf-8">' +
 		headHTML +
 		exportCss +

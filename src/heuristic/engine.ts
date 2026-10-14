@@ -148,11 +148,11 @@ function base64ToPptxBlob(base64: string): Blob {
 	return pptxBlobOf([bytesOfBase64(base64)])
 }
 
-function downloadBlob(blob: Blob, fileName?: string): void {
+function downloadBlob(blob: Blob, fileName: string): void {
 	const url = URL.createObjectURL(blob)
 	const a = document.createElement('a')
 	a.href = url
-	a.download = fileName || 'deck.pptx'
+	a.download = fileName
 	document.body.appendChild(a)
 	a.click()
 	setTimeout(() => {
@@ -240,7 +240,7 @@ async function buildDeck(headHTML: string, slides: string[], lang: string, opts:
 			// ts-pptx exposes `ShapeType` as a module export, not off the instance, so
 			// the emit layer's writer seam is supplied here rather than being read off
 			// `pptx` (which may be a mock from `opts.pptxFactory`).
-			const issues = await addModelToSlide({ ShapeType }, slide, rendered.model, size, lang || 'en')
+			const issues = await addModelToSlide({ ShapeType }, slide, rendered.model, size, lang)
 			warnings.push(...issues.map((message) => ({ slide: index + 1, message })))
 		} catch (error) {
 			warnings.push({

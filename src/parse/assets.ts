@@ -50,10 +50,6 @@ export interface ResolvedAssets {
 
 /**
  * A resolver over the document's own inline block, or `null` when there is none.
- *
- * Exported so a caller can compose it — resolve from the document, fall back to a
- * store, or the reverse — rather than being limited to the precedence
- * {@link resolveAssets} applies.
  */
 function inlineAssetResolver(blockText: string | null): AssetResolver | null {
 	if (blockText === null) return null

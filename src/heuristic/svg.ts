@@ -317,24 +317,21 @@ function svgItemToPaths(item: Extract<Item, { type: 'image' }>): PathItem[] | nu
 
 /**
  * In-place: replace every vectorizable SVG `image` item in the model with editable
- * `path` items. Returns the number of source images vectorized. Items that can't
+ * `path` items. Items that can't
  * be faithfully vectorized are left untouched (raster fallback). Called from the
  * deck orchestrator when `opts.vectorizeSvg` is set.
  */
-export function vectorizeSvgImages(model: SlideModel): number {
-	let converted = 0
+export function vectorizeSvgImages(model: SlideModel): void {
 	const out: Item[] = []
 	for (const item of model.items) {
-		if (item.type === 'image' && typeof item.src === 'string' && SVG_DATA_URL_RE.test(item.src)) {
+		if (item.type === 'image' && SVG_DATA_URL_RE.test(item.src)) {
 			const paths = svgItemToPaths(item)
 			if (paths) {
 				out.push(...paths)
-				converted++
 				continue
 			}
 		}
 		out.push(item)
 	}
 	model.items = out
-	return converted
 }
