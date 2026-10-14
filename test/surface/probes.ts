@@ -5899,6 +5899,10 @@ const INVISIBLE: [RegExp, string][] = [
 	],
 	[/^addAnimation\./, 'an animation: plays during a slideshow, and draws nothing on a static slide'],
 	[
+		/^addComment(\.|$)/,
+		"a review comment: kept in the slide's comments part and shown in PowerPoint's review pane, never drawn on the slide or in a slideshow",
+	],
+	[
 		/^theme\.colorScheme\.folHlink/,
 		'the followed-hyperlink colour: PowerPoint paints a link in it only after the link is clicked in a slideshow, so a static slide never shows it',
 	],
