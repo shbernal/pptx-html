@@ -826,6 +826,33 @@ function group(id: string, base: GroupProps, options: GroupProps, covers = [id.s
 }
 
 /**
+ * `pptx.theme` set on the probe side only, over a slide that uses what it sets: `use`
+ * places the object that names the slot.
+ *
+ * {@link theme}'s slide holds one text box, which the writer gives an explicit
+ * `000000` and the minor font, so a colour slot or the major font it sets is written
+ * and referenced by nothing on the slide. These are the same options with a reader:
+ * a shape filled with `accent1`, a run coloured `tx1`, a hyperlink.
+ */
+function themeUsed(id: string, options: ThemeProps, use: (slide: Slide) => void): Probe {
+	return {
+		id,
+		covers: [id.split(':')[0] as string],
+		author: (pptx: TsPptx, on: boolean) => {
+			if (on) pptx.theme = options
+			use(pptx.addSlide())
+		},
+	}
+}
+
+/** A shape filled with a theme colour, for {@link themeUsed}. */
+const filledWith = (color: string) => (slide: Slide) =>
+	slide.addShape('rect', { ...BOX, fill: { color }, objectName: 'probe' })
+
+/** Text coloured with a theme colour, for {@link themeUsed}. */
+const textIn = (color: string) => (slide: Slide) => slide.addText('Probe text', { ...BOX, color, objectName: 'probe' })
+
+/**
  * `pptx.theme` set on the probe side only, over a title placeholder: the master's title
  * style names the major font (`+mj-lt`, `+mj-ea`, `+mj-cs`), which no plain text box does.
  */
@@ -3736,6 +3763,15 @@ const AUTHORED: Probe[] = [
 		...themeTitle('theme.headFontFaceCS:title', { headFontFaceCS: 'Tahoma' }),
 		unread: 'https://github.com/shbernal/pptx-ts/issues/281',
 	},
+	themeUsed('theme.colorScheme.dk1:tx1', { colorScheme: { dk1: '101820' } }, textIn('tx1')),
+	themeUsed('theme.colorScheme.dk2:tx2', { colorScheme: { dk2: '250F6B' } }, textIn('tx2')),
+	themeUsed('theme.colorScheme.lt2:bg2', { colorScheme: { lt2: 'DDE3F0' } }, filledWith('bg2')),
+	themeUsed('theme.colorScheme.accent1:fill', { colorScheme: { accent1: '9B1B30' } }, filledWith('accent1')),
+	themeUsed('theme.colorScheme.accent2:fill', { colorScheme: { accent2: 'F0C808' } }, filledWith('accent2')),
+	themeUsed('theme.colorScheme.accent3:fill', { colorScheme: { accent3: '2E8B57' } }, filledWith('accent3')),
+	themeUsed('theme.colorScheme.accent4:fill', { colorScheme: { accent4: '8A2BE2' } }, filledWith('accent4')),
+	themeUsed('theme.colorScheme.accent5:fill', { colorScheme: { accent5: 'FF7F50' } }, filledWith('accent5')),
+	themeUsed('theme.colorScheme.accent6:fill', { colorScheme: { accent6: '20B2AA' } }, filledWith('accent6')),
 	media('addMedia.altText', { altText: 'A probe description' }),
 	media('addMedia.cover', { cover: PNG }),
 	media('addMedia.extn', { extn: 'mp3' }),
