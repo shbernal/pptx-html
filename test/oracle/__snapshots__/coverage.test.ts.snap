@@ -36,7 +36,7 @@ theme-color         hard       slides=1 (1a/0c)  calls=2
 
 # fidelity notes by disposition × cause (whole corpus)
              unread       unwritable   unsupported  
-dropped      31           31           5            
+dropped      31           31           0            
 flattened    0            31           0            
 approximated 31           0            8            
 
@@ -45,16 +45,16 @@ text-box            deck.docProps, master.background, master.txStyles, theme.fmt
 autoshape           deck.docProps, master.background, master.txStyles, theme.fmtScheme
 preset-geometry     deck.docProps, master.background, master.txStyles, theme.fmtScheme
 custgeom            deck.docProps, master.background, master.txStyles, theme.fmtScheme
-table               deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
-cell-fill           deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
-cell-diagonal       deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
-table-fill          deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
+table               deck.docProps, master.background, master.txStyles, table.rowAuto, theme.fmtScheme
+cell-fill           deck.docProps, master.background, master.txStyles, table.rowAuto, theme.fmtScheme
+cell-diagonal       deck.docProps, master.background, master.txStyles, table.rowAuto, theme.fmtScheme
+table-fill          deck.docProps, master.background, master.txStyles, table.rowAuto, theme.fmtScheme
 table-style         deck.docProps, master.background, master.txStyles, table.rowAuto, theme.fmtScheme
 picture             deck.docProps, master.background, master.txStyles, theme.fmtScheme
 picture-svg         deck.docProps, image.svg, master.background, master.txStyles, theme.fmtScheme
 connector           deck.docProps, master.background, master.txStyles, theme.fmtScheme
 gradient            deck.docProps, master.background, master.txStyles, theme.fmtScheme
-color-transform     deck.docProps, master.background, master.txStyles, table.rowAuto, table.style, theme.fmtScheme
+color-transform     deck.docProps, master.background, master.txStyles, table.rowAuto, theme.fmtScheme
 group               deck.docProps, master.background, master.txStyles, theme.fmtScheme
 nested-group        deck.docProps, master.background, master.txStyles, theme.fmtScheme
 hyperlink           deck.docProps, master.background, master.txStyles, theme.fmtScheme

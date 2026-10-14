@@ -40,6 +40,9 @@ model is expected to move.
 
 ### Fixed
 
+- **A comment comes back with its own index.** `emitDeck` replayed a deck's first
+  comment as index 2, because `fromTemplate` kept the source's comment-author
+  counter after dropping its slides (pptx-ts#244). The `pptx-ts` bump carries the fix.
 - **A deck that declares no slide size renders on a real page.** With no
   `p:sldSz`, `importDeck` gave the page a 0×0 canvas. It now uses the 10in × 7.5in
   that `readModelToIr` assumes and declares, so the page matches the deck that

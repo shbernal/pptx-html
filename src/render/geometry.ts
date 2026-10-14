@@ -509,8 +509,28 @@ const CONNECTORS: Record<string, (w: number, h: number, adj: Record<string, stri
 	},
 }
 
-/** One `a:path`'s commands, scaled from its own `0..w`/`0..h` units into the box. */
-function customPathData(path: GeometryPath, w: number, h: number): string {
+/** {@link GeometryCommand} with every coordinate a number. */
+type ResolvedCommand = GeometryCommand extends infer C
+	? C extends GeometryCommand
+		? { [K in keyof C]: K extends 'cmd' ? C[K] : number }
+		: never
+	: never
+
+/**
+ * The command when every coordinate is a number, or `undefined` when one names a
+ * guide, which this renderer does not evaluate. The caller marks that rather than
+ * drawing the point at 0.
+ */
+function numericCommand(command: GeometryCommand): ResolvedCommand | undefined {
+	const named = Object.entries(command).some(([key, value]) => key !== 'cmd' && typeof value !== 'number')
+	return named ? undefined : (command as ResolvedCommand)
+}
+
+/**
+ * One `a:path`'s commands, scaled from its own `0..w`/`0..h` units into the box,
+ * or `undefined` when a coordinate names a guide.
+ */
+function customPathData(path: GeometryPath, w: number, h: number): string | undefined {
 	// `@w`/`@h` of 0 means "the path is already in the shape's coordinate space",
 	// which is also the only sane reading when there is no denominator to divide by.
 	const sx = path.w > 0 ? w / path.w : 1
@@ -525,7 +545,9 @@ function customPathData(path: GeometryPath, w: number, h: number): string {
 	let penY = 0
 	const parts: string[] = []
 
-	for (const command of path.commands) {
+	for (const named of path.commands) {
+		const command = numericCommand(named)
+		if (command === undefined) return undefined
 		// The pen goes in as two numbers rather than as a thunk over the two `let`s
 		// above. It was a closure only because `segmentOf` needed the value at call
 		// time and `endOf` recomputed it; now the end point is computed once and
@@ -540,7 +562,7 @@ function customPathData(path: GeometryPath, w: number, h: number): string {
 
 type Scale = (value: number) => number
 
-function segmentOf(command: GeometryCommand, x: Scale, y: Scale, end: { x: number; y: number }): string {
+function segmentOf(command: ResolvedCommand, x: Scale, y: Scale, end: { x: number; y: number }): string {
 	switch (command.cmd) {
 		case 'moveTo':
 			return `M ${x(command.x)} ${y(command.y)}`
@@ -566,7 +588,7 @@ function segmentOf(command: GeometryCommand, x: Scale, y: Scale, end: { x: numbe
 }
 
 function endOf(
-	command: GeometryCommand,
+	command: ResolvedCommand,
 	x: Scale,
 	y: Scale,
 	penX: number,
@@ -604,9 +626,10 @@ function endOf(
 export function pathOf(geometry: Geometry, w: number, h: number): PathResult {
 	if (geometry.kind === 'custom') {
 		const drawn = geometry.paths.filter((path) => path.commands.length > 0)
-		if (drawn.length === 0) return { d: rect(w, h), fallback: 'custGeom' }
+		const data = drawn.map((path) => customPathData(path, w, h))
+		if (drawn.length === 0 || data.includes(undefined)) return { d: rect(w, h), fallback: 'custGeom' }
 		return {
-			d: drawn.map((path) => customPathData(path, w, h)).join(' '),
+			d: data.join(' '),
 			// `@fill="none"` on every path means the freeform is an open stroke, and
 			// filling it would paint over whatever it was drawn on top of.
 			...(drawn.every((path) => path.fill === 'none') ? { unfilled: true } : {}),

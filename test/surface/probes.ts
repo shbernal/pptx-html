@@ -3744,11 +3744,7 @@ const AUTHORED: Probe[] = [
 	media('addMedia.w', { w: 2 }),
 	media('addMedia.x', { x: 2 }),
 	media('addMedia.y', { y: 2 }),
-	{
-		...comment('addComment', {}, ['addComment.author', 'addComment.text']),
-		// The comment itself survives since #221; it comes back renumbered (idx 1 -> 2).
-		issue: 'https://github.com/shbernal/pptx-ts/issues/244',
-	},
+	comment('addComment', {}, ['addComment.author', 'addComment.text']),
 	comment('addComment.initials', { initials: 'XQ' }),
 	comment('addComment.x', { x: 3 }),
 	comment('addComment.y', { y: 4 }),

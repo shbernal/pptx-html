@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       pptx-ts:
-        specifier: ^4.1.1-next.104.gcb7615e
-        version: 4.1.1-next.104.gcb7615e
+        specifier: ^4.1.1-next.123.g41e5746
+        version: 4.1.1-next.123.g41e5746
     devDependencies:
       '@types/node':
         specifier: ^26.6.5
@@ -1795,8 +1795,8 @@ packages:
     resolution: {integrity: sha512-49cGhUbXj8Qenv0iTMxA1cFBzxXoctpC9Ujd77t1WcbJIr6nF/eI7g/8MgxrYldFRuAXvja7xQRwavoW7kgrxQ==}
     engines: {node: ^10 || ^12 || >=14}
 
-  pptx-ts@4.1.1-next.104.gcb7615e:
-    resolution: {integrity: sha512-7TCPZrwpkBq4lGboNsoWYPfSJO/Ds1T4lGMTYkLWzdkv8Q3pq0vw2DEI66auDcR9uVU0jg6OG4xoImyOYOASBQ==}
+  pptx-ts@4.1.1-next.123.g41e5746:
+    resolution: {integrity: sha512-ywYr7tSmKXq0raTnzHPAsW0GMH13Ljc/k82lL+amZJzMlM7XKt3XWnqPBA/MulUZHkj7Q/ML4T5F8jsY9Xmo1w==}
     engines: {node: '>=24'}
     peerDependencies:
       mathml2omml: ^0.5.0
@@ -3289,7 +3289,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
-  pptx-ts@4.1.1-next.104.gcb7615e:
+  pptx-ts@4.1.1-next.123.g41e5746:
     dependencies:
       '@xmldom/xmldom': 0.9.12
       fflate: 0.8.3
