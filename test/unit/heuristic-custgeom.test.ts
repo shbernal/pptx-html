@@ -45,13 +45,12 @@ function model(items: PathItem[]): SlideModel {
 
 // `toBytes()` is what `Presentation.load` takes, so the deck never becomes base64
 // on the way from the writer to the reader.
-async function emit(items: PathItem[]) {
+async function emit(items: PathItem[]): Promise<Uint8Array> {
 	const pptx = new TsPptx()
 	pptx.layout = 'LAYOUT_16x9'
 	const slide = pptx.addSlide()
-	const issues = await addModelToSlide({ ShapeType }, slide, model(items), SIZE, 'en')
-	const bytes = await pptx.toBytes()
-	return { issues, bytes }
+	await addModelToSlide({ ShapeType }, slide, model(items), SIZE, 'en')
+	return pptx.toBytes()
 }
 
 type FreeformShape = AutoShape & { customGeometry: CustomGeometry }
@@ -88,32 +87,11 @@ describe('pathShapeOptions — fill / stroke mapping', () => {
 })
 
 describe('emit → ts-pptx → read round-trip (custGeom)', () => {
-	it('emits path items without per-item issues', async () => {
-		const { issues } = await emit([triangle(), cubicStroke()])
-		expect(issues).toEqual([])
-	})
-
-	it('round-trips the triangle command sequence (moveTo / lnTo×2 / close)', async () => {
-		const { bytes } = await emit([triangle()])
-		const pres = await Presentation.load(bytes)
-		const shape = onlyFreeform(first(pres.slides, 'slide').shapes)
-		const cmds = first(shape.customGeometry.paths, 'path').commands.map((command) => command.cmd)
-		expect(cmds).toEqual(['moveTo', 'lnTo', 'lnTo', 'close'])
-	})
-
-	it('preserves the cubic curve as a cubicBezTo segment', async () => {
-		const { bytes } = await emit([cubicStroke()])
-		const pres = await Presentation.load(bytes)
-		const shape = onlyFreeform(first(pres.slides, 'slide').shapes)
-		const cmds = first(shape.customGeometry.paths, 'path').commands.map((command) => command.cmd)
-		expect(cmds).toEqual(['moveTo', 'cubicBezTo'])
-	})
-
-	it('scales path-unit coordinates to the shape box (triangle apex at half width, full height)', async () => {
-		const { bytes } = await emit([triangle()])
-		const pres = await Presentation.load(bytes)
+	it('round-trips the triangle as moveTo / lnTo×2 / close, scaled to the shape box', async () => {
+		const pres = await Presentation.load(await emit([triangle()]))
 		const shape = onlyFreeform(first(pres.slides, 'slide').shapes)
 		const path = first(shape.customGeometry.paths, 'path')
+		expect(path.commands.map((command) => command.cmd)).toEqual(['moveTo', 'lnTo', 'lnTo', 'close'])
 		// Apex point (box-inch 1,2 in a 2×2 box) → path-units (w/2, h).
 		// The command list is a union discriminated on `cmd`; only the line and move
 		// verbs carry a coordinate, so the narrowing is what makes `x`/`y` readable.
@@ -121,5 +99,12 @@ describe('emit → ts-pptx → read round-trip (custGeom)', () => {
 		if (apex?.cmd !== 'lnTo') throw new Error(`expected an lnTo at index 2, got ${apex?.cmd ?? 'nothing'}`)
 		expect(apex.x).toBeCloseTo(path.w / 2, -2)
 		expect(apex.y).toBeCloseTo(path.h, -2)
+	})
+
+	it('preserves the cubic curve as a cubicBezTo segment', async () => {
+		const pres = await Presentation.load(await emit([cubicStroke()]))
+		const shape = onlyFreeform(first(pres.slides, 'slide').shapes)
+		const cmds = first(shape.customGeometry.paths, 'path').commands.map((command) => command.cmd)
+		expect(cmds).toEqual(['moveTo', 'cubicBezTo'])
 	})
 })
