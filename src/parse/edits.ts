@@ -512,10 +512,41 @@ export function applyEdits(deck: DeckIr, structure: RenderIr, edits: EditSet): A
 	for (const slide of next.slides) {
 		const nodes = structure.slides.find((entry) => entry.number === slide.number)?.nodes
 		if (nodes === undefined) continue
-		slide.calls = patchLevel(nodes, slide.calls, edits, warnings, slide.number)
+		slide.calls = patchLevel(withoutSlideNumber(slide, nodes, edits, warnings), slide.calls, edits, warnings, slide.number)
 	}
 
 	return { deck: next, warnings }
+}
+
+/**
+ * The slide's nodes less the one the write contract carries as `slide.slideNumber`.
+ *
+ * The read model maps a `sldNum` placeholder it can write back to that option
+ * rather than to a call, so the paint model has a node the call list does not.
+ * Dropped here, the two line up again. Only when exactly one top-level node is a
+ * `sldNum` placeholder: with more, which one the option came from is a guess, and
+ * the count guard in `patchLevel` refuses instead.
+ *
+ * Deleting that node removes the option. Its text is a field, not a run the
+ * write side can retype, so a text edit on it is reported and not placed.
+ */
+function withoutSlideNumber(
+	slide: DeckIr['slides'][number],
+	nodes: readonly RenderNode[],
+	edits: EditSet,
+	warnings: string[]
+): readonly RenderNode[] {
+	if (slide.slideNumber === undefined) return nodes
+	const numbers = nodes.filter((node) => node.kind === 'shape' && !node.hidden && node.placeholder?.type === 'sldNum')
+	if (numbers.length !== 1) return nodes
+	const number = numbers[0] as RenderNode
+
+	if (edits.deleted.has(number.id)) delete slide.slideNumber
+	const prefix = `${number.id}/`
+	if ([...edits.runs.keys(), ...edits.paragraphs.keys()].some((address) => address.startsWith(prefix))) {
+		warnings.push(`${number.id} is the slide number, which the write API states as an option with no text to edit; its edits were not applied`)
+	}
+	return nodes.filter((node) => node !== number)
 }
 
 /**

@@ -266,6 +266,8 @@ function collectText(
 			props: editableParaProps(paragraph.props),
 		})
 		paragraph.runs.forEach((run, runIndex) => {
+			// A field's text is PowerPoint's to compute, so it is drawn and never typed into.
+			if (run.field !== undefined) return
 			intoRuns.push({
 				node: owner,
 				paragraph: paragraphIndex,
@@ -386,6 +388,7 @@ function stripText(text: TextBody | null): void {
 	for (const paragraph of text.paragraphs) {
 		for (const key of EDITABLE_PARA_PROPS) delete paragraph.props[key]
 		for (const run of paragraph.runs) {
+			if (run.field !== undefined) continue
 			run.text = ''
 			for (const key of EDITABLE_RUN_PROPS) delete run.props[key]
 		}

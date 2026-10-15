@@ -181,6 +181,9 @@ function runStyle(run: TextRun, fontScalePct: number | undefined): string {
  * surface attributes, so it is not typeable and not addressable: the wordmark on
  * a template band belongs to the layout part, and honouring an edit to it would
  * change every slide in the deck.
+ *
+ * A field run (a slide number) is drawn the same way, for a different reason: its
+ * text is what PowerPoint computes, so there is nothing to type over.
  */
 function renderRun(
 	run: TextRun,
@@ -193,7 +196,7 @@ function renderRun(
 	const link = run.props.hyperlink
 	const styleAttr = style === '' ? '' : ` style="${escapeAttr(style)}"`
 	const span =
-		nodeId === null
+		nodeId === null || run.field !== undefined
 			? `<span${styleAttr}>${escapeText(run.text)}</span>`
 			: surfaceSpan(run, `${nodeId}/${paragraph}/${index}`, styleAttr)
 

@@ -22,7 +22,7 @@ import { applyEdits, editsBetween } from '../../src/parse/edits'
 import { IslandError } from '../../src/parse/island'
 import { renderDeck } from '../../src/render/document'
 import { ISLAND_ID } from '../../src/render/island'
-import { CORPUS, corpusBytes } from '../corpus/decks'
+import { CORPUS, corpusBytes, newDeck } from '../corpus/decks'
 import { at } from '../support'
 import { viewDeck } from './roundtrip'
 
@@ -38,6 +38,22 @@ async function rendered(name: string): Promise<{ source: Uint8Array; html: strin
 	const imported = await importDeck(source)
 	const { html } = await renderDeck(imported.render, { bytes: (asset) => imported.assets.bytesFor({ $asset: asset }) })
 	return { source, html }
+}
+
+/** Render deck bytes the way the loop does, to HTML. */
+async function renderedBytes(source: Uint8Array): Promise<string> {
+	const imported = await importDeck(source)
+	const { html } = await renderDeck(imported.render, { bytes: (asset) => imported.assets.bytesFor({ $asset: asset }) })
+	return html
+}
+
+/** One text box and a slide number: a slide whose paint model has a node its call list does not. */
+async function slideNumberDeck(): Promise<Uint8Array> {
+	const pptx = newDeck()
+	const slide = pptx.addSlide()
+	slide.addText('Probe text', { x: 1, y: 1, w: 4, h: 1, objectName: 'probe' })
+	slide.slideNumber = { x: 0.5, y: 6.5, w: 1, h: 0.4 }
+	return pptx.write({ outputType: 'uint8array' })
 }
 
 /** Every run of text in an emitted deck, flattened, for asserting on content. */
@@ -465,6 +481,35 @@ describe('an edit made through the surface', () => {
 		const texts = await textOf(emitted.bytes)
 		expect(texts).not.toContain('Deploy')
 		expect(texts).toContain('Starred')
+	})
+
+	it('places an edit on a slide with a slide number, which has a node and no call', async () => {
+		// The read model writes the slide number back as `slide.slideNumber`, so the
+		// paint model has one top-level node more than the call list. Unaccounted for,
+		// the count guard in `edits.ts` refused every edit on such a slide.
+		const source = await slideNumberDeck()
+		const parsed = await parseDeck(await renderedBytes(source), { parseHtml: null })
+		const shape = parsed.ir?.slides[0]?.nodes[0]
+		if (shape?.kind !== 'shape' || !shape.text?.paragraphs[0]?.runs[0]) throw new Error('fixture changed')
+		expect(parsed.ir?.slides[0]?.nodes).toHaveLength(2)
+		shape.text.paragraphs[0].runs[0].text = 'Edited'
+
+		const emitted = await emitDeck(parsed, { source })
+		expect(await textOf(emitted.bytes)).toContain('Edited')
+		const ir = readModelToIr(await Presentation.load(emitted.bytes))
+		expect(ir.slides[0]?.slideNumber).toBeDefined()
+	})
+
+	it('drops the slide number when its node is deleted', async () => {
+		const source = await slideNumberDeck()
+		const parsed = await parseDeck(await renderedBytes(source), { parseHtml: null })
+		if (parsed.ir === null) throw new Error('the rendered document lost its island')
+		parsed.ir.slides[0]?.nodes.splice(1, 1)
+
+		const emitted = await emitDeck(parsed, { source })
+		const ir = readModelToIr(await Presentation.load(emitted.bytes))
+		expect(ir.slides[0]?.slideNumber).toBeUndefined()
+		expect(await textOf(emitted.bytes)).toContain('Probe text')
 	})
 
 	it('finds nothing to apply when nothing was edited', async () => {

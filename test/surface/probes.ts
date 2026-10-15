@@ -825,6 +825,52 @@ function group(id: string, base: GroupProps, options: GroupProps, covers = [id.s
 	}
 }
 
+/**
+ * `pptx.theme` set on the probe side only, over a slide that uses what it sets: `use`
+ * places the object that names the slot.
+ *
+ * {@link theme}'s slide holds one text box, which the writer gives an explicit
+ * `000000` and the minor font, so a colour slot or the major font it sets is written
+ * and referenced by nothing on the slide. These are the same options with a reader:
+ * a shape filled with `accent1`, a run coloured `tx1`, a hyperlink.
+ */
+function themeUsed(id: string, options: ThemeProps, use: (slide: Slide) => void): Probe {
+	return {
+		id,
+		covers: [id.split(':')[0] as string],
+		author: (pptx: TsPptx, on: boolean) => {
+			if (on) pptx.theme = options
+			use(pptx.addSlide())
+		},
+	}
+}
+
+/** A shape filled with a theme colour, for {@link themeUsed}. */
+const filledWith = (color: string) => (slide: Slide) =>
+	slide.addShape('rect', { ...BOX, fill: { color }, objectName: 'probe' })
+
+/** Text coloured with a theme colour, for {@link themeUsed}. */
+const textIn = (color: string) => (slide: Slide) => slide.addText('Probe text', { ...BOX, color, objectName: 'probe' })
+
+/**
+ * `pptx.theme` set on the probe side only, over a title placeholder: the master's title
+ * style names the major font (`+mj-lt`, `+mj-ea`, `+mj-cs`), which no plain text box does.
+ */
+function themeTitle(id: string, options: ThemeProps): Probe {
+	return {
+		id,
+		covers: [id.split(':')[0] as string],
+		author: (pptx: TsPptx, on: boolean) => {
+			if (on) pptx.theme = options
+			pptx.defineSlideMaster({
+				title: 'PROBE',
+				objects: [{ placeholder: { options: { name: 'title', type: 'title', ...BOX }, text: '' } }],
+			})
+			pptx.addSlide({ masterTitle: 'PROBE' }).addText('Probe title', { placeholder: 'title', objectName: 'probe' })
+		},
+	}
+}
+
 /** `pptx.theme` set on the probe side only, over a slide holding the probe text box. */
 function theme(id: string, options: ThemeProps, covers = [id.split(':')[0] as string]): Probe {
 	return {
@@ -3687,9 +3733,15 @@ const AUTHORED: Probe[] = [
 	theme('theme.headFontFace', { headFontFace: 'Georgia' }),
 	theme('theme.bodyFontFace', { bodyFontFace: 'Verdana' }),
 	theme('theme.headFontFaceEA', { headFontFaceEA: 'Yu Gothic' }),
-	theme('theme.bodyFontFaceEA', { bodyFontFaceEA: 'MS Mincho' }),
+	{
+		...theme('theme.bodyFontFaceEA', { bodyFontFaceEA: 'MS Mincho' }),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/281',
+	},
 	theme('theme.headFontFaceCS', { headFontFaceCS: 'Tahoma' }),
-	theme('theme.bodyFontFaceCS', { bodyFontFaceCS: 'Arial' }),
+	{
+		...theme('theme.bodyFontFaceCS', { bodyFontFaceCS: 'Arial' }),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/281',
+	},
 	theme('theme.colorScheme.dk1', { colorScheme: { dk1: '101820' } }),
 	theme('theme.colorScheme.lt1', { colorScheme: { lt1: 'FAF7F0' } }),
 	theme('theme.colorScheme.dk2', { colorScheme: { dk2: '250F6B' } }),
@@ -3702,6 +3754,33 @@ const AUTHORED: Probe[] = [
 	theme('theme.colorScheme.accent6', { colorScheme: { accent6: '20B2AA' } }),
 	theme('theme.colorScheme.hlink', { colorScheme: { hlink: '0050A0' } }),
 	theme('theme.colorScheme.folHlink', { colorScheme: { folHlink: '7A3E9D' } }),
+	themeTitle('theme.headFontFace:title', { headFontFace: 'Georgia' }),
+	{
+		...themeTitle('theme.headFontFaceEA:title', { headFontFaceEA: 'Yu Gothic' }),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/281',
+	},
+	{
+		...themeTitle('theme.headFontFaceCS:title', { headFontFaceCS: 'Tahoma' }),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/281',
+	},
+	themeUsed('theme.colorScheme.dk1:tx1', { colorScheme: { dk1: '101820' } }, textIn('tx1')),
+	themeUsed('theme.colorScheme.dk2:tx2', { colorScheme: { dk2: '250F6B' } }, textIn('tx2')),
+	themeUsed('theme.colorScheme.lt2:bg2', { colorScheme: { lt2: 'DDE3F0' } }, filledWith('bg2')),
+	themeUsed('theme.colorScheme.accent1:fill', { colorScheme: { accent1: '9B1B30' } }, filledWith('accent1')),
+	themeUsed('theme.colorScheme.accent2:fill', { colorScheme: { accent2: 'F0C808' } }, filledWith('accent2')),
+	themeUsed('theme.colorScheme.accent3:fill', { colorScheme: { accent3: '2E8B57' } }, filledWith('accent3')),
+	themeUsed('theme.colorScheme.accent4:fill', { colorScheme: { accent4: '8A2BE2' } }, filledWith('accent4')),
+	themeUsed('theme.colorScheme.accent5:fill', { colorScheme: { accent5: 'FF7F50' } }, filledWith('accent5')),
+	themeUsed('theme.colorScheme.accent6:fill', { colorScheme: { accent6: '20B2AA' } }, filledWith('accent6')),
+	{
+		...themeUsed('theme.colorScheme.hlink:link', { colorScheme: { hlink: '0050A0' } }, (slide) =>
+			slide.addText([{ text: 'Probe link', options: { hyperlink: { url: 'https://example.com/' } } }], {
+				...BOX,
+				objectName: 'probe',
+			})
+		),
+		unread: 'https://github.com/shbernal/pptx-ts/issues/282',
+	},
 	media('addMedia.altText', { altText: 'A probe description' }),
 	media('addMedia.cover', { cover: PNG }),
 	media('addMedia.extn', { extn: 'mp3' }),
@@ -5819,7 +5898,18 @@ const INVISIBLE: [RegExp, string][] = [
 		'a slide transition: plays between slides in a slideshow, and draws nothing on a static slide',
 	],
 	[/^addAnimation\./, 'an animation: plays during a slideshow, and draws nothing on a static slide'],
-	[/^addMedia\.loop/, 'media playback: changes how the clip plays, not the frame drawn for it'],
+	[
+		/^addComment(\.|$)/,
+		"a review comment: kept in the slide's comments part and shown in PowerPoint's review pane, never drawn on the slide or in a slideshow",
+	],
+	[
+		/^theme\.colorScheme\.folHlink/,
+		'the followed-hyperlink colour: PowerPoint paints a link in it only after the link is clicked in a slideshow, so a static slide never shows it',
+	],
+	[
+		/^addMedia\.(loop|extn|type)/,
+		'media playback: changes how the clip plays (its loop, its format, the audio or video player), not the poster frame drawn for it',
+	],
 	[/\.lang(:|$)/, 'a proofing language (`a:rPr/@lang`): selects spelling and grammar rules, and draws nothing'],
 	[
 		/^add(Shape|Image)\.hyperlink\./,
