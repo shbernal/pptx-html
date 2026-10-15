@@ -74,22 +74,18 @@ describe('parsePathData — commands', () => {
 })
 
 describe('parsePathData — arcs become cubics', () => {
-	it('converts an A arc into one or more cubic segments ending at the arc endpoint', () => {
+	it('converts an A arc into cubics ending at the endpoint, bulging out to the radius', () => {
+		// Half-circle radius 5 from (0,0) to (10,0): its midpoint sits a full radius
+		// off the chord.
 		const segs = parsePathData('M0 0 A5 5 0 0 1 10 0')
 		expect(segs[0]).toEqual({ cmd: 'move', x: 0, y: 0 })
 		expect(segs.length).toBeGreaterThan(1)
 		expect(segs.every((s, i) => i === 0 || s.cmd === 'cubic')).toBe(true)
-		const last = segs[segs.length - 1] as Extract<GeomSeg, { cmd: 'cubic' }>
-		expect(last.x).toBeCloseTo(10, 4)
-		expect(last.y).toBeCloseTo(0, 4)
-	})
-
-	it('approximates a semicircle arc with its midpoint bulging out to the radius', () => {
-		// Half-circle radius 5 from (0,0) to (10,0): split into two 90° cubics whose
-		// shared endpoint (the arc midpoint) sits a full radius off the chord.
-		const segs = parsePathData('M0 0 A5 5 0 0 1 10 0') as Array<Extract<GeomSeg, { cmd: 'cubic' }>>
-		const peak = Math.max(...segs.slice(1).map((s) => Math.abs(s.y)))
-		expect(peak).toBeCloseTo(5, 4)
+		const cubics = segs.slice(1) as Array<Extract<GeomSeg, { cmd: 'cubic' }>>
+		const last = cubics[cubics.length - 1]
+		expect(last?.x).toBeCloseTo(10, 4)
+		expect(last?.y).toBeCloseTo(0, 4)
+		expect(Math.max(...cubics.map((s) => Math.abs(s.y)))).toBeCloseTo(5, 4)
 	})
 
 	it('degenerate (zero-radius) arc collapses to a line to the endpoint', () => {
