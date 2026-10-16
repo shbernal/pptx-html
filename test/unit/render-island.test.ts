@@ -15,7 +15,7 @@ import { SAMPLE_IR } from '../fixtures/render-ir'
 const NO_ASSETS = { assets: 'ref' } as const
 
 describe('the two hashes', () => {
-	it('moves surfaceHash but not modelHash when a run is edited in place', async () => {
+	it('moves modelHash but not surfaceHash when a box moves outside the surface', async () => {
 		// The distinction the whole scheme rests on. An edit inside the surface is a
 		// *different model*, so `modelHash` moves too — what must hold is the
 		// converse: something outside the surface must move `modelHash` while

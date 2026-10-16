@@ -88,7 +88,7 @@ describe('convertDeck delivery modes', () => {
 		expect(deck.slides.length).toBe(2)
 	})
 
-	it('output: pptx-instance → the live writer (pre-repair)', async () => {
+	it('output: pptx-instance → the live writer', async () => {
 		const result = await convertDeck(deckHtml, { output: 'pptx-instance', resolveIcon: staticResolveIcon })
 		expect(result.base64).toBeUndefined()
 		expect(result.pptx).toBeTruthy()
