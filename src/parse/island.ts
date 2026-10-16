@@ -120,8 +120,6 @@ export interface OpenedIsland {
 	ir: RenderIr
 	/** The hashes as the document stated them, after they were checked. */
 	integrity: Integrity
-	/** The island block's text, verbatim. Kept because it is what `modelHash` covers. */
-	text: string
 }
 
 /**
@@ -177,7 +175,7 @@ export async function openIsland(blocks: DocumentBlocks): Promise<OpenedIsland |
 		)
 	}
 
-	return { ir, integrity: { irVersion: stated.irVersion, modelHash, surfaceHash }, text: blocks.island }
+	return { ir, integrity: { irVersion: stated.irVersion, modelHash, surfaceHash } }
 }
 
 /**

@@ -35,10 +35,9 @@ import { base64Of } from '../base64'
  * `source` is the package the IR was read from, loaded separately from
  * `template`: `importSlide` copies *out of* a live `Presentation`, and
  * `fromTemplate` has already stripped the slides from the destination's copy of
- * the same bytes. It is optional only because a deck with no carried slide never
- * reaches for it — one that does and has none is a failure, not a fallback.
+ * the same bytes.
  */
-export async function emitDeckIr(ir: DeckIr, template: Uint8Array, source?: Presentation): Promise<Uint8Array> {
+export async function emitDeckIr(ir: DeckIr, template: Uint8Array, source: Presentation): Promise<Uint8Array> {
 	const destination = await Presentation.fromTemplate(template)
 	const assets = new Map(ir.assets.map((asset) => [asset.name, asset]))
 
@@ -62,11 +61,6 @@ export async function emitDeckIr(ir: DeckIr, template: Uint8Array, source?: Pres
 	for (const slide of ir.slides) {
 		if (slide.source === 'carried') {
 			await flush()
-			if (source === undefined) {
-				throw new Error(
-					`slide ${slide.number} is carried, so emitting it needs the source package; pass one rather than transcribing a slide the write API cannot express`
-				)
-			}
 			destination.importSlide(source, slide.number - 1, { importNotes: true })
 			continue
 		}
