@@ -38,6 +38,12 @@ model is expected to move.
   text shadow, a table's `rtl`, a comment's position and date, and
   `underline: true` as shorthand for a single underline.
 
+### Removed
+
+- **`domNodeId`.** Nothing produced a node id from the DOM, and the paint model is
+  only ever imported from a package, so the export offered a way to build
+  something the architecture rules out.
+
 ### Fixed
 
 - **A freeform point that names a guide is drawn where the guide puts it.** The
