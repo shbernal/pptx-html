@@ -8,7 +8,6 @@
 import { ShapeType, TsPptx } from 'pptx-ts'
 import { type AnyShape, type AutoShape, type CustomGeometry, isAutoShape, Presentation } from 'pptx-ts/read'
 import { describe, expect, it } from 'vitest'
-import { pathShapeOptions } from '../../src/heuristic/custgeom'
 import type { PathItem, SlideModel } from '../../src/heuristic/model'
 import { addModelToSlide } from '../../src/heuristic/slide'
 import { first, only } from '../support'
@@ -70,19 +69,28 @@ function onlyFreeform(shapes: AnyShape[]): FreeformShape {
 	return only(freeforms(shapes), 'freeform shape')
 }
 
-describe('pathShapeOptions — fill / stroke mapping', () => {
-	it('maps a fill color and omits line when there is no stroke', () => {
-		const opts = pathShapeOptions(triangle())
-		expect(opts.fill).toEqual({ color: '451DC7' })
-		expect(opts.line).toBeUndefined()
-		expect(opts.x).toBe(1)
-		expect(opts.points).toHaveLength(4)
+describe('fill / stroke, read back from the emitted deck', () => {
+	it('fills a path with its colour and draws no line when it has no stroke', async () => {
+		const pres = await Presentation.load(await emit([triangle()]))
+		const shape = onlyFreeform(first(pres.slides, 'slide').shapes)
+		expect(shape.fillColor).toBe('451DC7')
+		expect(shape.lineColor).toBeNull()
 	})
 
-	it('maps a stroke to line and omits fill when there is none', () => {
-		const opts = pathShapeOptions(cubicStroke())
-		expect(opts.fill).toBeUndefined()
-		expect(opts.line).toEqual({ color: '04F06A', width: 2, dashType: 'solid' })
+	it('strokes a path at its own width, solid, and leaves it unfilled when it has no fill', async () => {
+		const pres = await Presentation.load(await emit([cubicStroke()]))
+		const shape = onlyFreeform(first(pres.slides, 'slide').shapes)
+		expect(shape.fillColor).toBeNull()
+		expect(shape.lineColor).toBe('04F06A')
+		expect(shape.lineWidthPt).toBe(2)
+		expect(shape.lineDash).toBe('solid')
+	})
+
+	it('strokes a path that states no width at 1pt', async () => {
+		const item = cubicStroke()
+		item.line = { color: '04F06A' }
+		const pres = await Presentation.load(await emit([item]))
+		expect(onlyFreeform(first(pres.slides, 'slide').shapes).lineWidthPt).toBe(1)
 	})
 })
 
