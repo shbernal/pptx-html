@@ -363,11 +363,12 @@ export function sameSurfaceValue(a: unknown, b: unknown): boolean {
  * The IR with every editable value stripped — the half that is *not* allowed to
  * change.
  *
- * The parser hashes this. Hashing the whole IR would flag a legitimate text edit as
- * drift; hashing only the projection would catch nothing, since the projection
- * is exactly the part that is meant to move. Deriving both from
- * {@link EDITABLE_SURFACE} is what keeps the two halves complementary by
- * construction rather than by review.
+ * Exported for callers that compare two models for drift; nothing in the return
+ * path calls it, which reads edits run by run instead. Comparing whole IRs would
+ * flag a legitimate text edit as drift; comparing only the projection would
+ * catch nothing, since the projection is exactly the part that is meant to move.
+ * Deriving both from {@link EDITABLE_SURFACE} is what keeps the two halves
+ * complementary by construction rather than by review.
  *
  * Node *deletion* is in surface, so a frozen slide's node list is compared as a
  * subsequence, not for equality — this function does not decide that; it only
