@@ -1,9 +1,10 @@
+import { isAutoShape } from 'pptx-ts/read'
 import { diffDeckIr, type FidelityNote } from 'pptx-ts/script'
 import { describe, expect, it } from 'vitest'
 import { CORPUS, corpusBytes } from '../corpus/decks'
 import { first } from '../support'
 import { htmlLoop } from './html-lane'
-import { assertRoundTrip, carryLoop, describeReport, resaveLoop, roundTrip, viewDeck } from './roundtrip'
+import { assertRoundTrip, carryLoop, describeReport, type Loop, resaveLoop, roundTrip, viewDeck } from './roundtrip'
 import { scriptLoop } from './script-lane'
 
 // Two things are under test here, and they are not the same thing:
@@ -11,10 +12,12 @@ import { scriptLoop } from './script-lane'
 //  1. the *lanes* — does a deck survive this path through the pipeline;
 //  2. the *harness* — would it notice if a deck did not.
 //
-// (2) matters more. `diffDeckIr` is mutation-tested upstream, but the wrapper
-// around it is ours and can silently compare the wrong two things: a harness
-// that diffed a deck against itself, or that swallowed the notes argument, would
-// report a clean run for every lane forever.
+// (2) matters more. `diffDeckIr` is mutation-tested upstream, but what feeds it
+// is ours. The mutation tests below call it directly on `viewDeck`'s canonical
+// form, which proves that form exposes the differences a lane can cause. The
+// wrapper tests go through `roundTrip` itself: a harness that diffed a deck
+// against itself, or that swallowed the notes a lane declares, would report a
+// clean run for every lane forever.
 
 describe('lanes', () => {
 	for (const entry of CORPUS) {
@@ -143,11 +146,15 @@ describe('lanes', () => {
 })
 
 describe('the harness itself', () => {
-	async function canonicalFixture() {
-		// A deck with a shape, text and explicit paint — enough surface to mutate.
+	/** A deck with a shape, text and explicit paint — enough surface to mutate. */
+	function autoshapeEntry() {
 		const entry = CORPUS.find((candidate) => candidate.name === 'autoshape')
 		if (!entry) throw new Error('corpus lost its autoshape deck')
-		return (await viewDeck(await corpusBytes(entry))).canonical
+		return entry
+	}
+
+	async function canonicalFixture() {
+		return (await viewDeck(await corpusBytes(autoshapeEntry()))).canonical
 	}
 
 	/** The first slide of a fixture, asserted present so a mutation cannot target nothing. */
@@ -194,7 +201,7 @@ describe('the harness itself', () => {
 		const expected = await canonicalFixture()
 		const actual = structuredClone(expected)
 		actual.slides = []
-		expect(diffDeckIr(expected, actual, []).differences.length).toBeGreaterThan(0)
+		expect(diffDeckIr(expected, actual, []).undeclared.length).toBeGreaterThan(0)
 	})
 
 	it('a matching note moves a difference from undeclared to declared', async () => {
@@ -245,5 +252,39 @@ describe('the harness itself', () => {
 			detail: 'test note',
 		}
 		expect(diffDeckIr(expected, actual, [note]).undeclared.length).toBeGreaterThan(0)
+	})
+
+	/**
+	 * A lane that recolours the autoshape deck's card outline and declares nothing,
+	 * unless given a note to declare. A real edit to the package, so the difference
+	 * exists only in the bytes the loop returns.
+	 */
+	function recolourLoop(notes: FidelityNote[] = []): Loop {
+		return async (input) => {
+			const card = first(input.pres.slides, 'slide').shapes.find((shape) => shape.name === 'card')
+			if (card === undefined || !isAutoShape(card)) throw new Error('autoshape deck lost its card')
+			card.lineColor = '123456'
+			return { bytes: await input.pres.save(), notes }
+		}
+	}
+
+	it('roundTrip diffs what the loop wrote against what it was given', async () => {
+		const result = await roundTrip(await corpusBytes(autoshapeEntry()), recolourLoop())
+		expect(result.report.undeclared.some((difference) => difference.path.endsWith('line.color'))).toBe(true)
+	})
+
+	it('roundTrip hands the notes the loop declares to the differ', async () => {
+		const note: FidelityNote = {
+			slideNumber: 1,
+			shapeName: 'card',
+			// The construct upstream's catalogue maps to `line.color`.
+			construct: 'line.schemeToken',
+			disposition: 'approximated',
+			cause: 'unwritable',
+			detail: 'test note',
+		}
+		const result = await roundTrip(await corpusBytes(autoshapeEntry()), recolourLoop([note]))
+		expect(result.report.undeclared, describeReport(result.report)).toEqual([])
+		expect(result.report.declared.length).toBeGreaterThan(0)
 	})
 })
