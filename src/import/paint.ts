@@ -22,6 +22,8 @@ import type {
 	ColorRef,
 	GradientFill,
 	GradientStop as ReadGradientStop,
+	LineEnd as ReadLineEnd,
+	LineEnds,
 	PatternFill,
 	OuterShadow,
 	PictureFill,
@@ -92,7 +94,7 @@ export function colorOf(token: string | null, resolved: ResolvedColor | null): C
  * {@link colorOf}: `scheme` is the token, `resolved` is what it renders as. A
  * `ColorRef` is never `null` itself, but the value holding it can be absent.
  */
-export function colorOfRef(ref: ColorRef | null | undefined): Color | undefined {
+export function colorOfRef(ref: ColorRef | null): Color | undefined {
 	return colorOf(ref?.scheme ?? null, ref?.resolved ?? null)
 }
 
@@ -248,18 +250,11 @@ export interface StrokeSource {
 	readonly lineSchemeColor: string | null
 	readonly resolvedLine: ResolvedColor | null
 	readonly lineGradient: GradientFill | null
-	readonly lineEnds: { head: unknown; tail: unknown } | null
+	readonly lineEnds: LineEnds | null
 }
 
-interface ReadLineEnd {
-	type: string
-	width: string | null
-	length: string | null
-}
-
-function lineEndOf(end: unknown, scope: ImportScope): LineEnd | undefined {
-	if (end === null || end === undefined) return undefined
-	const source = end as ReadLineEnd
+function lineEndOf(source: ReadLineEnd | null | undefined, scope: ImportScope): LineEnd | undefined {
+	if (source === null || source === undefined) return undefined
 	if (!LINE_END_TYPES.has(source.type)) {
 		note(
 			scope,

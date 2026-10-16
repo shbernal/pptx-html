@@ -22,11 +22,6 @@ import {
 	type Connector,
 	type GraphicFrame,
 	type GroupShape,
-	isAutoShape,
-	isConnector,
-	isGraphicFrame,
-	isGroupShape,
-	isPicture,
 	type Picture,
 	type Recolor,
 	type Shape,
@@ -130,32 +125,36 @@ function opaque(shape: Shape, scope: ImportScope, standsFor: string): OpaqueNode
 }
 
 function textOf(shape: Shape, scope: ImportScope): TextBody | null {
-	if (!shape.hasTextFrame) return null
 	const frame = shape.textFrame
 	return frame === null ? null : textBodyOf(frame, scope)
 }
 
+/**
+ * Exhaustive over `AnyShape`, so a kind a later read model adds is a type error
+ * here rather than a node drawn as something it is not.
+ */
 export function nodeOf(shape: AnyShape, parent: ImportScope): RenderNode {
 	const scope = forShape(parent, shape.name)
-	if (isGroupShape(shape)) return groupNodeOf(shape, scope)
-	if (isPicture(shape)) return pictureNodeOf(shape, scope)
-	if (isConnector(shape)) return connectorNodeOf(shape, scope)
-	if (isGraphicFrame(shape)) return graphicFrameNodeOf(shape, scope)
-	if (isAutoShape(shape)) {
-		return {
-			...baseOf(shape, scope),
-			kind: 'shape',
-			render: 'drawn',
-			geometry: geometryOf(shape, scope),
-			fill: fillOf(shape, scope),
-			stroke: strokeOf(shape, scope),
-			text: textOf(shape, scope),
-		}
+	switch (shape.shapeType) {
+		case 'group':
+			return groupNodeOf(shape, scope)
+		case 'picture':
+			return pictureNodeOf(shape, scope)
+		case 'connector':
+			return connectorNodeOf(shape, scope)
+		case 'graphicFrame':
+			return graphicFrameNodeOf(shape, scope)
+		case 'autoShape':
+			return {
+				...baseOf(shape, scope),
+				kind: 'shape',
+				render: 'drawn',
+				geometry: geometryOf(shape, scope),
+				fill: fillOf(shape, scope),
+				stroke: strokeOf(shape, scope),
+				text: textOf(shape, scope),
+			}
 	}
-	// Unreachable through `AnyShape` today. Left as an opaque node rather than a
-	// throw so a future read-model kind degrades to a labelled box instead of
-	// taking the whole import down.
-	return opaque(shape, scope, 'shape')
 }
 
 function groupNodeOf(group: GroupShape, scope: ImportScope): RenderNode {
@@ -285,10 +284,8 @@ function connectionOf(
 }
 
 function graphicFrameNodeOf(frame: GraphicFrame, scope: ImportScope): RenderNode {
-	if (frame.hasTable) {
-		const table = frame.table
-		if (table !== null) return tableNodeOf(frame, table, scope)
-	}
+	const table = frame.table
+	if (table !== null) return tableNodeOf(frame, table, scope)
 	// Charts and their extended cousins are read in full and drawn by nothing:
 	// there is no IR representation and no renderer, and inventing one would be an
 	// approximation. They stand for themselves on the page.
