@@ -150,8 +150,8 @@ export async function addModelToSlide(
 
 function textOptions(item: TextItem, p: Rect, slideSize: SlideSize, lang: string): Record<string, unknown> {
 	const s = item.style || {}
-	const maxW = Number.isFinite(slideSize.width) ? Math.max(0.05, slideSize.width - p.x) : null
-	const maxH = Number.isFinite(slideSize.height) ? Math.max(0.05, slideSize.height - p.y) : null
+	const maxW = Math.max(0.05, slideSize.width - p.x)
+	const maxH = Math.max(0.05, slideSize.height - p.y)
 	const isHeading = /^h[1-6]$/i.test(item.tag || '')
 	const constrain = !!s.constrainTextBox
 	const textW = constrain ? p.w : p.w * (item.noWrap ? 1.65 : isHeading ? 1.0 : 1.14)
@@ -160,8 +160,8 @@ function textOptions(item: TextItem, p: Rect, slideSize: SlideSize, lang: string
 	const opts: Record<string, unknown> = {
 		x: p.x,
 		y: p.y,
-		w: Math.max(0.05, maxW ? Math.min(maxW, textW) : textW),
-		h: Math.max(0.05, maxH ? Math.min(maxH, boxH) : boxH),
+		w: Math.max(0.05, Math.min(maxW, textW)),
+		h: Math.max(0.05, Math.min(maxH, boxH)),
 		fontFace: s.fontFace || DEFAULT_FONT.latin,
 		fontSize: s.fontSize || 12,
 		color: s.color || '000000',
