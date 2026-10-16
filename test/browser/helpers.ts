@@ -30,6 +30,7 @@ interface ReadShape {
 }
 interface ReadSlide {
 	shapes: ReadShape[]
+	notesText: string | null
 }
 export interface ReadDeck {
 	slides: ReadSlide[]
