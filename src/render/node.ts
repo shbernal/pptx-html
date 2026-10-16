@@ -140,8 +140,7 @@ function croppedImage(asset: string, box: Box, crop: EdgeRect | undefined, effec
 	return `<image ${attrs} x="${-crop.left * width}" y="${-crop.top * height}" width="${width}" height="${height}"/>`
 }
 
-function renderTable(node: TableNode, box: Box, context: NodeContext): string {
-	const rotation = node.placement?.rotation ?? 0
+function renderTable(node: TableNode, box: Box, rotation: number, context: NodeContext): string {
 	// A column with no stated width, or a row with no stated height, shares out
 	// what the frame has left. That is the same rule the writer applies on the way
 	// out, so a table drawn here and a table re-emitted agree about the geometry.
@@ -303,7 +302,8 @@ export function renderNode(node: RenderNode, context: NodeContext): string {
 	if (node.hidden === true) attrs.push('style="display:none"')
 	if (node.alt !== undefined) attrs.push(`aria-label="${escapeAttr(node.alt)}"`)
 
-	const body = node.render === 'placeholder' ? placeholderBox(box, node.standsFor ?? node.kind) : bodyOf(node, box, context)
+	const body =
+		node.render === 'placeholder' ? placeholderBox(box, node.standsFor ?? node.kind) : bodyOf(node, node.placement, context)
 	// Inside the node's transform, so the shadow turns with the shape unless it says otherwise.
 	const inner =
 		node.shadow === undefined || node.render === 'placeholder'
@@ -313,8 +313,9 @@ export function renderNode(node: RenderNode, context: NodeContext): string {
 	return `<g ${attrs.join(' ')}>${inner}</g>`
 }
 
-function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
-	const frame: PaintFrame = { w: box.w, h: box.h, rotation: node.placement?.rotation ?? 0 }
+function bodyOf(node: RenderNode, placement: Placement, context: NodeContext): string {
+	const box = placement.box
+	const frame: PaintFrame = { w: box.w, h: box.h, rotation: placement.rotation }
 	switch (node.kind) {
 		case 'group':
 			// A group paints nothing of its own. Its children's placements are already
@@ -357,7 +358,7 @@ function bodyOf(node: RenderNode, box: Box, context: NodeContext): string {
 		}
 
 		case 'table':
-			return renderTable(node, box, context)
+			return renderTable(node, box, placement.rotation, context)
 
 		case 'opaque':
 			// Unreachable in practice — an opaque node is always `render:
