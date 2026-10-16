@@ -586,11 +586,18 @@ function patchLevel(
 	return kept
 }
 
-/** The run-entry list a node's text lives in, or `null` when it has none. */
+/**
+ * One node's edits, written into the call that emits it.
+ *
+ * A call whose arguments are not in the shape expected is not skipped quietly:
+ * each text body under it goes to {@link patchRuns} with nothing to write into,
+ * which reports the edits it would have lost and stays silent when there were none.
+ */
 function patchNode(node: RenderNode, method: string, args: IrValue[], edits: EditSet, warnings: string[]): void {
 	if (node.kind === 'group') {
 		const children = args[0]
 		if (Array.isArray(children)) patchGroup(node.children, children, edits, warnings)
+		else unaddressable(node.children, edits, warnings)
 		return
 	}
 
@@ -604,16 +611,24 @@ function patchNode(node: RenderNode, method: string, args: IrValue[], edits: Edi
 
 	if (node.kind === 'table') {
 		const rows = args[0]
-		if (!Array.isArray(rows)) return
 		node.rows.forEach((row, rowIndex) => {
-			const rowArgs = rows[rowIndex]
-			if (!Array.isArray(rowArgs)) return
+			const rowArgs = Array.isArray(rows) ? rows[rowIndex] : undefined
 			row.cells.forEach((cell, cellIndex) => {
-				const cellArgs = rowArgs[cellIndex] as { text?: unknown } | undefined
-				if (cellArgs === undefined) return
-				patchRuns(cell.id, cell.text, cellArgs.text, edits, warnings)
+				const cellArgs = Array.isArray(rowArgs) ? (rowArgs[cellIndex] as { text?: unknown } | undefined) : undefined
+				patchRuns(cell.id, cell.text, cellArgs?.text, edits, warnings)
 			})
 		})
+	}
+}
+
+/** Reports any edit under `nodes`, whose write-contract entries could not be addressed. */
+function unaddressable(nodes: readonly RenderNode[], edits: EditSet, warnings: string[]): void {
+	for (const node of nodes) {
+		if (node.kind === 'group') unaddressable(node.children, edits, warnings)
+		else if (node.kind === 'shape') patchRuns(node.id, node.text, undefined, edits, warnings)
+		else if (node.kind === 'table') {
+			for (const row of node.rows) for (const cell of row.cells) patchRuns(cell.id, cell.text, undefined, edits, warnings)
+		}
 	}
 }
 
@@ -638,6 +653,7 @@ function patchGroup(nodes: readonly RenderNode[], children: IrValue[], edits: Ed
 		if (node.kind === 'group') {
 			const nested = entry.group?.children
 			if (Array.isArray(nested)) patchGroup(node.children, nested, edits, warnings)
+			else unaddressable(node.children, edits, warnings)
 			return
 		}
 		if (node.kind !== 'shape') return
