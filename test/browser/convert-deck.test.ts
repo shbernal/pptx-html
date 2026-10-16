@@ -10,6 +10,7 @@ import { Presentation } from 'pptx-ts/read'
 import { describe, expect, it } from 'vitest'
 import { convertDeck } from '../../src/index'
 import deckHtml from '../fixtures/deck.html?raw'
+import { first } from '../support'
 import { allDeckText, loadDeck, staticResolveIcon } from './helpers'
 
 /**
@@ -43,6 +44,35 @@ function writerWithoutToBytes() {
 			real.theme = value
 		},
 		addSlide: () => real.addSlide(),
+		write: (opts: { outputType: 'base64' }) => real.write(opts),
+	}
+}
+
+/**
+ * The barest writer `opts.pptxFactory` may hand back: no `presLayout` to read the
+ * slide size from, and slides with no `addNotes`. Both are optional in
+ * `PptxDeck` / `PptxSlide`, and the orchestrator falls back to the 16:9 size and
+ * skips the notes. Records every text box's options so the size can be checked
+ * where it is used.
+ */
+function bareWriter(textBoxes: Array<{ x: number; w: number }>) {
+	const real = new TsPptx()
+	return {
+		set layout(value: string) {
+			real.layout = value
+		},
+		addSlide: () => {
+			const slide = real.addSlide()
+			return {
+				addImage: (opts: object) => slide.addImage(opts as never),
+				addShape: (type: string, opts: object) => slide.addShape(type as never, opts),
+				addTable: (rows: unknown, opts: object) => slide.addTable(rows as never, opts),
+				addText: (text: unknown, opts: { x: number; w: number }) => {
+					textBoxes.push(opts)
+					return slide.addText(text as never, opts)
+				},
+			}
+		},
 		write: (opts: { outputType: 'base64' }) => real.write(opts),
 	}
 }
@@ -86,6 +116,37 @@ describe('convertDeck delivery modes', () => {
 		})
 		const deck = await Presentation.load(await bytesOfBlob(result.blob as Blob))
 		expect(deck.slides.length).toBe(2)
+	})
+
+	it('pptxFactory: a writer with no presLayout or addNotes gets the 16:9 size and no notes', async () => {
+		const textBoxes: Array<{ x: number; w: number }> = []
+		const html = deckHtml.replace(
+			'<h1>FY26 Strategy</h1>',
+			'<h1>FY26 Strategy</h1><aside data-notes>Speaker note</aside>'
+		)
+		const result = await convertDeck(html, {
+			output: 'base64',
+			resolveIcon: staticResolveIcon,
+			pptxFactory: () => bareWriter(textBoxes),
+		})
+		expect(result.slideCount).toBe(2)
+		// Text boxes are clamped to the slide's right edge, so a missing size would
+		// surface here as a NaN width rather than as an error.
+		expect(textBoxes.length).toBeGreaterThan(0)
+		for (const box of textBoxes) {
+			expect(Number.isFinite(box.w)).toBe(true)
+			expect(box.x + box.w).toBeLessThanOrEqual(10 + 1e-9)
+		}
+		const deck = await loadDeck(result.base64 as string)
+		expect(deck.slides.length).toBe(2)
+		// The writer adds a notes part to every slide, so no notes reads back as an
+		// empty body rather than as `null`.
+		expect(first(deck.slides, 'slide').notesText).toBe('')
+
+		// The control: the real writer, given the same document, does carry the note,
+		// so the empty body above is the missing method and not a note never extracted.
+		const control = await convertDeck(html, { output: 'base64', resolveIcon: staticResolveIcon })
+		expect(first((await loadDeck(control.base64 as string)).slides, 'slide').notesText).toBe('Speaker note')
 	})
 
 	it('output: pptx-instance → the live writer', async () => {
