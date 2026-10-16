@@ -15,7 +15,7 @@ import { Presentation } from 'pptx-ts/read'
 import { readModelToIr } from 'pptx-ts/script'
 import { describe, expect, it } from 'vitest'
 import { importDeck } from '../../src/import/deck'
-import { IR_VERSION } from '../../src/ir/render'
+import { IR_VERSION, type RenderNode } from '../../src/ir/render'
 import { emitDeck } from '../../src/loop'
 import { parseDeck } from '../../src/parse/deck'
 import { applyEdits, editsBetween } from '../../src/parse/edits'
@@ -528,6 +528,75 @@ describe('an edit made through the surface', () => {
 
 		const applied = applyEdits(readModelToIr(await Presentation.load(await entry('table'))), parsed.island, edits)
 		expect(applied.warnings).toEqual([])
+	})
+})
+
+describe('an edit the write contract has no place for', () => {
+	/**
+	 * A deck's write contract, its paint model, and one text edit to the first run of
+	 * `owner(paint model)`, with the call that emits it replaced by `corrupt`.
+	 * Applied twice, edited and not, so a warning is proved to be about the edit.
+	 */
+	async function applyTo(
+		name: string,
+		owner: (nodes: readonly RenderNode[]) => string,
+		corrupt: (args: unknown[]) => void
+	) {
+		const { html } = await rendered(name)
+		const parsed = await parseDeck(html, { parseHtml: null })
+		if (parsed.island === null) throw new Error('the rendered document lost its island')
+		const id = owner(at(parsed.island.slides, 0, 'slide').nodes)
+		const presentation = await Presentation.load(await entry(name))
+		const deck = () => {
+			const ir = readModelToIr(presentation)
+			corrupt(at(at(ir.slides, 0, 'slide').calls, 0, 'call').args)
+			return ir
+		}
+		const edited = {
+			runs: new Map([[`${id}/0/0`, { text: 'Edited', props: {} }]]),
+			paragraphs: new Map(),
+			deleted: new Set<string>(),
+		}
+		const untouched = { runs: new Map(), paragraphs: new Map(), deleted: new Set<string>() }
+		return {
+			id,
+			edited: applyEdits(deck(), parsed.island, edited).warnings,
+			untouched: applyEdits(deck(), parsed.island, untouched).warnings,
+		}
+	}
+
+	it('reports a table cell edit when the rows cannot be read', async () => {
+		const result = await applyTo(
+			'table',
+			(nodes) => {
+				const table = at(nodes, 0, 'node')
+				if (table.kind !== 'table') throw new Error(`expected a table, got ${table.kind}`)
+				return at(at(table.rows, 0, 'row').cells, 0, 'cell').id
+			},
+			(args) => {
+				args[0] = 'not rows'
+			}
+		)
+		expect(result.edited.join('\n')).toContain(result.id)
+		expect(result.untouched).toEqual([])
+	})
+
+	it('reports a group child edit when the children cannot be read', async () => {
+		const result = await applyTo(
+			'group',
+			(nodes) => {
+				const group = at(nodes, 0, 'node')
+				if (group.kind !== 'group') throw new Error(`expected a group, got ${group.kind}`)
+				const label = group.children.find((child) => child.name === 'group-label')
+				if (label === undefined) throw new Error('the group deck lost its label')
+				return label.id
+			},
+			(args) => {
+				args[0] = 'not children'
+			}
+		)
+		expect(result.edited.join('\n')).toContain(result.id)
+		expect(result.untouched).toEqual([])
 	})
 })
 
