@@ -250,9 +250,7 @@ export async function browserExtractor(config) {
 		canvas.width = Math.max(1, Math.round(width))
 		canvas.height = Math.max(1, Math.round(height))
 		const ctx = canvas.getContext('2d')
-		if (blurPx) {
-			try { ctx.filter = 'blur(' + blurPx + 'px)' } catch (e) {}
-		}
+		if (blurPx) ctx.filter = 'blur(' + blurPx + 'px)'
 		let g
 		if (/radial-gradient/i.test(gradientCss)) {
 			const c = gradientCenter(canvas.width, canvas.height, args)
@@ -279,7 +277,7 @@ export async function browserExtractor(config) {
 		canvas.width = Math.max(1, Math.round(rect.width + pad * 2))
 		canvas.height = Math.max(1, Math.round(rect.height + pad * 2))
 		const ctx = canvas.getContext('2d')
-		try { ctx.filter = 'blur(' + blurPx + 'px)' } catch (e) {}
+		ctx.filter = 'blur(' + blurPx + 'px)'
 		ctx.fillStyle = computed.backgroundColor
 		const radius = parseFloat(computed.borderRadius) || 0
 		roundRect(ctx, pad, pad, rect.width, rect.height, radius)

@@ -233,18 +233,15 @@ function segsToPoints(segs: GeomSeg[], map: (x: number, y: number) => [number, n
 function svgItemToPaths(item: Extract<Item, { type: 'image' }>): PathItem[] | null {
 	const markup = decodeSvgDataUrl(item.src)
 	if (!markup) return null
-	let svg: SVGSVGElement | null
-	try {
-		const doc = new DOMParser().parseFromString(markup, 'image/svg+xml')
-		if (doc.querySelector('parsererror')) return null
-		// No `root &&`: an XML parse always produces a root element, a failed one
-		// included — that is the `parsererror` the line above looks for.
-		const root = doc.documentElement
-		svg = root.tagName.toLowerCase() === 'svg' ? (root as unknown as SVGSVGElement) : null
-	} catch {
-		return null
-	}
-	if (!svg) return null
+	// No `try`: `parseFromString` throws only for an unknown MIME type, and this one
+	// is fixed. Malformed markup comes back as a `parsererror` document instead.
+	const doc = new DOMParser().parseFromString(markup, 'image/svg+xml')
+	if (doc.querySelector('parsererror')) return null
+	// No `root &&`: an XML parse always produces a root element, a failed one
+	// included — that is the `parsererror` the line above looks for.
+	const root = doc.documentElement
+	if (root.tagName.toLowerCase() !== 'svg') return null
+	const svg = root as unknown as SVGSVGElement
 
 	const vb = readViewBox(svg)
 	if (!vb) return null
