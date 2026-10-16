@@ -72,8 +72,8 @@ type Resolution =
 export interface ResolveOptions {
 	/** The caller's own source of bytes. Consulted first. */
 	resolver?: AssetResolver
-	/** The document's inline block, as text. Consulted when the resolver has nothing. */
-	inline?: string | null
+	/** The document's inline block, as text, or `null` when it has none. Consulted when the resolver has nothing. */
+	inline: string | null
 }
 
 /**
@@ -85,9 +85,9 @@ export interface ResolveOptions {
  */
 export async function resolveAssets(
 	manifest: readonly AssetManifestEntry[],
-	options: ResolveOptions = {}
+	options: ResolveOptions
 ): Promise<ResolvedAssets> {
-	const inline = inlineAssetResolver(options.inline ?? null)
+	const inline = inlineAssetResolver(options.inline)
 	const bytes = new Map<string, Uint8Array>()
 	const missing: string[] = []
 	const warnings: string[] = []
