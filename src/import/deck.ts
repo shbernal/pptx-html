@@ -84,7 +84,10 @@ function renderSlideOf(
 	slideNumberByPart: ReadonlyMap<string, number>
 ): RenderSlide {
 	const number = slide.index + 1
+	// `readModelToIr` maps `presentation.slides` one to one under the same
+	// numbering, so a slide it has no entry for is a broken join, not a default.
 	const contract = deck.slides.find((entry) => entry.number === number)
+	if (contract === undefined) throw new Error(`readModelToIr produced no slide ${number}`)
 
 	// Upstream's notes for this slide come first, so a note the *importer* files
 	// about the same shape reads as an addition to them rather than a competing
@@ -94,11 +97,11 @@ function renderSlideOf(
 	const scope: ImportScope = { slideNumber: number, shapeName: null, chrome: null, notes, assets, slideNumberByPart }
 	const nodes = slide.shapes.map((shape) => nodeOf(shape, scope))
 
-	const source = contract?.source ?? 'authored'
+	const source = contract.source
 	return {
 		number,
 		source,
-		layout: contract?.layout ?? null,
+		layout: contract.layout,
 		hidden: slide.hidden,
 		background: backgroundOf(slide.background, scope),
 		chrome: chromeOf(slide, scope),
