@@ -153,8 +153,8 @@ export function cloneIr(ir: RenderIr): RenderIr {
  *
  * Ids are **derived from the source, never generated**, so re-importing the same
  * deck twice yields the same ids — which is what lets a second import be
- * compared against the first at all. See {@link importedNodeId} /
- * {@link domNodeId} for the two derivations.
+ * compared against the first at all. See {@link importedNodeId},
+ * {@link cellNodeId} and {@link chromeNodeId} for the derivations.
  */
 export type NodeId = string
 
@@ -190,16 +190,6 @@ export type ChromeTier = 'layout' | 'master'
  */
 export function chromeNodeId(slideNumber: number, tier: ChromeTier, shapeId: number): NodeId {
 	return `s${slideNumber}.${tier}.sp${shapeId}`
-}
-
-/**
- * Identity for a node extracted from the DOM, where there is no `cNvPr/@id`:
- * the child-index path from the slide root. Deterministic for a given document,
- * which is all the inference lane can offer — a DOM edit that inserts an element
- * renumbers its siblings, and that is correctly read as drift.
- */
-export function domNodeId(slideNumber: number, childPath: readonly number[]): NodeId {
-	return `s${slideNumber}.dom${childPath.length > 0 ? `-${childPath.join('-')}` : ''}`
 }
 
 // ---------------------------------------------------------------------------

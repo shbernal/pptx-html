@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
 	cellNodeId,
-	domNodeId,
 	EMU_PER_INCH,
 	emuOf,
 	importedNodeId,
@@ -25,8 +24,6 @@ describe('node identity', () => {
 		// cost collisions.
 		expect(importedNodeId(3, 7)).toBe('s3.sp7')
 		expect(cellNodeId(importedNodeId(3, 7), 1, 2)).toBe('s3.sp7.r1c2')
-		expect(domNodeId(1, [0, 3, 2])).toBe('s1.dom-0-3-2')
-		expect(domNodeId(1, [])).toBe('s1.dom')
 	})
 })
 
