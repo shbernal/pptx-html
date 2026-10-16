@@ -263,8 +263,8 @@ function diffText(before: readonly RenderNode[], after: readonly RenderNode[], e
 		now.set(owner, text)
 	})
 	eachTextBody(before, (owner, text) => {
-		if (!now.has(owner)) return
-		diffTextBody(owner, text, now.get(owner) ?? null, edits)
+		const counterpart = now.get(owner)
+		if (counterpart !== undefined) diffTextBody(owner, text, counterpart, edits)
 	})
 }
 
@@ -510,8 +510,10 @@ export function applyEdits(deck: DeckIr, structure: RenderIr, edits: EditSet): A
 	}
 
 	for (const slide of next.slides) {
+		// Both models number the source deck's slides alike, and `emitDeck` has proved
+		// them one package by `modelHash`, so a slide missing here is a broken join.
 		const nodes = structure.slides.find((entry) => entry.number === slide.number)?.nodes
-		if (nodes === undefined) continue
+		if (nodes === undefined) throw new Error(`slide ${slide.number} is in the write contract and not in the paint model`)
 		slide.calls = patchLevel(withoutSlideNumber(slide, nodes, edits, warnings), slide.calls, edits, warnings, slide.number)
 	}
 
