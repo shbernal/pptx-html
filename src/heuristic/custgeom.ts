@@ -15,7 +15,7 @@ import type { PathItem } from './model'
 import type { PptxSlide, PptxWriter } from './pptx-types'
 
 /** Build the ts-pptx `addShape('custGeom', …)` options for a path item. */
-export function pathShapeOptions(item: PathItem): Record<string, unknown> {
+function pathShapeOptions(item: PathItem): Record<string, unknown> {
 	const p = item.position
 	const opts: Record<string, unknown> = {
 		x: p.x,
