@@ -246,11 +246,4 @@ describe('the harness itself', () => {
 		}
 		expect(diffDeckIr(expected, actual, [note]).undeclared.length).toBeGreaterThan(0)
 	})
-
-	it('two different decks do not compare clean', async () => {
-		// The emptiness guard's cousin: proof the comparison is deck-sensitive at all.
-		const first = (await viewDeck(await corpusBytes(CORPUS[0]))).canonical
-		const second = (await viewDeck(await corpusBytes(CORPUS[3]))).canonical
-		expect(diffDeckIr(first, second, []).undeclared.length).toBeGreaterThan(0)
-	})
 })

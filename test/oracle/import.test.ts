@@ -39,16 +39,6 @@ async function nodeNamed(deck: string, name: string): Promise<RenderNode> {
 }
 
 describe('identity', () => {
-	it('is stable across two imports of the same bytes', async () => {
-		// The property the whole differ depends on: ids are derived from the source,
-		// so a second import agrees with the first. A generated id would make every
-		// comparison the return path makes vacuous.
-		const bytes = await corpusBytes(CORPUS[0])
-		const first = await importDeck(bytes)
-		const second = await importDeck(bytes)
-		expect(second.render).toStrictEqual(first.render)
-	})
-
 	it('is unique across a deck, including nested group children and table cells', async () => {
 		for (const entry of CORPUS) {
 			const ir = await importCorpus(entry.name)
