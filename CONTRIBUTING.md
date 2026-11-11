@@ -392,3 +392,8 @@ for a reader of the repo, not as a plan step.
 
 `pnpm run check` must be clean; `lefthook` pre-commit jobs run `oxlint --fix` and
 then `oxfmt` on staged files if hooks are wired in your environment.
+
+Commit messages carry no AI attribution: no `Co-authored-by:` trailer for a tool,
+no "Generated with" line. CI's `commit-check` job rejects them, under the rules in
+`.github/cchk.toml`. Say how AI was involved in the pull request description
+instead, on the template's `AI disclosure:` line.

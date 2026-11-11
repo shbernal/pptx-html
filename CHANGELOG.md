@@ -46,6 +46,9 @@ model is expected to move.
 
 ### Fixed
 
+- **A hyperlink with no colour of its own is drawn in the theme's `hlink` colour.**
+  The `pptx-ts` bump resolves an uncoloured link run to the theme hyperlink colour
+  (pptx-ts#282), and the paint model now shows it.
 - **A freeform point that names a guide is drawn where the guide puts it.** The
   read model now returns a custGeom coordinate such as `x="g0"` or `y="t"` as the
   name, where it used to read it as 0 (pptx-ts#255). The custom `Geometry` carries
