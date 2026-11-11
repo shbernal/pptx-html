@@ -144,7 +144,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
+          version: 12.18.0
           run_install: false
 
       # One version, not the CI matrix. The matrix exists to prove the library
