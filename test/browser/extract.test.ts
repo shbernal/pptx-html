@@ -36,7 +36,6 @@ describe('cover slide', () => {
 		expect((model.background as { type: string }).type).toBe('color')
 
 		const heading = textItems(model).find((item) => runText(item.text).includes('Quarterly Strategy Review'))
-		expect(heading).toBeTruthy()
 		expect(heading?.tag).toBe('h1')
 		expect(heading?.style?.bold).toBe(true)
 		expect(heading?.style?.color).toBe('FFFFFF')
@@ -46,7 +45,6 @@ describe('cover slide', () => {
 
 		// The CSS gradient becomes a rasterised, full-bleed decor image behind everything.
 		const gradient = model.items.find((item) => item.type === 'image')
-		expect(gradient).toBeTruthy()
 		expect(gradient?.z).toBeLessThan(0)
 
 		expect(summarizeModel(model)).toMatchSnapshot()
@@ -61,7 +59,6 @@ describe('bullets slide', () => {
 		expect(heading?.tag).toBe('h2')
 
 		const list = model.items.find((item) => item.type === 'list')
-		expect(list).toBeTruthy()
 		const runs = Array.isArray(list?.text) ? list.text.map((run) => run.text) : []
 		expect(runs).toEqual(['Accelerate cloud migration', 'Strengthen data governance', 'Expand the partner ecosystem'])
 
@@ -74,7 +71,6 @@ describe('table slide', () => {
 		const model = await modelFor(tableHtml)
 
 		const table = model.items.find((item) => item.type === 'table')
-		expect(table).toBeTruthy()
 		const rows = (table?.rows || []).map((row) => row.map((cell) => cell.text))
 		expect(rows.length).toBe(3)
 		expect(rows[0]).toEqual(['Workstream', 'Owner', 'Status'])
