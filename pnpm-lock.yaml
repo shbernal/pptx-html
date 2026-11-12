@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       pptx-ts:
-        specifier: ^4.2.0
-        version: 4.2.0
+        specifier: ^5.0.0
+        version: 5.0.0
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -1742,8 +1742,8 @@ packages:
     resolution: {integrity: sha512-LJlKCCAUFKOuZxipUdYw1NzIITEsPcgyOG9LkvRJvuKj/bRzbuRY0ARXvL0pWGpsZvn8jku+LMep2eU0seHp8g==}
     engines: {node: ^10 || ^12 || >=14}
 
-  pptx-ts@4.2.0:
-    resolution: {integrity: sha512-sA1+m+joR1ef8amoWFRb5fGeh80nBEJ44+x/4aJUYaSk4RpEAg75dxnBcJV4dBu640Y2Kmb5jiHH/rf71loQeg==}
+  pptx-ts@5.0.0:
+    resolution: {integrity: sha512-0NYRRV8LMN/7vnHWGqAIUvMYtxzNr8z5A0khR4By4+491E5K9GkFEjCO1u1HMXty7IQzSnqgT8kP23cGLz3TSg==}
     engines: {node: '>=24'}
     peerDependencies:
       mathml2omml: ^0.5.0
@@ -3222,7 +3222,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
-  pptx-ts@4.2.0:
+  pptx-ts@5.0.0:
     dependencies:
       '@xmldom/xmldom': 0.9.12
       fflate: 0.8.3
