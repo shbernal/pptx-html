@@ -32,6 +32,47 @@ jobs:
           message: true
           branch: false
 
+      # The rest of the old commit-msg hook: charcheck's `no-em-dash-in-commit-msg` rule,
+      # and a PowerShell here-string delimiter (`@'`, `'@`) leaked into a message. Only on
+      # pull requests, where the commits to check are known: base..head, merges skipped.
+      - name: Setup pnpm
+        if: github.event_name == 'pull_request'
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12.18.0
+          run_install: false
+
+      - name: Setup Node
+        if: github.event_name == 'pull_request'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        if: github.event_name == 'pull_request'
+        run: pnpm install --frozen-lockfile
+
+      - name: Check commit message prose
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          status=0
+          msg="$RUNNER_TEMP/commit-msg"
+          quotes=$(printf '\47\42')
+          for sha in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            git log -1 --format=%B "$sha" > "$msg"
+            pnpm exec charcheck --commit-msg "$msg" || { echo "::error::$sha: charcheck"; status=1; }
+            if grep -qE '^@['$quotes']?[[:space:]]*$|^@['$quotes']|['$quotes']@[[:space:]]*$' "$msg"; then
+              echo "::error::$sha: a here-string delimiter leaked into the message; commit it with git commit -F <file>"
+              status=1
+            fi
+          done
+          exit $status
+
   validate:
     name: Node ${{ matrix.node }}
     runs-on: ubuntu-24.04
@@ -82,6 +123,9 @@ jobs:
 
       - name: Check formatting
         run: pnpm run format:check
+
+      - name: Banned characters
+        run: pnpm run lint:chars
 
       - name: Unused files, exports and dependencies
         run: pnpm run knip

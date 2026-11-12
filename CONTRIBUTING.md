@@ -55,14 +55,6 @@ fix, since `next` carries it. It still works for a commit `next` skipped, but it
 builds from source and pulls upstream's `devDependencies`, so it is for trying a
 fix, not for staying on, and it needs `allowBuilds` back at `true`.
 
-`lefthook`'s postinstall is denied on purpose in `pnpm-workspace.yaml`, and there
-is deliberately no `prepare: lefthook install` script. That postinstall syncs git
-hooks, and when `core.hooksPath` is set globally it writes *into that global
-directory*, replacing the existing `pre-commit` with a wrapper hardcoded to this
-repo's `node_modules`, which would then fire for every repo on the machine.
-`lefthook run` needs no installed hooks, so hook wiring is left to whatever the
-environment already provides.
-
 ## Commands
 
 ```bash
@@ -390,10 +382,14 @@ Conventional-commit subjects (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`),
 scoped where it helps (`feat(parse):`). Write the subject as what the change does
 for a reader of the repo, not as a plan step.
 
-`pnpm run check` must be clean; `lefthook` pre-commit jobs run `oxlint --fix` and
-then `oxfmt` on staged files if hooks are wired in your environment.
+There are no git hooks; CI runs every check. `pnpm run check` and
+`pnpm run lint:chars` must be clean, and `pnpm run check:fix` applies the lint and
+format fixes.
 
 Commit messages carry no AI attribution: no `Co-authored-by:` trailer for a tool,
 no "Generated with" line. CI's `commit-check` job rejects them, under the rules in
-`.github/cchk.toml`. Say how AI was involved in the pull request description
+`.github/cchk.toml`. The same job runs `charcheck --commit-msg` on each commit of a
+pull request, which rejects an em dash, and rejects a PowerShell here-string
+delimiter (`@'` or `'@`) left in a message: write a multi-line message to a file
+and commit it with `git commit -F <file>`. Say how AI was involved in the pull request description
 instead, on the template's `AI disclosure:` line.
