@@ -11,6 +11,15 @@ model is expected to move.
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-11-12
+
+### Changed
+
+- **`pptx-ts` moves to 5.0.0.** It is the same code as 4.2.0, republished as a
+  major version because 4.2.0 carried breaking changes. Nothing renders, parses
+  or emits differently. A consumer that depends on `pptx-ts` itself should move
+  to `^5.0.0` too, or it installs two copies.
+
 ## [0.3.0] — 2026-11-12
 
 ### Added
@@ -371,7 +380,8 @@ First public release.
 - ESM only, Node `>=24`. `@shbernal/ts-pptx` `^3.2.0` is the one runtime
   dependency.
 
-[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/shbernal/pptx-html/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/shbernal/pptx-html/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/shbernal/pptx-html/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/shbernal/pptx-html/compare/v0.1.2...v0.2.0
