@@ -11,6 +11,8 @@ model is expected to move.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-11-12
+
 ### Added
 
 - **Prereleases on the `next` dist-tag.** Every push to `main` that changes the
@@ -23,20 +25,19 @@ model is expected to move.
   the same library under its new npm name, at the same version, so nothing renders
   or imports differently. A consumer that imported `@shbernal/ts-pptx` alongside
   this package should switch its imports to `pptx-ts` too, or it installs two copies.
-- **`pptx-ts` moves to a prerelease from its `next` channel.** It carries the
-  read-side fixes this repo filed: text options, shape and picture locks, paint
-  details, picture bullets, placeholders, slide backgrounds, transition sounds and
-  slide numbers now survive `readModelToIr`. A later prerelease adds connector
-  routes and shape bindings, a group's own rotation and flips, a picture's recolour
-  and transparency, a background picture's crop, a paragraph's end language,
-  `slide.color`, and hyperlinked table cells. A third adds table-cell border and
-  diagonal caps and transparency, table-cell picture bullets, `hyperlink.action`
-  runs without a forced colour, `sizing: 'contain'` pictures, and a picture's or
-  empty placeholder's binding to its layout placeholder. A fourth adds a built-in
-  table style's definition, table-level text options (bullets, caps, highlight,
-  language, paragraph indents, tab stops, transparency and the rest), a cell's
-  text shadow, a table's `rtl`, a comment's position and date, and
-  `underline: true` as shorthand for a single underline.
+- **`pptx-ts` moves to 4.2.0.** It carries the read-side fixes this repo filed:
+  text options, shape and picture locks, paint details, picture bullets,
+  placeholders, slide backgrounds, transition sounds and slide numbers now survive
+  `readModelToIr`, and so do connector routes and shape bindings, a group's own
+  rotation and flips, a picture's recolour and transparency, a background
+  picture's crop, a paragraph's end language, `slide.color`, hyperlinked table
+  cells, table-cell border and diagonal caps and transparency, table-cell picture
+  bullets, `hyperlink.action` runs without a forced colour, `sizing: 'contain'`
+  pictures, and a picture's or empty placeholder's binding to its layout
+  placeholder. It also writes a built-in table style's definition, table-level
+  text options (bullets, caps, highlight, language, paragraph indents, tab stops,
+  transparency and the rest), a cell's text shadow, a table's `rtl`, a comment's
+  position and date, and `underline: true` as shorthand for a single underline.
 
 ### Removed
 
@@ -370,7 +371,8 @@ First public release.
 - ESM only, Node `>=24`. `@shbernal/ts-pptx` `^3.2.0` is the one runtime
   dependency.
 
-[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.2.1...HEAD
+[unreleased]: https://github.com/shbernal/pptx-html/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/shbernal/pptx-html/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/shbernal/pptx-html/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/shbernal/pptx-html/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/shbernal/pptx-html/compare/v0.1.1...v0.1.2
