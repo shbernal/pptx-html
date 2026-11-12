@@ -2,22 +2,6 @@
 # declare a workspace: this repo is a single package and defines no `packages:`
 # globs, so nothing outside it is ever linked in.
 #
-# lefthook's postinstall is denied, and the `prepare` script installs the hooks
-# instead. The postinstall runs `lefthook install -f`, and that `-f` is the part
-# worth refusing: it overwrites whatever hook already sits in the target
-# directory and renames it to `.old`. `prepare` calls plain `lefthook install`,
-# which writes this repo's `.git/hooks` and stops if anything is in the way.
-#
-# Denying the build costs nothing else. The binary is not built by that script,
-# it arrives prebuilt as the `lefthook-<os>-<arch>` optional dependency, so
-# `pnpm exec lefthook` works with this set to `false`.
-#
-# This entry used to say there was deliberately no `prepare` script, because a
-# machine-wide `core.hooksPath` made `-f` write into the shared hooks directory
-# and disarm every other repo. That global path was removed on 2026-08-17 and
-# hooks are per-repo again, so the `prepare` script is both safe and required:
-# `remotes:` in lefthook.yml is only fetched by `lefthook install`.
-#
 # The writer flipped from `true` to `false`, and the entry still has to be here.
 # While it was pinned to a git sha it had to be *built* before it could be
 # installed — `dist/` is gitignored upstream, so pnpm packed the checkout and ran
@@ -29,25 +13,22 @@
 # manifest still declares `prepare`, which pnpm counts as a build script and asks
 # about no matter where the package came from; removing the line just makes pnpm
 # write `set this to true or false` back into this file. Denied rather than
-# allowed because that `prepare` is upstream's own dev wiring — `install-hooks`,
-# which skips when `INIT_CWD` is outside its checkout, and `ensure-dist
-# --if-missing`, a no-op against a `dist/` that shipped. Neither does anything for
+# allowed because that `prepare` is upstream's own dev wiring — `ensure-dist
+# --if-missing`, a no-op against a `dist/` that shipped. It does nothing for
 # a consumer, so this is the answerable-either-way case the two below are, and
 # `false` is the answer that runs no foreign script. Back to `true` if the pin
 # ever returns to a sha.
 allowBuilds:
   'pptx-ts': false
-  lefthook: false
 #
 # The writer is excluded from the release-age gate. That gate exists to keep a
 # compromised publish from being pulled in before anyone notices it; this repo
 # and `pptx-ts` share an author, so it buys nothing here and costs a
-# two-day wait on every bump — during which `pnpm run`, and therefore the
-# pre-commit hook, refuses to run at all.
+# two-day wait on every bump — during which `pnpm run` refuses to run at all.
 #
 # By name, not `name@version`: `pnpm add` writes the pinned form itself, but the
 # lockfile verification that runs before every script does not honour it, so the
-# entry it wrote does not unblock the commit it was written for.
+# entry it wrote does not unblock the scripts it was written for.
 #
 # This is the entry that stopped being theoretical. It was inert for as long as
 # the pin was a git sha — the gate reads a registry publish date and a git tarball
