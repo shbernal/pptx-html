@@ -1,10 +1,10 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "pptx-ts-upstream": {
       "source": "./node_modules/pptx-ts",
       "sourceType": "local",
-      "computedHash": "c2cfeacc2cf4e0a45e9fff37eaf2583080313b31e61e2bd4dd2714995be2a08e"
+      "computedHash": "a1a5d0f15290073237d3e345fcae8a92d46da215385e5949aa6ec031621a0e2b"
     }
   }
 }
