@@ -181,10 +181,10 @@ importers:
         version: 3.5.45
       charcheck:
         specifier: ^0.4.0
-        version: 0.4.0(@vue/compiler-sfc@3.5.45)(typescript@7.0.2)
+        version: 0.4.1(@vue/compiler-sfc@3.5.45)(typescript@7.0.2)
       knip:
         specifier: ^6.45.0
-        version: 6.45.0
+        version: 6.45.1
       oxfmt:
         specifier: ^0.78.0
         version: 0.78.0
@@ -277,13 +277,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
-
-  '@napi-rs/wasm-runtime@1.2.5':
-    resolution: {integrity: sha512-HshSvXzmBxNzqejd3k/KemgQ3hdREUYFRRrgxOZ+gPljDIsO2SDZrVZMd4Z/HsxudQbE62OVyVFE8z9BCurfjA==}
-    engines: {node: ^20.19.0 || ^22.13.0 || >=23.5.0}
-    peerDependencies:
-      '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
-      '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
 
   '@napi-rs/wasm-runtime@1.2.6':
     resolution: {integrity: sha512-mRyDmEw9/fCDXCGfL1sbgIw/GUK0PVxRW4YwgPN61F3LQ+fSyoBFarJVzgGyhF6kRzEQZ0FejDqm4WLXSeqQmw==}
@@ -1399,8 +1392,8 @@ packages:
   character-entities-legacy@3.0.0:
     resolution: {integrity: sha512-RpPp0asT/6ufRm//AJVwpViZbGM/MkjQFxJccQRHmISF/22NBtsHqAWmL+/pmkPWoIUJdWyeVleTl1wydHATVQ==}
 
-  charcheck@0.4.0:
-    resolution: {integrity: sha512-W7kbSuVDsYl2geESXvKAuEAt2gUYLlRQgt8e/6oqONIOPK3YMh4I1AEWdcw9dV2aWNV4V03Xx68KP8q714CmKw==}
+  charcheck@0.4.1:
+    resolution: {integrity: sha512-3E9/2xVltaPvH0s/voRUa6bVb39th3C1fhXi4ark8YaVB9NLgFAsb7z87bab3TV1ZYt0vT2HwWuF+TJ6quF/Ww==}
     engines: {node: '>=24'}
     hasBin: true
     peerDependencies:
@@ -1532,8 +1525,8 @@ packages:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
 
-  knip@6.45.0:
-    resolution: {integrity: sha512-ywPAhxiJGPWD/1V5dVYawA6el74q4vgX8omkeyl0MbA1CCkdjxrvWXXVqM20a5wQWcl1NbC9ImLHYsbFEbD0Xg==}
+  knip@6.45.1:
+    resolution: {integrity: sha512-zp3zXKy2cZWiIttdlWU5fisKxVQaLSU6471ej0KGz1GdHdaHxpzTAO/LIyFNc3gU3v1W7LJaqvYumoO3l/u+6A==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
@@ -2155,7 +2148,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@napi-rs/wasm-runtime@1.2.5(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)':
+  '@napi-rs/wasm-runtime@1.2.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)':
     dependencies:
       '@emnapi/core': 1.11.2
       '@emnapi/runtime': 1.11.2
@@ -2284,7 +2277,7 @@ snapshots:
     dependencies:
       '@emnapi/core': 1.11.2
       '@emnapi/runtime': 1.11.2
-      '@napi-rs/wasm-runtime': 1.2.5(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
+      '@napi-rs/wasm-runtime': 1.2.6(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
     optional: true
 
   '@oxc-resolver/binding-win32-arm64-msvc@11.24.2':
@@ -2868,7 +2861,7 @@ snapshots:
 
   character-entities-legacy@3.0.0: {}
 
-  charcheck@0.4.0(@vue/compiler-sfc@3.5.45)(typescript@7.0.2):
+  charcheck@0.4.1(@vue/compiler-sfc@3.5.45)(typescript@7.0.2):
     dependencies:
       picocolors: 1.1.1
       tinyglobby: 0.2.17
@@ -2970,7 +2963,7 @@ snapshots:
 
   jiti@2.7.0: {}
 
-  knip@6.45.0:
+  knip@6.45.1:
     dependencies:
       formatly: 0.11.4
       get-tsconfig: 4.14.3
